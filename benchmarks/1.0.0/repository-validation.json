@@ -1,0 +1,38 @@
+{
+  "errors": [],
+  "metrics": {
+    "activation_cases": 36,
+    "behavior_cases": 34,
+    "description_length": 260,
+    "markdown_files": 40,
+    "references": 14,
+    "routes": {
+      "file_words": {
+        "SKILL.md": 759,
+        "references/audit-and-refactor.md": 1088,
+        "references/callable-naming.md": 790,
+        "references/data-infrastructure.md": 850,
+        "references/dynamic-languages.md": 660,
+        "references/functional-concurrent-languages.md": 741,
+        "references/language-conventions.md": 867,
+        "references/local-variable-naming.md": 676,
+        "references/managed-mobile-languages.md": 786,
+        "references/naming-model.md": 1359,
+        "references/new-code-workflow.md": 946,
+        "references/refactor-safety.md": 1058,
+        "references/systems-languages.md": 660,
+        "references/typescript-javascript.md": 547,
+        "references/web-frameworks.md": 496
+      },
+      "max_extended_route_words": 7640,
+      "max_standard_route": {
+        "name": "refactor+callable+local-variable+web-framework",
+        "words": 6773
+      }
+    },
+    "short_description_length": 50
+  },
+  "schema_version": "1.0",
+  "valid": true,
+  "warnings": []
+}

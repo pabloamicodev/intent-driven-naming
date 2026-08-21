@@ -1,0 +1,32 @@
+name: Language profile proposal
+description: Propose evidence-backed support or changes for a language ecosystem.
+title: "profile: "
+labels: [language-profile]
+body:
+  - type: input
+    id: ecosystem
+    attributes:
+      label: Language and ecosystem
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Primary evidence and repository examples
+      description: Explain conventions, semantic exceptions, and public contract behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: cases
+    attributes:
+      label: Proposed positive, no-op, and contract-risk cases
+    validations:
+      required: true
+  - type: checkboxes
+    id: experience
+    attributes:
+      label: Review readiness
+      options:
+        - label: An experienced practitioner is available to review the proposal.
+        - label: The proposal does not force another language's casing or programming model.
+          required: true

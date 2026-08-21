@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.idea/
+.DS_Store
+coverage.xml
+dist/
+benchmark-results/
+eval-results/
+*.class
+*.exe

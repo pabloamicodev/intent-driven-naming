@@ -1,0 +1,51 @@
+name: Behavior or safety bug
+description: Report an incorrect naming decision, unsafe rename, routing issue, or harness defect.
+title: "bug: "
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Activation
+        - Generation
+        - Audit
+        - Refactor safety
+        - Language profile
+        - Harness or fixture
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the request, relevant code, protected contracts, and configuration.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected observable behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security check
+      options:
+        - label: This report does not disclose an unpatched vulnerability that should use private reporting.
+          required: true

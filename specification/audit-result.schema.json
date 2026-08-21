@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/audit-result.schema.json",
+  "title": "Intent-Driven Naming Audit Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mode", "summary", "findings", "protected_identifiers", "verification"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "mode": { "enum": ["audit", "refactor"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["location", "current_name", "category", "evidence", "decision", "confidence", "contract_risk"],
+        "properties": {
+          "location": { "type": "string", "minLength": 1 },
+          "current_name": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["dangerous", "misleading", "ambiguous", "inconsistent", "cosmetic"] },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "decision": { "enum": ["keep", "rename", "map", "migrate", "defer"] },
+          "proposed_name": { "type": ["string", "null"] },
+          "rationale": { "type": ["string", "null"] },
+          "confidence": { "enum": ["high", "medium", "low"] },
+          "contract_risk": { "enum": ["internal", "cross-module", "external", "dynamic"] }
+        }
+      }
+    },
+    "protected_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "reason"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["commands", "unverified_surfaces"],
+      "properties": {
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "unverified_surfaces": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

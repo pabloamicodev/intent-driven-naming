@@ -145,7 +145,7 @@ Avoid `process`, `handle`, `execute`, or `run` when a more precise action is sup
 
 Keep the declaration honest about side effects. A query-like name must not conceal creation, persistence, publication, deletion, or external communication. Use `handle` for a real event, request, command, or failure boundary rather than as a generic prefix for all business logic.
 
-Inside the callable, align parameters and local bindings with the declaration's vocabulary. Name meaningful transformations by their resulting state, accumulators by their invariant when needed, and callback elements as singular members of their collection. Read `function-and-local-naming.md` for the full callable and intrafunction decision model.
+Inside the callable, align parameters and local bindings with the declaration's vocabulary. Name meaningful transformations by their resulting state, accumulators by their invariant when needed, and callback elements as singular members of their collection. Read `callable-naming.md` for the declaration contract and `local-variable-naming.md` for intrafunction data flow.
 
 ### Errors and Results
 

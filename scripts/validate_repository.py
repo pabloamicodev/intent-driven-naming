@@ -1,0 +1,423 @@
+#!/usr/bin/env python3
+"""Validate the skill package, specifications, datasets, routes, and governance files."""
+
+from __future__ import annotations
+
+import argparse
+import itertools
+import json
+import re
+import subprocess
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+TRIGGER_ID = re.compile(r"^\| (T\d{2}) \|")
+BEHAVIOR_ID = re.compile(r"^## (B\d{2}) —")
+
+
+def word_count(path: Path) -> int:
+    return len(re.findall(r"\S+", path.read_text(encoding="utf-8")))
+
+
+def load_json(path: Path, errors: list[str]) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"{path.relative_to(ROOT)}: invalid JSON: {exc}")
+        return None
+
+
+def load_jsonl(path: Path, errors: list[str]) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    if not path.exists():
+        errors.append(f"missing dataset: {path.relative_to(ROOT)}")
+        return records
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{path.relative_to(ROOT)}:{line_number}: invalid JSON: {exc}")
+            continue
+        if not isinstance(record, dict):
+            errors.append(f"{path.relative_to(ROOT)}:{line_number}: expected JSON object")
+            continue
+        records.append(record)
+    return records
+
+
+def prose_paragraphs(markdown: str) -> list[str]:
+    paragraphs: list[str] = []
+    current: list[str] = []
+    in_fence = False
+
+    def flush() -> None:
+        if current:
+            normalized = " ".join(" ".join(current).split())
+            if len(normalized) >= 120:
+                paragraphs.append(normalized)
+            current.clear()
+
+    for line in markdown.splitlines():
+        if line.startswith("```"):
+            flush()
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        stripped = line.strip()
+        if not stripped:
+            flush()
+            continue
+        if stripped.startswith(("#", "- ", "* ", ">", "|")) or re.match(r"^\d+\.\s", stripped):
+            flush()
+            continue
+        current.append(stripped)
+    flush()
+    return paragraphs
+
+
+def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
+    markdown_files = sorted(ROOT.rglob("*.md"))
+    reference_files = sorted((ROOT / "references").glob("*.md"))
+    linked_references: set[Path] = set()
+    for path in markdown_files:
+        text = path.read_text(encoding="utf-8")
+        headings = [match.groups() for line in text.splitlines() if (match := HEADING.match(line))]
+        h1_count = sum(1 for level, _ in headings if level == "#")
+        if h1_count != 1:
+            errors.append(f"{path.relative_to(ROOT)}: expected exactly one H1, found {h1_count}")
+        if path.parent == ROOT / "references":
+            h2_names = [title for level, title in headings if level == "##"]
+            duplicates = [name for name, count in Counter(h2_names).items() if count > 1]
+            for name in duplicates:
+                errors.append(f"{path.relative_to(ROOT)}: duplicate H2 heading '{name}'")
+            paragraph_counts = Counter(prose_paragraphs(text))
+            for paragraph, count in paragraph_counts.items():
+                if count > 1:
+                    errors.append(
+                        f"{path.relative_to(ROOT)}: duplicated prose paragraph x{count}: {paragraph[:80]}..."
+                    )
+        for target in MARKDOWN_LINK.findall(text):
+            clean = target.strip("<>").split("#", 1)[0]
+            if not clean or re.match(r"^[a-z]+://", clean) or clean.startswith(("mailto:", "/")):
+                continue
+            resolved = (path.parent / clean).resolve()
+            if not resolved.exists():
+                errors.append(f"{path.relative_to(ROOT)}: broken link '{target}'")
+            try:
+                relative = resolved.relative_to((ROOT / "references").resolve())
+            except ValueError:
+                continue
+            if relative.suffix == ".md":
+                linked_references.add(resolved)
+    for reference in reference_files:
+        if reference.resolve() not in linked_references:
+            errors.append(f"{reference.relative_to(ROOT)}: reference is not routed from any Markdown file")
+    if len(markdown_files) > 40:
+        warnings.append(f"large Markdown surface: {len(markdown_files)} files")
+    return {"markdown_files": len(markdown_files), "references": len(reference_files)}
+
+
+def validate_frontmatter(errors: list[str]) -> dict[str, int]:
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    if not skill.startswith("---\n"):
+        errors.append("SKILL.md: missing YAML frontmatter")
+        return {}
+    parts = skill.split("---", 2)
+    if len(parts) < 3:
+        errors.append("SKILL.md: unterminated YAML frontmatter")
+        return {}
+    frontmatter = parts[1]
+    name_match = re.search(r"^name:\s*(.+)$", frontmatter, re.MULTILINE)
+    description_match = re.search(r"^description:\s*(.+)$", frontmatter, re.MULTILINE)
+    if not name_match or name_match.group(1).strip() != "intent-driven-naming":
+        errors.append("SKILL.md: unexpected or missing name")
+    if not description_match:
+        errors.append("SKILL.md: missing description")
+        description_length = 0
+    else:
+        description_length = len(description_match.group(1).strip())
+        if description_length > 1024:
+            errors.append(f"SKILL.md: description too long ({description_length})")
+    metadata = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
+    short_match = re.search(r'^\s*short_description:\s*"([^"]+)"', metadata, re.MULTILINE)
+    if not short_match:
+        errors.append("agents/openai.yaml: missing short_description")
+        short_length = 0
+    else:
+        short_length = len(short_match.group(1))
+        if not 25 <= short_length <= 64:
+            errors.append(f"agents/openai.yaml: short_description length is {short_length}, expected 25-64")
+    return {"description_length": description_length, "short_description_length": short_length}
+
+
+def validate_routes(errors: list[str]) -> dict[str, Any]:
+    routes = load_json(ROOT / "specification" / "routes.json", errors)
+    budgets = load_json(ROOT / "specification" / "context-budgets.json", errors)
+    if not isinstance(routes, dict) or not isinstance(budgets, dict):
+        return {}
+    all_paths: set[str] = set(routes.get("always", []))
+    for group_name in ("conditional_core", "modes", "features", "profiles"):
+        group = routes.get(group_name, {})
+        if not isinstance(group, dict):
+            errors.append(f"specification/routes.json: {group_name} must be an object")
+            continue
+        for paths in group.values():
+            if not isinstance(paths, list):
+                errors.append(f"specification/routes.json: {group_name} entries must be arrays")
+                continue
+            all_paths.update(paths)
+    counts: dict[str, int] = {}
+    for relative in sorted(all_paths):
+        path = ROOT / relative
+        if not path.exists():
+            errors.append(f"specification/routes.json: missing routed file {relative}")
+            continue
+        counts[relative] = word_count(path)
+    budget_values = budgets.get("budgets", {})
+    entrypoint_budget = budget_values.get("entrypoint")
+    if isinstance(entrypoint_budget, int) and counts.get("SKILL.md", 0) > entrypoint_budget:
+        errors.append(f"SKILL.md exceeds entrypoint budget: {counts['SKILL.md']} > {entrypoint_budget}")
+    single_budget = budget_values.get("single-reference")
+    exceptions = budgets.get("exceptions", {})
+    for relative, count in counts.items():
+        if not relative.startswith("references/"):
+            continue
+        limit = exceptions.get(relative, single_budget)
+        if isinstance(limit, int) and count > limit:
+            errors.append(f"{relative} exceeds reference budget: {count} > {limit}")
+
+    always = routes.get("always", [])
+    modes = list(routes.get("modes", {}).items())
+    features = list(routes.get("features", {}).items())
+    profiles = list(routes.get("profiles", {}).items())
+    feature_choices = [()] + [(item,) for item in features] + [tuple(features)]
+    standard_routes: list[tuple[str, int]] = []
+    for (mode_name, mode_paths), feature_choice, (profile_name, profile_paths) in itertools.product(
+        modes, feature_choices, profiles
+    ):
+        paths = list(always) + list(mode_paths) + list(profile_paths)
+        feature_names: list[str] = []
+        for feature_name, feature_paths in feature_choice:
+            feature_names.append(feature_name)
+            paths.extend(feature_paths)
+        unique_paths = list(dict.fromkeys(paths))
+        total = sum(counts.get(path, 0) for path in unique_paths)
+        label = f"{mode_name}+{'+'.join(feature_names) if feature_names else 'no-feature'}+{profile_name}"
+        standard_routes.append((label, total))
+    max_standard_label, max_standard = max(standard_routes, key=lambda item: item[1])
+    standard_budget = budget_values.get("standard-route")
+    if isinstance(standard_budget, int) and max_standard > standard_budget:
+        errors.append(f"maximum standard route exceeds budget: {max_standard_label} {max_standard} > {standard_budget}")
+    convention_paths = [path for paths in routes.get("conditional_core", {}).values() for path in paths]
+    convention_words = sum(counts.get(path, 0) for path in set(convention_paths))
+    max_extended = max_standard + convention_words
+    extended_budget = budget_values.get("extended-route")
+    if isinstance(extended_budget, int) and max_extended > extended_budget:
+        errors.append(f"maximum extended route exceeds budget: {max_extended} > {extended_budget}")
+    return {
+        "file_words": counts,
+        "max_standard_route": {"name": max_standard_label, "words": max_standard},
+        "max_extended_route_words": max_extended,
+    }
+
+
+def validate_evaluations(errors: list[str]) -> dict[str, int]:
+    sys.path.insert(0, str(ROOT))
+    from harness.eval_core import validate_case
+
+    activation = load_jsonl(ROOT / "evals" / "cases" / "activation.jsonl", errors)
+    behavior = load_jsonl(ROOT / "evals" / "cases" / "behavior.jsonl", errors)
+    ids: set[str] = set()
+    for record in activation + behavior:
+        record_errors = validate_case(record)
+        errors.extend(f"eval {record.get('id', '?')}: {error}" for error in record_errors)
+        case_id = record.get("id")
+        if case_id in ids:
+            errors.append(f"duplicate evaluation id {case_id}")
+        ids.add(case_id)
+    trigger_source_ids = {
+        match.group(1)
+        for line in (ROOT / "evals" / "trigger-cases.md").read_text(encoding="utf-8").splitlines()
+        if (match := TRIGGER_ID.match(line))
+    }
+    behavior_source_ids = {
+        match.group(1)
+        for line in (ROOT / "evals" / "behavior-cases.md").read_text(encoding="utf-8").splitlines()
+        if (match := BEHAVIOR_ID.match(line))
+    }
+    if trigger_source_ids != {record.get("id") for record in activation}:
+        errors.append("activation JSONL IDs do not match trigger-cases.md")
+    if behavior_source_ids != {record.get("id") for record in behavior}:
+        errors.append("behavior JSONL IDs do not match behavior-cases.md")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for count, label in ((len(activation), "activation"), (len(behavior), "behavior")):
+        if str(count) not in readme:
+            errors.append(f"README.md does not mention current {label} count {count}")
+    export_check = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "export_evals.py"), "--check"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if export_check.returncode != 0:
+        errors.append(export_check.stderr.strip() or "generated evaluation datasets are stale")
+    return {"activation_cases": len(activation), "behavior_cases": len(behavior)}
+
+
+def validate_governance(errors: list[str]) -> None:
+    required = [
+        "VERSION",
+        "LICENSE",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "GOVERNANCE.md",
+        "CODE_OF_CONDUCT.md",
+        ".github/workflows/ci.yml",
+    ]
+    for relative in required:
+        if not (ROOT / relative).exists():
+            errors.append(f"missing adoption file: {relative}")
+    version_path = ROOT / "VERSION"
+    if version_path.exists():
+        version = version_path.read_text(encoding="utf-8").strip()
+        if not VERSION_PATTERN.fullmatch(version):
+            errors.append(f"VERSION is not semantic: {version}")
+    for schema in sorted((ROOT / "specification").glob("*.json")):
+        load_json(schema, errors)
+    policy = load_json(ROOT / "specification" / "release-policy.json", errors)
+    if not isinstance(policy, dict):
+        errors.append("specification/release-policy.json must be an object")
+        return
+    if version_path.exists() and policy.get("version") != version_path.read_text(encoding="utf-8").strip():
+        errors.append("release policy version does not match VERSION")
+    variants = policy.get("required_variants")
+    if not isinstance(variants, list) or any(not isinstance(value, str) for value in variants):
+        errors.append("release policy required_variants must be a string array")
+    elif set(variants) != {"with-skill", "without-skill"}:
+        errors.append("release policy must require with-skill and without-skill variants")
+    if policy.get("gated_variant") != "with-skill":
+        errors.append("release policy must gate the with-skill variant")
+    activation = policy.get("activation_minimums")
+    if not isinstance(activation, dict) or set(activation) != {"precision", "recall", "accuracy"}:
+        errors.append("release policy activation minimums are incomplete")
+    elif any(
+        isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1
+        for value in activation.values()
+    ):
+        errors.append("release policy activation minimums must be ratios")
+    behavior = policy.get("behavior")
+    if not isinstance(behavior, dict):
+        errors.append("release policy behavior threshold is invalid")
+    else:
+        pass_rate = behavior.get("minimum_pass_rate")
+        maximum_ungraded = behavior.get("maximum_ungraded")
+        if (
+            isinstance(pass_rate, bool)
+            or not isinstance(pass_rate, (int, float))
+            or not 0 <= pass_rate <= 1
+            or isinstance(maximum_ungraded, bool)
+            or not isinstance(maximum_ungraded, int)
+            or maximum_ungraded < 0
+        ):
+            errors.append("release policy behavior threshold is invalid")
+    comparison = policy.get("comparison")
+    if not isinstance(comparison, dict) or comparison.get("baseline_variant") != "without-skill":
+        errors.append("release policy comparison baseline is invalid")
+    elif any(
+        isinstance(comparison.get(key), bool)
+        or not isinstance(comparison.get(key), (int, float))
+        for key in (
+            "minimum_activation_accuracy_delta",
+            "minimum_behavior_pass_rate_delta",
+        )
+    ):
+        errors.append("release policy comparison deltas are invalid")
+    required_fields = policy.get("required_implementation_fields")
+    expected_fields = {
+        "adapter",
+        "adapter_version",
+        "agent",
+        "agent_version",
+        "model",
+        "model_version",
+        "reasoning",
+    }
+    if not isinstance(required_fields, list) or not expected_fields.issubset(required_fields):
+        errors.append("release policy implementation metadata is incomplete")
+
+
+def validate_placeholders(errors: list[str]) -> None:
+    pattern = re.compile(r"\b(TODO|TBD|PLACEHOLDER)\b", re.IGNORECASE)
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or ".git" in path.parts:
+            continue
+        if path.resolve() == Path(__file__).resolve():
+            continue
+        if path.suffix.lower() not in {".md", ".json", ".jsonl", ".yaml", ".yml", ".py", ".txt"}:
+            continue
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if pattern.search(line):
+                errors.append(f"{path.relative_to(ROOT)}:{line_number}: unresolved placeholder token")
+
+
+def validate_repository() -> dict[str, Any]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    metrics: dict[str, Any] = {}
+    metrics.update(validate_markdown(errors, warnings))
+    metrics.update(validate_frontmatter(errors))
+    metrics["routes"] = validate_routes(errors)
+    metrics.update(validate_evaluations(errors))
+    validate_governance(errors)
+    validate_placeholders(errors)
+    return {
+        "schema_version": "1.0",
+        "valid": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "metrics": metrics,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--json-output", type=Path)
+    args = parser.parse_args()
+    report = validate_repository()
+    rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    if args.json_output:
+        args.json_output.parent.mkdir(parents=True, exist_ok=True)
+        args.json_output.write_text(rendered, encoding="utf-8", newline="\n")
+    if report["valid"]:
+        metrics = report["metrics"]
+        print(
+            "repository validation passed: "
+            f"references={metrics.get('references')} "
+            f"activation={metrics.get('activation_cases')} "
+            f"behavior={metrics.get('behavior_cases')}"
+        )
+        routes = metrics.get("routes", {})
+        if routes:
+            print(
+                f"context budget: standard={routes['max_standard_route']['words']} "
+                f"extended={routes['max_extended_route_words']} words"
+            )
+        return 0
+    print(rendered, file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

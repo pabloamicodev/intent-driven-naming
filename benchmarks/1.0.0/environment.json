@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-08-21",
+  "operating_system": "Windows-10-10.0.26300-SP0",
+  "architecture": "AMD64",
+  "tools": {
+    "python": "3.11.9",
+    "node": "24.18.1",
+    "rustc": "1.97.1",
+    "javac": "17.0.12",
+    "java": "17.0.12",
+    "powershell": "7.6.5",
+    "git": "2.55.0.windows.3",
+    "go": null,
+    "terraform": null
+  }
+}

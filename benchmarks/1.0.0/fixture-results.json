@@ -1,0 +1,68 @@
+{
+  "counts": {
+    "failed": 0,
+    "passed": 6,
+    "skipped": 1
+  },
+  "hard_gate_passed": true,
+  "results": [
+    {
+      "critical": true,
+      "duration_ms": 67.363,
+      "id": "FX01",
+      "language": "javascript",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 57.903,
+      "id": "FX02",
+      "language": "python",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "critical": false,
+      "duration_ms": 0,
+      "id": "FX03",
+      "language": "go",
+      "reason": "required tool not found: go",
+      "status": "skipped"
+    },
+    {
+      "critical": true,
+      "duration_ms": 211.845,
+      "id": "FX04",
+      "language": "rust",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 539.207,
+      "id": "FX05",
+      "language": "java",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 47.168,
+      "id": "FX06",
+      "language": "sql",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 41.245,
+      "id": "FX07",
+      "language": "terraform",
+      "reason": null,
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0",
+  "valid": true
+}

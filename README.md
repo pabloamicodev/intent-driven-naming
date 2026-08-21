@@ -1,151 +1,207 @@
 # Intent-Driven Naming
 
-An instruction-only Agent Skill that helps AI coding agents generate, audit, and safely refactor software identifiers according to semantic intent in any language or development stack.
+Version 1.0.0 is an Agent Skill and conformance project for generating, auditing, and safely refactoring software identifiers according to semantic intent across languages and development stacks.
 
-The skill combines a reusable naming model with separate workflows for:
+The core skill remains instruction-only. Deterministic tooling surrounds it to validate the package, route context efficiently, execute contract fixtures, run provider-neutral evaluations, and block safety regressions. No script rejects an identifier merely because it is called `data`, `result`, `item`, `i`, or another generic or short name.
 
-- generating new code, queries, schemas, scripts, and infrastructure with clear, durable names;
-- naming functions and methods from their observable contracts, then aligning parameters and local variables with the intrafunction data flow;
-- auditing dangerous, misleading, ambiguous, or inconsistent identifiers;
-- applying behavior-preserving renames without breaking external contracts;
-- translating one semantic model into the idioms of each language, framework, schema, and tool.
+## What It Covers
 
-## Structure
+- Functions, methods, constructors, commands, queries, predicates, handlers, and callbacks.
+- Parameters, argument labels, local variables, captures, accumulators, errors, and intermediate results.
+- Types, interfaces, schemas, queries, scripts, configuration, and infrastructure identifiers.
+- New-code generation, read-only audit, targeted refactor, and protected-boundary mapping.
+- Language idiom without forcing one ecosystem's casing or programming model onto another.
+
+## Decision Outcomes
+
+The normative model defines five outcomes:
+
+| Outcome | Use |
+|---|---|
+| `keep` | The current name is clear, conventional, contract-bound, or not worth the churn. |
+| `rename` | A supported internal rename creates material semantic gain. |
+| `map` | Preserve an external spelling and expose a clearer internal alias. |
+| `migrate` | Treat a public, persisted, dynamic, or stateful change as a coordinated migration. |
+| `defer` | Available evidence cannot establish meaning or safety. |
+
+Behavior regressions, silent contract changes, invented domain meaning, unauthorized audit mutations, and migrations disguised as refactors are non-compensable failures.
+
+## Architecture
 
 ```text
 intent-driven-naming/
+├── SKILL.md
 ├── agents/
 │   └── openai.yaml
-├── evals/
-│   ├── behavior-cases.md
-│   └── trigger-cases.md
 ├── references/
-│   ├── audit-and-refactor.md
-│   ├── data-infrastructure.md
-│   ├── dynamic-languages.md
-│   ├── functional-concurrent-languages.md
-│   ├── function-and-local-naming.md
-│   ├── language-conventions.md
-│   ├── managed-mobile-languages.md
 │   ├── naming-model.md
+│   ├── language-conventions.md
 │   ├── new-code-workflow.md
+│   ├── audit-and-refactor.md
 │   ├── refactor-safety.md
-│   ├── systems-languages.md
-│   └── typescript-javascript.md
-├── README.md
-└── SKILL.md
+│   ├── callable-naming.md
+│   ├── local-variable-naming.md
+│   ├── typescript-javascript.md
+│   ├── web-frameworks.md
+│   └── language-family profiles
+├── specification/
+│   ├── decision-model.md
+│   ├── conformance-levels.md
+│   ├── adapter-protocol.md
+│   ├── routes.json
+│   └── JSON schemas and context budgets
+├── evals/
+│   ├── trigger-cases.md
+│   ├── behavior-cases.md
+│   ├── cases/
+│   │   ├── activation.jsonl
+│   │   └── behavior.jsonl
+│   └── fixtures/
+├── harness/
+├── scripts/
+├── tests/
+├── docs/
+└── .github/workflows/ci.yml
 ```
 
-`SKILL.md` stays deliberately small. It defines discovery, shared invariants, boundaries, and routing. The agent loads the universal semantic model and convention-discovery protocol, then only the workflow and language profile relevant to the current task.
+`SKILL.md` remains the small router. The semantic core is always loaded; workflows, callable guidance, local-variable guidance, convention discovery, and language profiles are conditional. Specifications, datasets, fixtures, and maintenance scripts stay outside normal task context.
 
-This follows the progressive-disclosure model described in [OpenAI's skill documentation](https://learn.chatgpt.com/docs/build-skills).
+This follows the progressive-disclosure design described in the [official OpenAI documentation for Skills](https://learn.chatgpt.com/docs/build-skills).
 
-## Install for Codex
+## Install as a Skill
 
-Clone or copy the repository into the user-level skills directory so the entrypoint is located at:
+Place the repository so the entrypoint is available at one of these locations:
 
 ```text
 $HOME/.agents/skills/intent-driven-naming/SKILL.md
+$REPOSITORY_ROOT/.agents/skills/intent-driven-naming/SKILL.md
 ```
 
-For a repository-scoped installation, place it at:
-
-```text
-$REPOSITORY_ROOT/.agents/skills/intent-driven-naming/
-```
+The skill itself has no runtime dependency. Python is required only for repository validation and evaluation tooling.
 
 ## Use
 
 Generate new code:
 
 ```text
-$intent-driven-naming Implement a checkout service with clear domain names for requests, totals, payment state, and errors.
+$intent-driven-naming Implement a checkout service with clear names for requests, totals, payment state, and errors.
 ```
 
 Run a read-only audit:
 
 ```text
-$intent-driven-naming Audit the identifiers in this module. Rank material problems, but do not edit files.
+$intent-driven-naming Audit identifiers in this module. Rank material findings and do not edit files.
 ```
 
 Apply a safe refactor:
 
 ```text
-$intent-driven-naming Rename dangerous or misleading identifiers in this package without changing behavior or external contracts.
+$intent-driven-naming Rename dangerous or misleading identifiers without changing behavior or external contracts.
 ```
-
-Or let a compatible agent select it automatically when a coding task matches the description in `SKILL.md`.
 
 ## Language and Development Coverage
 
-The core is language-independent. Profiles add decisions that genuinely differ by ecosystem:
-
-| Profile | Examples covered |
+| Profile | Representative coverage |
 |---|---|
-| TypeScript and JavaScript | Node.js, browser code, React, Vue, Svelte, Angular, React Query |
+| TypeScript and JavaScript | Node.js, browser modules, types, async APIs, serialization |
+| Web frameworks | React, React Query, Vue, Svelte, Angular |
 | Dynamic languages | Python, Ruby, PHP |
 | Systems languages | Go, Rust, C, C++ |
 | Managed and mobile | Java, Kotlin, C#, Swift, Dart |
 | Functional and concurrent | Haskell, OCaml, F#, Scala, Clojure, Erlang, Elixir |
-| Data and infrastructure | SQL, data pipelines, schemas, shell, PowerShell, Terraform, Kubernetes, configuration |
+| Data and infrastructure | SQL, schemas, pipelines, shell, PowerShell, Terraform, Kubernetes |
 
-These profiles are not an allowlist. For another language, the agent uses `language-conventions.md` to inspect repository instructions, formatters, linters, analyzers, neighboring code, framework requirements, and public contracts before rendering the semantic name.
+Profiles are refinements, not an allowlist. Unlisted languages use the semantic model, repository evidence, compiler or analyzer feedback, and conservative contract safety.
 
-## How Decisions Are Made
+See [compatibility](docs/compatibility.md) for evidence-scoped support claims and [limitations](docs/limitations.md) for what is not yet proven.
 
-The skill starts with the domain concept and adds only distinctions that matter:
+## Offline Validation
 
-```text
-concept + role + state + representation + cardinality + unit + necessary scope
-```
-
-This is a decision model, not a required naming formula. A candidate is evaluated for truthfulness, disambiguation, consistency, scope fit, searchability, brevity, idiomatic form, and contract safety. Existing clear names are preserved.
-
-Meaning and spelling are deliberately separated. The same concept may be `priceInCents`, `price_in_cents`, `PriceInCents`, or `PRICE_IN_CENTS` depending on the language and role. Cross-layer consistency means preserving the concept and explicit mappings, not forcing identical casing.
-
-## Functions and Variables Inside Functions
-
-The skill evaluates a callable as one semantic unit:
+Run every repository, unit, dataset, and fixture check:
 
 ```text
-observable contract
-├── function or method declaration
-├── parameters and argument labels
-├── meaningful local data-flow stages
-├── callbacks, captures, accumulators, errors, and results
-└── returned value and side effects
+python scripts/run_checks.py
 ```
 
-Function names describe the action, result, question, or externally visible effect rather than an incidental loop, query, or parsing step. Parameters are named from the caller and callee perspectives. Local variables describe their current semantic state—such as raw, parsed, validated, normalized, filtered, grouped, or unit-bearing values—only when that distinction matters.
+Individual commands:
 
-The skill uses a scope-and-risk budget instead of banning short identifiers. Conventional names such as `i`, `x`, `err`, or `acc` can remain in a tiny unambiguous scope; they become candidates for improvement when they travel farther, cross closures or async boundaries, compete with similar values, or hide units, representations, or accumulated meaning.
+```text
+python scripts/export_evals.py --check
+python scripts/validate_repository.py
+python -m unittest discover -s tests -v
+python harness/verify_fixtures.py
+```
 
-Intrafunction refactors also check property shorthand, destructuring, closure captures, named arguments, reflection, serialization, and generated code before assuming a local rename is behavior-preserving.
+The repository contains 36 activation cases, 34 behavior cases, and 7 executable or contract-verifiable fixtures across JavaScript, Python, Go, Rust, Java, SQL, and Terraform.
 
-Audits classify findings as dangerous, misleading, ambiguous, inconsistent, or cosmetic. They also record confidence and contract risk so a suspicious name is not automatically converted into a large refactor.
+Generated JSONL remains synchronized with the reviewed Markdown source:
 
-## Evaluation
+```text
+python scripts/export_evals.py --write
+```
 
-The repository includes two evaluation suites:
+## Provider-Neutral Evaluation
 
-- `evals/trigger-cases.md` contains 36 cases covering function declarations, local variables, application code, systems code, schemas, data, shell, infrastructure, and negative routing boundaries.
-- `evals/behavior-cases.md` contains 34 cases testing callable contracts, intrafunction data flow, semantic accuracy, idiomatic rendering, no-op decisions, polyglot continuity, contract preservation, refactor safety, and proportionality.
+Candidate and grader integrations communicate through JSONL instead of a vendor SDK. Run an adapter without shell interpolation:
 
-Run behavior cases both with and without the skill. Score the observable invariants instead of comparing exact response wording. Treat behavior or contract regressions as more severe than missed cosmetic improvements.
+```text
+python harness/run_adapter.py \
+  --cases evals/cases/activation.jsonl \
+  --output eval-results/activation.jsonl \
+  --variant with-skill \
+  -- your-adapter-command
+```
 
-When the `description` changes, rerun the trigger cases. When workflows or references change, rerun the affected behavior cases.
+Create blinded review packets for behavior results. Keep the reidentification key private from reviewers:
 
-## Design Decisions
+```text
+python harness/prepare_review.py \
+  --results eval-results/behavior.jsonl \
+  --packet-output eval-results/review-packets.jsonl \
+  --key-output eval-results/review-keys.jsonl
+```
 
-- Instruction-only: no runtime dependencies or scripts.
-- Agent-neutral core guidance with optional OpenAI UI metadata.
-- Progressive disclosure keeps unrelated language, framework, and refactor instructions out of context.
-- Existing behavior, authorization boundaries, generated sources, and external contracts are protected by default.
-- Generic and short identifiers are evaluated in their real scope rather than mechanically banned.
-- Function declarations and their internal variables are reviewed as one semantic unit.
-- Local naming detail scales with scope, competition, transformation depth, and correctness risk.
-- Audits can produce a justified no-op.
-- Language and framework conventions override blanket verbosity.
-- Language profiles are optional refinements rather than a closed support list.
-- Polyglot consistency preserves meaning while allowing idiomatic casing and API form per layer.
-- Scripts are intentionally omitted because semantic quality cannot be validated reliably by a forbidden-word scan.
+After independent reviewers return records matching `specification/review-record.schema.json`, merge their labels and score the complete run:
+
+```text
+python harness/merge_reviews.py \
+  --results eval-results/behavior.jsonl \
+  --review-keys eval-results/review-keys.jsonl \
+  --reviews eval-results/reviews.jsonl \
+  --minimum-reviews 2 \
+  --output eval-results/graded-behavior.jsonl
+
+python harness/score_results.py \
+  --results eval-results/activation.jsonl eval-results/graded-behavior.jsonl \
+  --require-complete \
+  --policy specification/release-policy.json \
+  --json-output benchmark-results/report.json \
+  --markdown-output benchmark-results/report.md
+```
+
+For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires complete with-skill and without-skill runs, pinned implementation metadata, at least 0.90 activation precision/recall/accuracy, at least 0.90 behavior pass rate, no ungraded invariants, and no regression against the control. The scorer refuses to pass critical failures, duplicate results, malformed data, or incomplete strict runs. The default aggregation policy is conservative: any independent failure fails a critical invariant; noncritical invariants use a strict majority and ties remain ungraded.
+
+Reports separate activation, behavior, completion, critical failures, ungraded invariants, and language or risk slices. A critical failure makes the hard gate fail regardless of aggregate quality.
+
+The evaluation design follows the [official OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration of model graders.
+
+## Conformance and Evidence
+
+The project defines four cumulative evidence levels beyond package validity:
+
+1. Routing and scope.
+2. Semantic decisions.
+3. Refactor safety.
+4. Organization-grade held-out, human-calibrated, cross-agent evidence.
+
+The offline repository can prove package validity and executable fixture safety. Level 4 cannot be claimed without external model runs, pinned configurations, held-out data, and expert review. See the [release policy](specification/release-policy.json), [conformance levels](specification/conformance-levels.md), [human evaluation](docs/human-evaluation.md), and [benchmarking](benchmarks/README.md).
+
+## Contributing and Governance
+
+- [Contributing](CONTRIBUTING.md)
+- [Governance](GOVERNANCE.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Changelog](CHANGELOG.md)
+
+The project is licensed under Apache License 2.0. See [LICENSE](LICENSE).

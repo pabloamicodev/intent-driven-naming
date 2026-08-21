@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "fixtures": [
+    {
+      "id": "FX01",
+      "language": "javascript",
+      "directory": "javascript/property-shorthand",
+      "candidate_filename": "implementation.js",
+      "reference": "expected.js",
+      "critical": true,
+      "required_tool": "node",
+      "verify_command": ["node", "verify.js", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX02",
+      "language": "python",
+      "directory": "python/keyword-parameter",
+      "candidate_filename": "implementation.py",
+      "reference": "expected.py",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX03",
+      "language": "go",
+      "directory": "go/short-local-no-op",
+      "candidate_filename": "implementation.go",
+      "reference": "expected.go",
+      "critical": false,
+      "required_tool": "go",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX04",
+      "language": "rust",
+      "directory": "rust/conversion-contract",
+      "candidate_filename": "implementation.rs",
+      "reference": "expected.rs",
+      "critical": true,
+      "required_tool": "rustc",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 60
+    },
+    {
+      "id": "FX05",
+      "language": "java",
+      "directory": "java/interface-override",
+      "candidate_filename": "Implementation.java",
+      "reference": "Expected.java",
+      "critical": true,
+      "required_tool": "javac",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 60
+    },
+    {
+      "id": "FX06",
+      "language": "sql",
+      "directory": "sql/legacy-unit-alias",
+      "candidate_filename": "query.sql",
+      "reference": "expected.sql",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX07",
+      "language": "terraform",
+      "directory": "terraform/stateful-rename",
+      "candidate_filename": "main.tf",
+      "reference": "expected.tf",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    }
+  ]
+}

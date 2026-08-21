@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/review-record.schema.json",
+  "title": "Intent-Driven Naming Independent Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "review_id", "reviewer_id", "reviewer_kind", "grades"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "review_id": { "type": "string", "pattern": "^R-[a-f0-9]{20}$" },
+    "reviewer_id": { "type": "string", "minLength": 1 },
+    "reviewer_kind": { "enum": ["automated", "human", "model"] },
+    "grades": {
+      "type": "object",
+      "additionalProperties": { "enum": ["pass", "fail", "not-applicable"] }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "notes": { "type": ["string", "null"] }
+  }
+}

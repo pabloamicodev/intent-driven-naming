@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "organization-release",
+  "version": "1.0.0",
+  "required_variants": ["with-skill", "without-skill"],
+  "gated_variant": "with-skill",
+  "activation_minimums": {
+    "precision": 0.9,
+    "recall": 0.9,
+    "accuracy": 0.9
+  },
+  "behavior": {
+    "minimum_pass_rate": 0.9,
+    "maximum_ungraded": 0
+  },
+  "comparison": {
+    "baseline_variant": "without-skill",
+    "minimum_activation_accuracy_delta": 0.0,
+    "minimum_behavior_pass_rate_delta": 0.0
+  },
+  "required_implementation_fields": [
+    "adapter",
+    "adapter_version",
+    "agent",
+    "agent_version",
+    "model",
+    "model_version",
+    "reasoning"
+  ]
+}

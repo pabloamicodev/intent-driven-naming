@@ -9,7 +9,9 @@ Make important identifiers communicate durable semantic intent. Prefer the short
 
 ## Route the Task
 
-Read both [references/naming-model.md](references/naming-model.md) and [references/language-conventions.md](references/language-conventions.md) for every task that uses this skill, then load only the workflow and language profile that apply.
+Read [references/naming-model.md](references/naming-model.md) for every task that uses this skill, then load only the workflow and specialized references that apply.
+
+Read [references/language-conventions.md](references/language-conventions.md) when conventions are uncertain, the language is unlisted, the task crosses ecosystems, or public and runtime contracts make surface form important. For a small local task with clear repository conventions, use the selected profile and nearby authoritative code without loading the extra protocol.
 
 Select the workflow:
 
@@ -17,11 +19,14 @@ Select the workflow:
 - For an audit or review, read [references/audit-and-refactor.md](references/audit-and-refactor.md). Report findings without editing unless changes were explicitly requested.
 - For an authorized rename or refactor, read both [references/audit-and-refactor.md](references/audit-and-refactor.md) and [references/refactor-safety.md](references/refactor-safety.md).
 
-When the affected code creates, reviews, or renames a callable or its body, also read [references/function-and-local-naming.md](references/function-and-local-naming.md). This includes functions, methods, constructors, parameters, local bindings, callbacks, closure captures, accumulators, and intermediate results.
+When function or method declarations, constructors, commands, queries, handlers, or public parameters are central, read [references/callable-naming.md](references/callable-naming.md).
+
+When local bindings, callback parameters, closure captures, accumulators, indexes, errors, or intermediate results are central, read [references/local-variable-naming.md](references/local-variable-naming.md).
 
 Select at most the relevant language profile for each affected part of the task:
 
-- TypeScript, JavaScript, Node.js, or browser UI frameworks: read [references/typescript-javascript.md](references/typescript-javascript.md).
+- TypeScript, JavaScript, Node.js, or browser modules: read [references/typescript-javascript.md](references/typescript-javascript.md).
+- React, React Query, Vue, Svelte, Angular, or comparable component frameworks: also read [references/web-frameworks.md](references/web-frameworks.md).
 - Python, Ruby, or PHP: read [references/dynamic-languages.md](references/dynamic-languages.md).
 - Go, Rust, C, or C++: read [references/systems-languages.md](references/systems-languages.md).
 - Java, Kotlin, C#, Swift, or Dart: read [references/managed-mobile-languages.md](references/managed-mobile-languages.md).

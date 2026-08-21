@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/eval-case.schema.json",
+  "title": "Intent-Driven Naming Evaluation Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "suite", "title", "prompt", "tags"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "id": { "type": "string", "pattern": "^[TB][0-9]{2}$" },
+    "suite": { "enum": ["activation", "behavior"] },
+    "title": { "type": "string", "minLength": 1 },
+    "prompt": { "type": "string", "minLength": 1 },
+    "tags": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "expected_activation": { "type": "boolean" },
+    "rationale": { "type": "string" },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "severity", "grading"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "description": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["critical", "major", "minor"] },
+          "grading": { "enum": ["deterministic", "semantic", "human"] }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "suite": { "const": "activation" } } },
+      "then": { "required": ["expected_activation", "rationale"] }
+    },
+    {
+      "if": { "properties": { "suite": { "const": "behavior" } } },
+      "then": { "required": ["invariants"] }
+    }
+  ]
+}

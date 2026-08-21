@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Run a provider-neutral JSONL adapter against evaluation cases."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from harness.eval_core import EvaluationDataError, load_case_map, validate_result, write_jsonl
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cases", type=Path, required=True, help="JSONL case dataset")
+    parser.add_argument("--output", type=Path, required=True, help="raw result JSONL")
+    parser.add_argument("--variant", choices=("with-skill", "without-skill"), required=True)
+    parser.add_argument("--run-id", default=None)
+    parser.add_argument("--timeout-seconds", type=int, default=1800)
+    parser.add_argument("--max-output-bytes", type=int, default=50_000_000)
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("adapter", nargs=argparse.REMAINDER, help="adapter command after --")
+    args = parser.parse_args()
+
+    adapter = args.adapter
+    if adapter and adapter[0] == "--":
+        adapter = adapter[1:]
+    if not adapter:
+        parser.error("an adapter command is required after --")
+    if args.timeout_seconds < 1:
+        parser.error("--timeout-seconds must be at least 1")
+    if args.max_output_bytes < 1:
+        parser.error("--max-output-bytes must be at least 1")
+    if args.limit is not None and args.limit < 0:
+        parser.error("--limit cannot be negative")
+
+    try:
+        case_map = load_case_map([args.cases])
+    except EvaluationDataError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    cases = list(case_map.values())
+    if args.limit is not None:
+        cases = cases[: args.limit]
+    run_id = args.run_id or f"run-{uuid.uuid4().hex[:12]}"
+    requests = []
+    for case in cases:
+        requests.append(
+            {
+                "protocol_version": 1,
+                "run_id": run_id,
+                "case": case,
+                "skill_path": str(ROOT.resolve()),
+                "variant": args.variant,
+            }
+        )
+    payload = "".join(json.dumps(item, ensure_ascii=False) + "\n" for item in requests)
+
+    try:
+        completed = subprocess.run(
+            adapter,
+            input=payload,
+            text=True,
+            capture_output=True,
+            timeout=args.timeout_seconds,
+            cwd=ROOT,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"adapter execution failed: {exc}", file=sys.stderr)
+        return 2
+    if completed.stderr:
+        print(completed.stderr, file=sys.stderr, end="")
+    if completed.returncode != 0:
+        print(f"adapter exited with {completed.returncode}", file=sys.stderr)
+        return completed.returncode
+    stdout_size = len(completed.stdout.encode("utf-8"))
+    if stdout_size > args.max_output_bytes:
+        print(
+            f"adapter stdout exceeded --max-output-bytes: {stdout_size} > {args.max_output_bytes}",
+            file=sys.stderr,
+        )
+        return 2
+
+    responses = []
+    for line_number, line in enumerate(completed.stdout.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            response = json.loads(line)
+        except json.JSONDecodeError as exc:
+            print(f"adapter stdout line {line_number} is not JSON: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(response, dict):
+            print(f"adapter stdout line {line_number} must be a JSON object", file=sys.stderr)
+            return 2
+        responses.append(response)
+    response_ids = [response.get("case_id") for response in responses]
+    expected_ids = [case["id"] for case in cases]
+    if response_ids != expected_ids:
+        print(
+            f"adapter response IDs do not match request order: expected {expected_ids}, got {response_ids}",
+            file=sys.stderr,
+        )
+        return 2
+    for response in responses:
+        for field, expected in (("run_id", run_id), ("variant", args.variant)):
+            if field in response and response[field] != expected:
+                print(
+                    f"adapter response {response['case_id']} attempted to change {field}",
+                    file=sys.stderr,
+                )
+                return 2
+        response.setdefault("schema_version", "1.0")
+        response.setdefault("protocol_version", 1)
+        response.setdefault("run_id", run_id)
+        response.setdefault("variant", args.variant)
+        validation_errors = validate_result(response, case_map)
+        if validation_errors:
+            print(
+                f"adapter response {response['case_id']} is invalid: {'; '.join(validation_errors)}",
+                file=sys.stderr,
+            )
+            return 2
+        case = case_map[response["case_id"]]
+        if (
+            response["status"] == "completed"
+            and case["suite"] == "activation"
+            and not isinstance(response.get("selected_skill"), bool)
+        ):
+            print(
+                f"adapter response {response['case_id']} requires selected_skill",
+                file=sys.stderr,
+            )
+            return 2
+        if response["status"] == "completed" and case["suite"] == "behavior":
+            output_text = response.get("output_text")
+            if not isinstance(output_text, str) or not output_text.strip():
+                print(
+                    f"adapter response {response['case_id']} requires reviewable output_text",
+                    file=sys.stderr,
+                )
+                return 2
+    write_jsonl(args.output, responses)
+    print(f"wrote {len(responses)} results to {args.output}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

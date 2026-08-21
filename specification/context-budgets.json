@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "measurement": "whitespace-delimited words",
+  "budgets": {
+    "entrypoint": 900,
+    "standard-route": 7000,
+    "extended-route": 8000,
+    "single-reference": 1600
+  },
+  "exceptions": {
+    "references/callable-naming.md": 900,
+    "references/local-variable-naming.md": 800
+  },
+  "policy": "A route may exceed standard-route only when language conventions are uncertain or the task crosses ecosystems. No checked-in reference may exceed its applicable single-reference budget."
+}

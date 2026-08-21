@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "always": ["SKILL.md", "references/naming-model.md"],
+  "conditional_core": {
+    "uncertain-or-cross-language-conventions": ["references/language-conventions.md"]
+  },
+  "modes": {
+    "new-code": ["references/new-code-workflow.md"],
+    "audit": ["references/audit-and-refactor.md"],
+    "refactor": ["references/audit-and-refactor.md", "references/refactor-safety.md"]
+  },
+  "features": {
+    "callable": ["references/callable-naming.md"],
+    "local-variable": ["references/local-variable-naming.md"]
+  },
+  "profiles": {
+    "typescript-javascript": ["references/typescript-javascript.md"],
+    "web-framework": ["references/typescript-javascript.md", "references/web-frameworks.md"],
+    "dynamic": ["references/dynamic-languages.md"],
+    "systems": ["references/systems-languages.md"],
+    "managed-mobile": ["references/managed-mobile-languages.md"],
+    "functional-concurrent": ["references/functional-concurrent-languages.md"],
+    "data-infrastructure": ["references/data-infrastructure.md"]
+  }
+}

@@ -1,0 +1,2 @@
+SELECT price
+FROM orders;

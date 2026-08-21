@@ -218,7 +218,7 @@ When the codebase has no stronger convention, these verbs can clarify data acces
 
 Existing project and framework conventions take precedence.
 
-Keep the callable declaration and its body at compatible semantic levels. Parameters should describe what callers provide; meaningful local bindings should describe the value's current role or transformation; the returned value and effects should fulfill the declaration name. Use `function-and-local-naming.md` for the detailed function and intrafunction workflow.
+Keep the callable declaration and its body at compatible semantic levels. Parameters should describe what callers provide; meaningful local bindings should describe the value's current role or transformation; the returned value and effects should fulfill the declaration name. Use `callable-naming.md` for declarations and public parameters, and `local-variable-naming.md` for intrafunction data flow.
 
 ## Contextual Exceptions
 
