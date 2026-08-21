@@ -2,7 +2,8 @@
   "schema_version": "1.0",
   "always": ["SKILL.md", "references/naming-model.md"],
   "conditional_core": {
-    "uncertain-or-cross-language-conventions": ["references/language-conventions.md"]
+    "uncertain-conventions": ["references/language-conventions.md"],
+    "polyglot-boundary": ["references/polyglot-boundaries.md"]
   },
   "modes": {
     "new-code": ["references/new-code-workflow.md"],

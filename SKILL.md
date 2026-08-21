@@ -1,6 +1,6 @@
 ---
 name: intent-driven-naming
-description: Improve function, method, parameter, local-variable, type, schema, query, and infrastructure identifiers across languages. Use for code generation, naming audits, review, and behavior-preserving refactors; not for product, brand, file, branch, or prose naming.
+description: Improve identifiers when naming quality is material to code generation, an explicit naming audit, or a behavior-preserving refactor. Covers functions, parameters, locals, types, schemas, queries, and infrastructure across languages. Do not use when the task explicitly preserves identifiers, concerns only runtime behavior, or names products, brands, files, branches, or prose.
 ---
 
 # Intent-Driven Naming
@@ -11,7 +11,9 @@ Make important identifiers communicate durable semantic intent. Prefer the short
 
 Read [references/naming-model.md](references/naming-model.md) for every task that uses this skill, then load only the workflow and specialized references that apply.
 
-Read [references/language-conventions.md](references/language-conventions.md) when conventions are uncertain, the language is unlisted, the task crosses ecosystems, or public and runtime contracts make surface form important. For a small local task with clear repository conventions, use the selected profile and nearby authoritative code without loading the extra protocol.
+Read [references/language-conventions.md](references/language-conventions.md) when conventions are uncertain, the language is unlisted, or public and runtime contracts make surface form important. For a small local task with clear repository conventions, use the selected profile and nearby authoritative code without loading the extra protocol.
+
+For a change crossing two or more languages, schemas, generated boundaries, or runtime naming systems, read [references/polyglot-boundaries.md](references/polyglot-boundaries.md). Use it as the shared mapping protocol. Load a full language profile only for an artifact whose declarations are actively generated or changed, and never load more than two full profiles at once; inspect additional ecosystems from local authoritative evidence instead.
 
 Select the workflow:
 
@@ -23,7 +25,7 @@ When function or method declarations, constructors, commands, queries, handlers,
 
 When local bindings, callback parameters, closure captures, accumulators, indexes, errors, or intermediate results are central, read [references/local-variable-naming.md](references/local-variable-naming.md).
 
-Select at most the relevant language profile for each affected part of the task:
+Select the relevant language profile for each actively changed part of the task, subject to the polyglot limit above:
 
 - TypeScript, JavaScript, Node.js, or browser modules: read [references/typescript-javascript.md](references/typescript-javascript.md).
 - React, React Query, Vue, Svelte, Angular, or comparable component frameworks: also read [references/web-frameworks.md](references/web-frameworks.md).

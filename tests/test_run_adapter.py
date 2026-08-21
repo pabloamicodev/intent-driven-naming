@@ -23,6 +23,8 @@ class RunAdapterTest(unittest.TestCase):
                 str(output),
                 "--variant",
                 "with-skill",
+                "--system-id",
+                "mock-system",
                 "--limit",
                 "2",
                 "--",
@@ -33,6 +35,8 @@ class RunAdapterTest(unittest.TestCase):
             results = read_jsonl(output)
             self.assertEqual([result["case_id"] for result in results], ["T01", "T02"])
             self.assertTrue(all(result["variant"] == "with-skill" for result in results))
+            self.assertTrue(all(result["system_id"] == "mock-system" for result in results))
+            self.assertTrue(all(len(result["configuration_hash"]) == 64 for result in results))
 
     def test_rejects_adapter_identity_spoofing(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -46,6 +50,8 @@ class RunAdapterTest(unittest.TestCase):
                 str(output),
                 "--variant",
                 "with-skill",
+                "--system-id",
+                "spoof-test",
                 "--limit",
                 "1",
                 "--",

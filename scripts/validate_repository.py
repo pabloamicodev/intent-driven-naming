@@ -86,7 +86,14 @@ def prose_paragraphs(markdown: str) -> list[str]:
 
 
 def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
-    markdown_files = sorted(ROOT.rglob("*.md"))
+    markdown_files = sorted(
+        path
+        for path in ROOT.rglob("*.md")
+        if not any(
+            excluded in path.parts
+            for excluded in (".git", ".venv", ".tox", "node_modules", "__pycache__")
+        )
+    )
     reference_files = sorted((ROOT / "references").glob("*.md"))
     linked_references: set[Path] = set()
     for path in markdown_files:
@@ -218,16 +225,47 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
     standard_budget = budget_values.get("standard-route")
     if isinstance(standard_budget, int) and max_standard > standard_budget:
         errors.append(f"maximum standard route exceeds budget: {max_standard_label} {max_standard} > {standard_budget}")
-    convention_paths = [path for paths in routes.get("conditional_core", {}).values() for path in paths]
-    convention_words = sum(counts.get(path, 0) for path in set(convention_paths))
-    max_extended = max_standard + convention_words
+    conditional_paths = [path for paths in routes.get("conditional_core", {}).values() for path in paths]
+    maximum_profiles = budgets.get("maximum_simultaneous_profiles")
+    if (
+        isinstance(maximum_profiles, bool)
+        or not isinstance(maximum_profiles, int)
+        or maximum_profiles < 1
+    ):
+        errors.append("context budget maximum_simultaneous_profiles must be a positive integer")
+        maximum_profiles = 1
+    polyglot_routes: list[tuple[str, int]] = []
+    for (mode_name, mode_paths), feature_choice in itertools.product(modes, feature_choices):
+        for profile_count in range(1, min(maximum_profiles, len(profiles)) + 1):
+            for profile_choice in itertools.combinations(profiles, profile_count):
+                paths = list(always) + list(mode_paths) + list(conditional_paths)
+                feature_names: list[str] = []
+                for feature_name, feature_paths in feature_choice:
+                    feature_names.append(feature_name)
+                    paths.extend(feature_paths)
+                profile_names: list[str] = []
+                for profile_name, profile_paths in profile_choice:
+                    profile_names.append(profile_name)
+                    paths.extend(profile_paths)
+                total = sum(counts.get(path, 0) for path in dict.fromkeys(paths))
+                label = (
+                    f"{mode_name}+{'+'.join(feature_names) if feature_names else 'no-feature'}+"
+                    f"{'+'.join(profile_names)}"
+                )
+                polyglot_routes.append((label, total))
+    max_polyglot_label, max_extended = max(polyglot_routes, key=lambda item: item[1])
     extended_budget = budget_values.get("extended-route")
     if isinstance(extended_budget, int) and max_extended > extended_budget:
-        errors.append(f"maximum extended route exceeds budget: {max_extended} > {extended_budget}")
+        errors.append(
+            f"maximum extended route exceeds budget: {max_polyglot_label} "
+            f"{max_extended} > {extended_budget}"
+        )
     return {
         "file_words": counts,
         "max_standard_route": {"name": max_standard_label, "words": max_standard},
+        "max_extended_route": {"name": max_polyglot_label, "words": max_extended},
         "max_extended_route_words": max_extended,
+        "maximum_simultaneous_profiles": maximum_profiles,
     }
 
 
@@ -259,6 +297,21 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
         errors.append("activation JSONL IDs do not match trigger-cases.md")
     if behavior_source_ids != {record.get("id") for record in behavior}:
         errors.append("behavior JSONL IDs do not match behavior-cases.md")
+    fixture_manifest = load_json(ROOT / "evals" / "fixtures" / "manifest.json", errors)
+    if isinstance(fixture_manifest, dict) and isinstance(fixture_manifest.get("fixtures"), list):
+        fixture_ids: set[str] = set()
+        behavior_ids = {record.get("id") for record in behavior}
+        for fixture in fixture_manifest["fixtures"]:
+            if not isinstance(fixture, dict):
+                errors.append("fixture manifest entries must be objects")
+                continue
+            fixture_id = fixture.get("id")
+            if fixture_id in fixture_ids:
+                errors.append(f"duplicate fixture id {fixture_id}")
+            fixture_ids.add(fixture_id)
+            unknown_cases = set(fixture.get("related_behavior_cases", [])) - behavior_ids
+            if unknown_cases:
+                errors.append(f"fixture {fixture_id} references unknown behavior cases {sorted(unknown_cases)}")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for count, label in ((len(activation), "activation"), (len(behavior), "behavior")):
         if str(count) not in readme:
@@ -302,6 +355,14 @@ def validate_governance(errors: list[str]) -> None:
         return
     if version_path.exists() and policy.get("version") != version_path.read_text(encoding="utf-8").strip():
         errors.append("release policy version does not match VERSION")
+    if policy.get("schema_version") != "1.1":
+        errors.append("release policy schema_version must be 1.1")
+    dataset_version_path = ROOT / "evals" / "DATASET_VERSION"
+    if (
+        dataset_version_path.exists()
+        and policy.get("dataset_version") != dataset_version_path.read_text(encoding="utf-8").strip()
+    ):
+        errors.append("release policy dataset_version does not match evals/DATASET_VERSION")
     variants = policy.get("required_variants")
     if not isinstance(variants, list) or any(not isinstance(value, str) for value in variants):
         errors.append("release policy required_variants must be a string array")
@@ -309,29 +370,90 @@ def validate_governance(errors: list[str]) -> None:
         errors.append("release policy must require with-skill and without-skill variants")
     if policy.get("gated_variant") != "with-skill":
         errors.append("release policy must gate the with-skill variant")
-    activation = policy.get("activation_minimums")
-    if not isinstance(activation, dict) or set(activation) != {"precision", "recall", "accuracy"}:
-        errors.append("release policy activation minimums are incomplete")
+    minimum_replicates = policy.get("minimum_replicates")
+    if (
+        isinstance(minimum_replicates, bool)
+        or not isinstance(minimum_replicates, int)
+        or minimum_replicates < 3
+    ):
+        errors.append("release policy must require at least three replicates")
+    activation = policy.get("activation")
+    expected_activation_fields = {
+        "minimum_precision",
+        "minimum_recall",
+        "minimum_specificity",
+        "minimum_balanced_accuracy",
+        "minimum_accuracy",
+        "maximum_false_positive_rate",
+        "minimum_slice_accuracy",
+        "maximum_slice_false_positive_rate",
+    }
+    if not isinstance(activation, dict) or set(activation) != expected_activation_fields:
+        errors.append("release policy activation thresholds are incomplete")
     elif any(
         isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1
         for value in activation.values()
     ):
-        errors.append("release policy activation minimums must be ratios")
+        errors.append("release policy activation thresholds must be ratios")
     behavior = policy.get("behavior")
     if not isinstance(behavior, dict):
         errors.append("release policy behavior threshold is invalid")
     else:
-        pass_rate = behavior.get("minimum_pass_rate")
+        ratio_fields = (
+            "minimum_pass_rate",
+            "minimum_case_pass_rate",
+            "minimum_decision_exact_match_rate",
+            "minimum_slice_pass_rate",
+        )
         maximum_ungraded = behavior.get("maximum_ungraded")
-        if (
-            isinstance(pass_rate, bool)
-            or not isinstance(pass_rate, (int, float))
-            or not 0 <= pass_rate <= 1
-            or isinstance(maximum_ungraded, bool)
+        minimum_slice_observations = behavior.get("minimum_slice_observations")
+        if any(
+            isinstance(behavior.get(field), bool)
+            or not isinstance(behavior.get(field), (int, float))
+            or not 0 <= behavior[field] <= 1
+            for field in ratio_fields
+        ) or (
+            isinstance(maximum_ungraded, bool)
             or not isinstance(maximum_ungraded, int)
             or maximum_ungraded < 0
+            or isinstance(minimum_slice_observations, bool)
+            or not isinstance(minimum_slice_observations, int)
+            or minimum_slice_observations < 1
         ):
             errors.append("release policy behavior threshold is invalid")
+    review = policy.get("review")
+    if not isinstance(review, dict):
+        errors.append("release policy review thresholds are invalid")
+    else:
+        minimum_reviews = review.get("minimum_reviews_per_candidate")
+        agreement_fields = (
+            "minimum_raw_grade_agreement",
+            "minimum_chance_corrected_grade_agreement",
+            "minimum_decision_set_agreement",
+        )
+        if (
+            isinstance(minimum_reviews, bool)
+            or not isinstance(minimum_reviews, int)
+            or minimum_reviews < 2
+            or any(
+                isinstance(review.get(field), bool)
+                or not isinstance(review.get(field), (int, float))
+                or not -1 <= review[field] <= 1
+                for field in agreement_fields
+            )
+        ):
+            errors.append("release policy review thresholds are invalid")
+    pairwise = policy.get("pairwise")
+    expected_pairwise_fields = {
+        "minimum_resolved_fraction",
+        "minimum_with_skill_win_rate_excluding_ties",
+        "minimum_raw_reviewer_agreement",
+    }
+    if not isinstance(pairwise, dict) or set(pairwise) != expected_pairwise_fields or any(
+        isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1
+        for value in pairwise.values()
+    ):
+        errors.append("release policy pairwise thresholds are invalid")
     comparison = policy.get("comparison")
     if not isinstance(comparison, dict) or comparison.get("baseline_variant") != "without-skill":
         errors.append("release policy comparison baseline is invalid")
@@ -340,7 +462,9 @@ def validate_governance(errors: list[str]) -> None:
         or not isinstance(comparison.get(key), (int, float))
         for key in (
             "minimum_activation_accuracy_delta",
+            "minimum_activation_accuracy_lower_bound",
             "minimum_behavior_pass_rate_delta",
+            "minimum_behavior_pass_rate_lower_bound",
         )
     ):
         errors.append("release policy comparison deltas are invalid")
@@ -361,7 +485,12 @@ def validate_governance(errors: list[str]) -> None:
 def validate_placeholders(errors: list[str]) -> None:
     pattern = re.compile(r"\b(TODO|TBD|PLACEHOLDER)\b", re.IGNORECASE)
     for path in ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts:
+        if not path.is_file() or any(
+            excluded in path.parts
+            for excluded in (
+                ".git", ".venv", ".tox", "node_modules", "__pycache__", "benchmarks"
+            )
+        ):
             continue
         if path.resolve() == Path(__file__).resolve():
             continue

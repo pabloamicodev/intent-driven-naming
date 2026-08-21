@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/pairwise-review.schema.json",
+  "title": "Blinded Pairwise Review",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "pair_id", "reviewer_id", "preference", "evidence"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "pair_id": { "type": "string", "pattern": "^P-[a-f0-9]{20}$" },
+    "reviewer_id": { "type": "string", "minLength": 1 },
+    "preference": { "enum": ["A", "B", "tie"] },
+    "evidence": { "type": "string", "minLength": 1 },
+    "notes": { "type": ["string", "null"] }
+  }
+}

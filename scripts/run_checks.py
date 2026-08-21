@@ -6,6 +6,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+import importlib.util
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,10 @@ def run(label: str, command: list[str]) -> None:
 def main() -> int:
     python = sys.executable
     run("generated evals", [python, "scripts/export_evals.py", "--check"])
+    if importlib.util.find_spec("jsonschema") is not None:
+        run("json schemas", [python, "scripts/validate_schemas.py"])
+    else:
+        print("\n[json schemas] skipped; install requirements-dev.txt for strict validation", flush=True)
     run("repository", [python, "scripts/validate_repository.py"])
     run("unit tests", [python, "-m", "unittest", "discover", "-s", "tests", "-v"])
     run("fixtures", [python, "harness/verify_fixtures.py"])

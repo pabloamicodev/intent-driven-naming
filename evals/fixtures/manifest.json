@@ -4,6 +4,8 @@
     {
       "id": "FX01",
       "language": "javascript",
+      "related_behavior_cases": ["B29"],
+      "expected_decisions": ["map"],
       "directory": "javascript/property-shorthand",
       "candidate_filename": "implementation.js",
       "reference": "expected.js",
@@ -15,6 +17,8 @@
     {
       "id": "FX02",
       "language": "python",
+      "related_behavior_cases": ["B28"],
+      "expected_decisions": ["keep", "rename"],
       "directory": "python/keyword-parameter",
       "candidate_filename": "implementation.py",
       "reference": "expected.py",
@@ -25,6 +29,8 @@
     {
       "id": "FX03",
       "language": "go",
+      "related_behavior_cases": ["B05", "B13"],
+      "expected_decisions": ["keep"],
       "directory": "go/short-local-no-op",
       "candidate_filename": "implementation.go",
       "reference": "expected.go",
@@ -36,6 +42,8 @@
     {
       "id": "FX04",
       "language": "rust",
+      "related_behavior_cases": ["B16"],
+      "expected_decisions": ["rename"],
       "directory": "rust/conversion-contract",
       "candidate_filename": "implementation.rs",
       "reference": "expected.rs",
@@ -47,6 +55,8 @@
     {
       "id": "FX05",
       "language": "java",
+      "related_behavior_cases": ["B17"],
+      "expected_decisions": ["keep"],
       "directory": "java/interface-override",
       "candidate_filename": "Implementation.java",
       "reference": "Expected.java",
@@ -58,6 +68,8 @@
     {
       "id": "FX06",
       "language": "sql",
+      "related_behavior_cases": ["B21"],
+      "expected_decisions": ["map"],
       "directory": "sql/legacy-unit-alias",
       "candidate_filename": "query.sql",
       "reference": "expected.sql",
@@ -68,12 +80,65 @@
     {
       "id": "FX07",
       "language": "terraform",
+      "related_behavior_cases": ["B22"],
+      "expected_decisions": ["migrate"],
       "directory": "terraform/stateful-rename",
       "candidate_filename": "main.tf",
       "reference": "expected.tf",
       "critical": true,
       "verify_command": ["{python}", "verify.py", "{candidate}"],
       "timeout_seconds": 30
+    },
+    {
+      "id": "FX08",
+      "language": "typescript",
+      "related_behavior_cases": ["B03", "B24"],
+      "expected_decisions": ["map", "rename"],
+      "directory": "typescript/serialization-boundary",
+      "candidate_filename": "implementation.ts",
+      "reference": "expected.ts",
+      "critical": true,
+      "required_tool": "tsc",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 45
+    },
+    {
+      "id": "FX09",
+      "language": "python",
+      "related_behavior_cases": ["B09", "B36"],
+      "expected_decisions": ["keep", "rename"],
+      "directory": "python/dynamic-registry",
+      "candidate_filename": "implementation.py",
+      "reference": "expected.py",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX10",
+      "language": "csharp",
+      "related_behavior_cases": ["B11", "B28"],
+      "expected_decisions": ["keep"],
+      "directory": "csharp/named-argument-contract",
+      "candidate_filename": "Program.cs",
+      "reference": "Expected.cs",
+      "critical": true,
+      "required_tool": "dotnet",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 90
+    },
+    {
+      "id": "FX11",
+      "language": "polyglot-generated",
+      "related_behavior_cases": ["B10", "B24"],
+      "expected_decisions": ["keep", "rename"],
+      "directory": "generated/schema-source-of-truth",
+      "candidate_filename": "implementation",
+      "reference": "expected",
+      "critical": true,
+      "required_tool": "tsc",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 60
     }
   ]
 }

@@ -24,13 +24,23 @@ def main() -> int:
     parser.add_argument("--behavior-cases", type=Path, default=ROOT / "evals/cases/behavior.jsonl")
     parser.add_argument("--packet-output", type=Path, required=True)
     parser.add_argument("--key-output", type=Path, required=True)
+    parser.add_argument(
+        "--artifact-root",
+        type=Path,
+        help="explicit root containing sanitized artifact bundle paths referenced by results",
+    )
     parser.add_argument("--salt", default=None, help="optional reproducibility salt; omit for a random salt")
     args = parser.parse_args()
 
     try:
         cases = load_case_map([args.behavior_cases])
         results = [record for path in args.results for record in read_jsonl(path)]
-        packets, keys = prepare_review_packet(cases, results, args.salt or secrets.token_hex(32))
+        packets, keys = prepare_review_packet(
+            cases,
+            results,
+            args.salt or secrets.token_hex(32),
+            artifact_root=args.artifact_root,
+        )
     except (EvaluationDataError, ReviewDataError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

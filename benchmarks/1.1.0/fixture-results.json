@@ -1,0 +1,175 @@
+{
+  "counts": {
+    "failed": 0,
+    "passed": 10,
+    "skipped": 1
+  },
+  "hard_gate_passed": true,
+  "results": [
+    {
+      "critical": true,
+      "duration_ms": 59.495,
+      "expected_decisions": [
+        "map"
+      ],
+      "id": "FX01",
+      "language": "javascript",
+      "reason": null,
+      "related_behavior_cases": [
+        "B29"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 88.957,
+      "expected_decisions": [
+        "keep",
+        "rename"
+      ],
+      "id": "FX02",
+      "language": "python",
+      "reason": null,
+      "related_behavior_cases": [
+        "B28"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": false,
+      "duration_ms": 0,
+      "expected_decisions": [
+        "keep"
+      ],
+      "id": "FX03",
+      "language": "go",
+      "reason": "required tool not found: go",
+      "related_behavior_cases": [
+        "B05",
+        "B13"
+      ],
+      "status": "skipped"
+    },
+    {
+      "critical": true,
+      "duration_ms": 226.112,
+      "expected_decisions": [
+        "rename"
+      ],
+      "id": "FX04",
+      "language": "rust",
+      "reason": null,
+      "related_behavior_cases": [
+        "B16"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 682.698,
+      "expected_decisions": [
+        "keep"
+      ],
+      "id": "FX05",
+      "language": "java",
+      "reason": null,
+      "related_behavior_cases": [
+        "B17"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 62.874,
+      "expected_decisions": [
+        "map"
+      ],
+      "id": "FX06",
+      "language": "sql",
+      "reason": null,
+      "related_behavior_cases": [
+        "B21"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 50.968,
+      "expected_decisions": [
+        "migrate"
+      ],
+      "id": "FX07",
+      "language": "terraform",
+      "reason": null,
+      "related_behavior_cases": [
+        "B22"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 904.027,
+      "expected_decisions": [
+        "map",
+        "rename"
+      ],
+      "id": "FX08",
+      "language": "typescript",
+      "reason": null,
+      "related_behavior_cases": [
+        "B03",
+        "B24"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 54.888,
+      "expected_decisions": [
+        "keep",
+        "rename"
+      ],
+      "id": "FX09",
+      "language": "python",
+      "reason": null,
+      "related_behavior_cases": [
+        "B09",
+        "B36"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 1633.289,
+      "expected_decisions": [
+        "keep"
+      ],
+      "id": "FX10",
+      "language": "csharp",
+      "reason": null,
+      "related_behavior_cases": [
+        "B11",
+        "B28"
+      ],
+      "status": "passed"
+    },
+    {
+      "critical": true,
+      "duration_ms": 793.856,
+      "expected_decisions": [
+        "keep",
+        "rename"
+      ],
+      "id": "FX11",
+      "language": "polyglot-generated",
+      "reason": null,
+      "related_behavior_cases": [
+        "B10",
+        "B24"
+      ],
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0",
+  "valid": true
+}

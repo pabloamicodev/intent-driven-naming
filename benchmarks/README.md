@@ -12,11 +12,12 @@ Keep model, reasoning, tools, environment, retry policy, and case ordering equiv
 
 ## Required Reports
 
-- Activation precision, recall, and accuracy.
-- Behavior pass rate and ungraded count.
+- Activation precision, recall, specificity, false-positive rate, balanced accuracy, accuracy, confidence intervals, and difficulty/locale slices.
+- Behavior invariant pass rate, case pass rate, decision exact-match rate, and ungraded count.
 - Critical contract failures.
 - Results by language, mode, risk, and expected decision.
 - Pairwise expert or calibrated-grader preference.
+- Raw and chance-corrected reviewer agreement plus decision-set agreement.
 - Input tokens, output tokens, latency, and cost when available.
 - Skipped fixtures and missing tools.
 
@@ -28,5 +29,8 @@ Keep model, reasoning, tools, environment, retry policy, and case ordering equiv
 - No benchmark publication with missing configuration metadata.
 - The with-skill variant meets the versioned activation and behavior thresholds.
 - The with-skill variant does not regress against the otherwise equivalent without-skill control.
+- Accuracy and invariant-pass deltas are computed from matched case/replicate outcomes, with paired 95% intervals rather than treating the two variants as unrelated samples.
+- Every system and variant has at least three complete, independently identified repetitions.
+- Review evidence meets the versioned reviewer-count and agreement thresholds.
 
-Use `harness/run_adapter.py` to collect raw outputs, `harness/prepare_review.py` to blind behavior results, `harness/merge_reviews.py` to aggregate independent labels, and `harness/score_results.py --require-complete --policy specification/release-policy.json` for release scoring. Store release evidence in a versioned subdirectory rather than overwriting prior runs.
+Use `harness/run_adapter.py` to collect raw outputs, `harness/prepare_review.py` to blind behavior results, `harness/merge_reviews.py` to aggregate independent labels and calculate agreement, and the pairwise tools to measure direct preference. Run `harness/score_results.py --require-complete --policy specification/release-policy.json --review-agreement ...` for release scoring. Store raw results, blinded-packet hashes, private-key custody notes, review records, configuration metadata, and final reports in a versioned evidence directory rather than overwriting prior runs.

@@ -1,26 +1,39 @@
 #!/usr/bin/env python3
-"""Export human-readable evaluation cases to stable JSONL datasets."""
+"""Export explicit human-reviewed evaluation metadata to stable JSONL and a manifest."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
 TRIGGER_SOURCE = ROOT / "evals" / "trigger-cases.md"
 BEHAVIOR_SOURCE = ROOT / "evals" / "behavior-cases.md"
+DATASET_VERSION_PATH = ROOT / "evals" / "DATASET_VERSION"
 OUTPUT_DIR = ROOT / "evals" / "cases"
 ACTIVATION_OUTPUT = OUTPUT_DIR / "activation.jsonl"
 BEHAVIOR_OUTPUT = OUTPUT_DIR / "behavior.jsonl"
+MANIFEST_OUTPUT = ROOT / "evals" / "manifest.json"
 
 TRIGGER_ROW = re.compile(
-    r"^\| (T\d{2}) \| (.*?) \| (Trigger|Do not trigger) \| (.*?) \|$"
+    r"^\| (T\d{2}) \| (.*?) \| (Trigger|Do not trigger) \| "
+    r"(easy|standard|edge|adversarial) \| ([a-z]{2}(?:-[A-Z]{2})?) \| (.*?) \|$"
 )
 BEHAVIOR_HEADING = re.compile(r"^## (B\d{2}) — (.+)$")
+INVARIANT_ROW = re.compile(
+    r"^- \[(critical|major|minor)\]\[(deterministic|semantic|human)\] (.+)$"
+)
+VALID_MODES = {"generation", "audit", "refactor"}
+VALID_DIFFICULTIES = {"easy", "standard", "edge", "adversarial"}
+VALID_RISKS = {"internal", "cross-module", "external", "dynamic", "stateful", "unknown"}
+VALID_DECISIONS = {"keep", "rename", "map", "migrate", "defer", "not-applicable"}
 
 
 def normalize_inline_markdown(value: str) -> str:
@@ -75,28 +88,44 @@ def derive_tags(text: str, base: list[str]) -> list[str]:
     return tags
 
 
-def parse_activation_cases(markdown: str) -> list[dict[str, object]]:
-    cases: list[dict[str, object]] = []
+def dataset_version() -> str:
+    version = DATASET_VERSION_PATH.read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise ValueError(f"Invalid evals/DATASET_VERSION: {version}")
+    return version
+
+
+def parse_activation_cases(markdown: str, version: str | None = None) -> list[dict[str, Any]]:
+    version = version or dataset_version()
+    cases: list[dict[str, Any]] = []
     for line in markdown.splitlines():
         match = TRIGGER_ROW.match(line)
         if not match:
             continue
-        case_id, prompt, expectation, rationale = match.groups()
+        case_id, prompt, expectation, difficulty, locale, rationale = match.groups()
         expected = expectation == "Trigger"
         clean_prompt = normalize_inline_markdown(prompt)
         clean_rationale = normalize_inline_markdown(rationale)
         tags = derive_tags(
             f"{clean_prompt} {clean_rationale}",
-            ["activation", "positive" if expected else "negative"],
+            [
+                "activation",
+                "positive" if expected else "negative",
+                difficulty,
+                f"locale-{locale.lower()}",
+            ],
         )
         cases.append(
             {
                 "schema_version": "1.0",
+                "dataset_version": version,
                 "id": case_id,
                 "suite": "activation",
                 "title": f"Activation {case_id}",
                 "prompt": clean_prompt,
                 "tags": tags,
+                "difficulty": difficulty,
+                "locale": locale,
                 "expected_activation": expected,
                 "rationale": clean_rationale,
             }
@@ -120,43 +149,54 @@ def extract_fenced_block(lines: list[str], start: int) -> tuple[str, int]:
     return "\n".join(content).strip(), index + 1
 
 
-def invariant_metadata(description: str) -> tuple[str, str]:
-    lowered = description.lower()
-    critical_markers = (
-        "behavior",
-        "contract",
-        "serialized",
-        "external",
-        "public",
-        "runtime",
-        "not changed",
-        "unchanged",
-        "does not edit",
-        "no files are modified",
-        "preserved",
-        "remains unchanged",
-        "does not replace",
-    )
-    deterministic_markers = (
-        "no files are modified",
-        "numeric value",
-        "serialized output",
-        "field remains",
-        "spelling remains",
-        "loop structure",
-        "message tag",
-        "stored column",
-        "resource label",
-        "output shape",
-    )
-    severity = "critical" if any(marker in lowered for marker in critical_markers) else "major"
-    grading = "deterministic" if any(marker in lowered for marker in deterministic_markers) else "semantic"
-    return severity, grading
+def parse_metadata(section: list[str], case_id: str) -> dict[str, Any]:
+    try:
+        metadata_heading = section.index("### Case metadata")
+        prompt_heading = section.index("### Prompt")
+    except ValueError as exc:
+        raise ValueError(f"{case_id}: missing case metadata or prompt heading") from exc
+    values: dict[str, str] = {}
+    for line in section[metadata_heading + 1 : prompt_heading]:
+        match = re.match(r"^- ([A-Za-z ]+): (.+)$", line)
+        if match:
+            values[match.group(1).lower().replace(" ", "_")] = match.group(2).strip()
+    required = {
+        "mode",
+        "difficulty",
+        "locale",
+        "languages",
+        "contract_risk",
+        "expected_decisions",
+    }
+    missing = required - set(values)
+    if missing:
+        raise ValueError(f"{case_id}: missing metadata {sorted(missing)}")
+    languages = [value.strip() for value in values["languages"].split(",")]
+    decisions = [value.strip() for value in values["expected_decisions"].split(",")]
+    if values["mode"] not in VALID_MODES:
+        raise ValueError(f"{case_id}: invalid mode {values['mode']}")
+    if values["difficulty"] not in VALID_DIFFICULTIES:
+        raise ValueError(f"{case_id}: invalid difficulty {values['difficulty']}")
+    if values["contract_risk"] not in VALID_RISKS:
+        raise ValueError(f"{case_id}: invalid contract risk {values['contract_risk']}")
+    if not languages or any(not value for value in languages):
+        raise ValueError(f"{case_id}: languages must be non-empty")
+    if not decisions or any(value not in VALID_DECISIONS for value in decisions):
+        raise ValueError(f"{case_id}: invalid expected decisions {decisions}")
+    return {
+        "mode": values["mode"],
+        "difficulty": values["difficulty"],
+        "locale": values["locale"],
+        "languages": languages,
+        "contract_risk": values["contract_risk"],
+        "expected_decisions": decisions,
+    }
 
 
-def parse_behavior_cases(markdown: str) -> list[dict[str, object]]:
+def parse_behavior_cases(markdown: str, version: str | None = None) -> list[dict[str, Any]]:
+    version = version or dataset_version()
     lines = markdown.splitlines()
-    cases: list[dict[str, object]] = []
+    cases: list[dict[str, Any]] = []
     index = 0
     while index < len(lines):
         heading = BEHAVIOR_HEADING.match(lines[index])
@@ -170,40 +210,55 @@ def parse_behavior_cases(markdown: str) -> list[dict[str, object]]:
                 break
             section_end += 1
         section = lines[index:section_end]
+        metadata = parse_metadata(section, case_id)
         try:
             prompt_heading = section.index("### Prompt")
             prompt, _ = extract_fenced_block(section, prompt_heading + 1)
             invariants_heading = section.index("### Required invariants")
         except ValueError as exc:
             raise ValueError(f"Malformed behavior case {case_id}: {exc}") from exc
-        invariant_lines: list[str] = []
+        invariants: list[dict[str, str]] = []
         for line in section[invariants_heading + 1 :]:
             if line.startswith("### "):
                 break
-            if line.startswith("- "):
-                invariant_lines.append(line[2:].strip())
-        if not invariant_lines:
-            raise ValueError(f"Behavior case {case_id} has no required invariants")
-        invariants: list[dict[str, str]] = []
-        for invariant_index, description in enumerate(invariant_lines, start=1):
-            severity, grading = invariant_metadata(description)
+            if not line.startswith("- "):
+                continue
+            match = INVARIANT_ROW.match(line)
+            if not match:
+                raise ValueError(f"{case_id}: invariant metadata must be explicit: {line}")
+            severity, grading, description = match.groups()
             invariants.append(
                 {
-                    "id": f"{case_id.lower()}-{invariant_index:02d}",
+                    "id": f"{case_id.lower()}-{len(invariants) + 1:02d}",
                     "description": description,
                     "severity": severity,
                     "grading": grading,
                 }
             )
-        tags = derive_tags(f"{title} {prompt}", ["behavior"])
+        if not invariants:
+            raise ValueError(f"Behavior case {case_id} has no required invariants")
+        tags = derive_tags(
+            f"{title} {prompt}",
+            [
+                "behavior",
+                metadata["mode"],
+                metadata["difficulty"],
+                f"locale-{metadata['locale'].lower()}",
+                f"risk-{metadata['contract_risk']}",
+                *(f"decision-{decision}" for decision in metadata["expected_decisions"]),
+                *metadata["languages"],
+            ],
+        )
         cases.append(
             {
                 "schema_version": "1.0",
+                "dataset_version": version,
                 "id": case_id,
                 "suite": "behavior",
                 "title": title,
                 "prompt": prompt,
                 "tags": tags,
+                **metadata,
                 "invariants": invariants,
             }
         )
@@ -211,26 +266,80 @@ def parse_behavior_cases(markdown: str) -> list[dict[str, object]]:
     return cases
 
 
-def serialize_jsonl(records: list[dict[str, object]]) -> str:
+def serialize_jsonl(records: list[dict[str, Any]]) -> str:
     return "".join(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n" for record in records)
 
 
+def sha256_text(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def count_values(cases: list[dict[str, Any]], field: str) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for case in cases:
+        value = case[field]
+        if isinstance(value, list):
+            counts.update(value)
+        else:
+            counts[str(value)] += 1
+    return dict(sorted(counts.items()))
+
+
 def build_outputs() -> dict[Path, str]:
-    activation_cases = parse_activation_cases(TRIGGER_SOURCE.read_text(encoding="utf-8"))
-    behavior_cases = parse_behavior_cases(BEHAVIOR_SOURCE.read_text(encoding="utf-8"))
-    if len(activation_cases) != 36:
-        raise ValueError(f"Expected 36 activation cases, found {len(activation_cases)}")
-    if len(behavior_cases) != 34:
-        raise ValueError(f"Expected 34 behavior cases, found {len(behavior_cases)}")
+    version = dataset_version()
+    trigger_text = TRIGGER_SOURCE.read_text(encoding="utf-8")
+    behavior_text = BEHAVIOR_SOURCE.read_text(encoding="utf-8")
+    activation_cases = parse_activation_cases(trigger_text, version)
+    behavior_cases = parse_behavior_cases(behavior_text, version)
+    if not activation_cases or not behavior_cases:
+        raise ValueError("Evaluation sources must contain activation and behavior cases")
+    ids = [case["id"] for case in activation_cases + behavior_cases]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Evaluation case IDs must be unique")
+    activation_jsonl = serialize_jsonl(activation_cases)
+    behavior_jsonl = serialize_jsonl(behavior_cases)
+    manifest = {
+        "schema_version": "1.0",
+        "dataset_version": version,
+        "counts": {
+            "activation": len(activation_cases),
+            "behavior": len(behavior_cases),
+            "invariants": sum(len(case["invariants"]) for case in behavior_cases),
+        },
+        "source_sha256": {
+            "trigger-cases.md": sha256_text(trigger_text),
+            "behavior-cases.md": sha256_text(behavior_text),
+        },
+        "output_sha256": {
+            "cases/activation.jsonl": sha256_text(activation_jsonl),
+            "cases/behavior.jsonl": sha256_text(behavior_jsonl),
+        },
+        "strata": {
+            "activation_expected": {
+                "false": sum(not case["expected_activation"] for case in activation_cases),
+                "true": sum(case["expected_activation"] for case in activation_cases),
+            },
+            "activation_difficulty": count_values(activation_cases, "difficulty"),
+            "activation_locale": count_values(activation_cases, "locale"),
+            "behavior_mode": count_values(behavior_cases, "mode"),
+            "behavior_difficulty": count_values(behavior_cases, "difficulty"),
+            "behavior_locale": count_values(behavior_cases, "locale"),
+            "behavior_language": count_values(behavior_cases, "languages"),
+            "behavior_contract_risk": count_values(behavior_cases, "contract_risk"),
+            "behavior_decision": count_values(behavior_cases, "expected_decisions"),
+        },
+    }
     return {
-        ACTIVATION_OUTPUT: serialize_jsonl(activation_cases),
-        BEHAVIOR_OUTPUT: serialize_jsonl(behavior_cases),
+        ACTIVATION_OUTPUT: activation_jsonl,
+        BEHAVIOR_OUTPUT: behavior_jsonl,
+        MANIFEST_OUTPUT: json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
     }
 
 
 def write_outputs(outputs: dict[Path, str]) -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for path, content in outputs.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8", newline="\n")
         print(f"wrote {path.relative_to(ROOT)}")
 
@@ -254,7 +363,7 @@ def check_outputs(outputs: dict[Path, str]) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--write", action="store_true", help="write generated JSONL datasets")
+    mode.add_argument("--write", action="store_true", help="write generated datasets and manifest")
     mode.add_argument("--check", action="store_true", help="fail if generated datasets are stale")
     args = parser.parse_args()
 

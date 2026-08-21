@@ -42,6 +42,8 @@ def verify_fixtures(candidate_root: Path | None, strict_tools: bool) -> dict[str
                 {
                     "id": fixture["id"],
                     "language": fixture["language"],
+                    "related_behavior_cases": fixture["related_behavior_cases"],
+                    "expected_decisions": fixture["expected_decisions"],
                     "status": status,
                     "critical": fixture["critical"],
                     "reason": f"required tool not found: {required_tool}",
@@ -54,6 +56,8 @@ def verify_fixtures(candidate_root: Path | None, strict_tools: bool) -> dict[str
                 {
                     "id": fixture["id"],
                     "language": fixture["language"],
+                    "related_behavior_cases": fixture["related_behavior_cases"],
+                    "expected_decisions": fixture["expected_decisions"],
                     "status": "failed",
                     "critical": fixture["critical"],
                     "reason": f"candidate not found: {candidate}",
@@ -63,19 +67,37 @@ def verify_fixtures(candidate_root: Path | None, strict_tools: bool) -> dict[str
             continue
         command = render_command(fixture["verify_command"], candidate)
         started = time.perf_counter()
-        completed = subprocess.run(
-            command,
-            cwd=directory,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=fixture.get("timeout_seconds", 60),
-        )
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=directory,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=fixture.get("timeout_seconds", 60),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            duration_ms = round((time.perf_counter() - started) * 1000, 3)
+            results.append(
+                {
+                    "id": fixture["id"],
+                    "language": fixture["language"],
+                    "related_behavior_cases": fixture["related_behavior_cases"],
+                    "expected_decisions": fixture["expected_decisions"],
+                    "status": "failed",
+                    "critical": fixture["critical"],
+                    "reason": str(exc),
+                    "duration_ms": duration_ms,
+                }
+            )
+            continue
         duration_ms = round((time.perf_counter() - started) * 1000, 3)
         results.append(
             {
                 "id": fixture["id"],
                 "language": fixture["language"],
+                "related_behavior_cases": fixture["related_behavior_cases"],
+                "expected_decisions": fixture["expected_decisions"],
                 "status": "passed" if completed.returncode == 0 else "failed",
                 "critical": fixture["critical"],
                 "reason": completed.stderr.strip() or completed.stdout.strip() or None,

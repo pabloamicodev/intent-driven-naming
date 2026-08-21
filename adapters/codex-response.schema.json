@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["selected_skill", "loaded_resources", "answer"],
+  "properties": {
+    "selected_skill": { "type": "boolean" },
+    "loaded_resources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "answer": { "type": "string", "minLength": 1 }
+  }
+}

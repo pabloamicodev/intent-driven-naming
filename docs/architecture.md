@@ -4,7 +4,7 @@ Intent-Driven Naming separates semantic judgment from deterministic verification
 
 ## Loaded Skill Surface
 
-`SKILL.md` selects one mode, relevant feature guidance, and one language profile. `naming-model.md` is the universal semantic core. Convention discovery is conditional when local evidence is already clear.
+`SKILL.md` selects one mode, relevant feature guidance, and the smallest applicable language surface. `naming-model.md` is the universal semantic core. Convention discovery is conditional when local evidence is already clear. Cross-ecosystem work uses the compact polyglot boundary protocol and at most two full profiles concurrently.
 
 Only Markdown files routed for the current task become instructions. Specifications, datasets, fixtures, scripts, and governance files remain outside model context unless a maintenance task explicitly reads them.
 

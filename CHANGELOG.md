@@ -2,6 +2,25 @@
 
 All notable changes are documented here. The project follows Semantic Versioning.
 
+## 1.1.0 — 2026-08-21
+
+### Added
+
+- Balanced, versioned activation data with 60 cases, multilingual boundaries, adversarial negatives, explicit strata, content hashes, and a generated manifest.
+- Explicit metadata for 36 behavior cases across three locales, covering mode, language, difficulty, contract risk, expected decision, invariant severity, and grading method.
+- Repeated-run and multi-system evaluation identities, specificity and balanced-accuracy metrics, Wilson intervals, decision confusion, retry accounting, and per-slice reports.
+- Sanitized artifact bundles, evidence-required independent review, reviewer-agreement statistics, and blinded randomized pairwise comparison.
+- A reference Codex CLI adapter that isolates cases and keeps with-skill and without-skill workspaces configuration-equivalent.
+- A compact polyglot boundary protocol for mapping internal, external, generated, dynamic, and persisted identifiers.
+- Executable TypeScript serialization, Python runtime-registry, C# named-argument, and generated-source fixtures.
+- JSON Schema validation, pinned CI actions and development dependencies, and a deterministic runtime-only local installer.
+
+### Changed
+
+- Tightened activation scope so explicit identifier-preservation and behavior-only tasks do not activate the skill.
+- Raised the organization release contract to dataset and policy version 1.1 with three required replicates, control comparisons, reviewer agreement, decision accuracy, false-positive, and critical-safety gates.
+- Limited polyglot context to a boundary map and at most two simultaneous full language profiles.
+
 ## 1.0.0 — 2026-08-21
 
 ### Added

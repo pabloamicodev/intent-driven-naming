@@ -1,0 +1,19 @@
+{
+  "architecture": "AMD64",
+  "operating_system": "Windows-10-10.0.26300-SP0",
+  "recorded_at": "2026-08-21",
+  "schema_version": "1.0",
+  "tools": {
+    "codex": "codex-cli 0.149.0-alpha.4",
+    "dotnet": "8.0.423",
+    "git": "git version 2.55.0.windows.3",
+    "go": null,
+    "javac": "javac 17.0.12",
+    "node": "v24.18.1",
+    "powershell": "PowerShell 7.6.5",
+    "python": "3.11.9",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "terraform": null,
+    "typescript": "Version 5.2.2"
+  }
+}

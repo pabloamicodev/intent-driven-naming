@@ -1,26 +1,43 @@
+import json
 import unittest
 
 from scripts.export_evals import build_outputs, parse_activation_cases, parse_behavior_cases
 
 
 class ExportEvalsTest(unittest.TestCase):
-    def test_exports_expected_case_counts(self):
+    def test_exports_versioned_cases_and_manifest(self):
         outputs = build_outputs()
-        line_counts = {path.name: len(content.splitlines()) for path, content in outputs.items()}
-        self.assertEqual(line_counts["activation.jsonl"], 36)
-        self.assertEqual(line_counts["behavior.jsonl"], 34)
+        by_name = {path.name: content for path, content in outputs.items()}
+        self.assertEqual(len(by_name["activation.jsonl"].splitlines()), 60)
+        self.assertEqual(len(by_name["behavior.jsonl"].splitlines()), 36)
+        manifest = json.loads(by_name["manifest.json"])
+        self.assertEqual(manifest["dataset_version"], "1.1.0")
+        self.assertEqual(manifest["counts"]["activation"], 60)
+        self.assertEqual(manifest["counts"]["behavior"], 36)
 
-    def test_activation_parser_requires_table_rows(self):
+    def test_activation_parser_requires_explicit_strata(self):
         cases = parse_activation_cases(
-            "| T01 | Improve function names. | Trigger | Identifier work. |\n"
-            "| T02 | Name a product. | Do not trigger | Brand work. |\n"
+            "| T01 | Improve function names. | Trigger | standard | en | Identifier work. |\n"
+            "| T02 | Name a product. | Do not trigger | adversarial | es | Brand work. |\n",
+            "1.1.0",
         )
         self.assertEqual([case["expected_activation"] for case in cases], [True, False])
+        self.assertEqual(cases[1]["difficulty"], "adversarial")
+        self.assertEqual(cases[1]["locale"], "es")
 
-    def test_behavior_parser_extracts_invariants(self):
+    def test_behavior_parser_extracts_explicit_metadata_and_invariants(self):
         markdown = """# Cases
 
 ## B01 — Example
+
+### Case metadata
+
+- Mode: refactor
+- Difficulty: edge
+- Locale: en
+- Languages: typescript, python
+- Contract risk: external
+- Expected decisions: map
 
 ### Prompt
 
@@ -30,15 +47,17 @@ Improve this function.
 
 ### Required invariants
 
-- Behavior remains unchanged.
-- A no-op is acceptable.
+- [critical][semantic] Behavior remains unchanged.
+- [major][human] A no-op is acceptable.
 
 ## Scoring
 """
-        cases = parse_behavior_cases(markdown)
+        cases = parse_behavior_cases(markdown, "1.1.0")
         self.assertEqual(cases[0]["id"], "B01")
-        self.assertEqual(len(cases[0]["invariants"]), 2)
+        self.assertEqual(cases[0]["languages"], ["typescript", "python"])
+        self.assertEqual(cases[0]["expected_decisions"], ["map"])
         self.assertEqual(cases[0]["invariants"][0]["severity"], "critical")
+        self.assertEqual(cases[0]["invariants"][1]["grading"], "human")
 
 
 if __name__ == "__main__":

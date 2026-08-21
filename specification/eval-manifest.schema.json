@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/eval-manifest.schema.json",
+  "title": "Versioned Evaluation Dataset Manifest",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "dataset_version", "counts", "source_sha256", "output_sha256", "strata"],
+  "$defs": {
+    "digestMap": {
+      "type": "object", "minProperties": 1,
+      "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "dataset_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["activation", "behavior", "invariants"],
+      "properties": {
+        "activation": { "type": "integer", "minimum": 1 },
+        "behavior": { "type": "integer", "minimum": 1 },
+        "invariants": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "source_sha256": { "$ref": "#/$defs/digestMap" },
+    "output_sha256": { "$ref": "#/$defs/digestMap" },
+    "strata": {
+      "type": "object", "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/countMap" }
+    }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "counts": {
+    "activation": 60,
+    "behavior": 36,
+    "invariants": 137
+  },
+  "dataset_version": "1.1.0",
+  "output_sha256": {
+    "cases/activation.jsonl": "e32f426b1d99ed221963da21fbb817ee4113feebc54da0aded20f868d5938f78",
+    "cases/behavior.jsonl": "5fcf3c2e62fdcb9c7273ed25f91ee6e356b669291b2d64d8914db062ed8313af"
+  },
+  "schema_version": "1.0",
+  "source_sha256": {
+    "behavior-cases.md": "9370e195364f9f7189d3a8a465aea04bec32493f5d8f6e524a93294ff3b89f41",
+    "trigger-cases.md": "b6acee5bcaeef53bf7e3d5f2c668d1cb4ba4b84928073fbe7ce13b87d5f6639c"
+  },
+  "strata": {
+    "activation_difficulty": {
+      "adversarial": 5,
+      "easy": 8,
+      "edge": 13,
+      "standard": 34
+    },
+    "activation_expected": {
+      "false": 30,
+      "true": 30
+    },
+    "activation_locale": {
+      "de": 1,
+      "en": 53,
+      "es": 3,
+      "fr": 1,
+      "pt": 2
+    },
+    "behavior_contract_risk": {
+      "cross-module": 1,
+      "dynamic": 3,
+      "external": 14,
+      "internal": 16,
+      "stateful": 1,
+      "unknown": 1
+    },
+    "behavior_decision": {
+      "defer": 6,
+      "keep": 13,
+      "map": 8,
+      "migrate": 4,
+      "not-applicable": 3,
+      "rename": 16
+    },
+    "behavior_difficulty": {
+      "adversarial": 6,
+      "edge": 20,
+      "standard": 10
+    },
+    "behavior_language": {
+      "csharp": 2,
+      "elixir": 2,
+      "generic": 9,
+      "go": 2,
+      "java": 1,
+      "javascript": 6,
+      "powershell": 1,
+      "python": 5,
+      "react": 2,
+      "rust": 1,
+      "sql": 1,
+      "swift": 1,
+      "terraform": 1,
+      "typescript": 8
+    },
+    "behavior_locale": {
+      "en": 34,
+      "es": 1,
+      "pt": 1
+    },
+    "behavior_mode": {
+      "audit": 11,
+      "generation": 3,
+      "refactor": 22
+    }
+  }
+}

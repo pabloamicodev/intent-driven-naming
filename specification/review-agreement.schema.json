@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/review-agreement.schema.json",
+  "title": "Reviewer Agreement Report",
+  "type": "object",
+  "required": [
+    "schema_version", "reviewed_candidates", "review_records", "minimum_reviews_per_candidate", "grade_pairs",
+    "raw_grade_agreement", "chance_corrected_grade_agreement", "decision_set_agreement",
+    "disagreements"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "reviewed_candidates": { "type": "integer", "minimum": 0 },
+    "review_records": { "type": "integer", "minimum": 0 },
+    "minimum_reviews_per_candidate": { "type": "integer", "minimum": 0 },
+    "grade_pairs": { "type": "integer", "minimum": 0 },
+    "raw_grade_agreement": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "chance_corrected_grade_agreement": { "type": ["number", "null"], "minimum": -1, "maximum": 1 },
+    "decision_set_agreement": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "disagreements": { "type": "array", "items": { "type": "object" } }
+  }
+}

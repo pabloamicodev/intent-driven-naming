@@ -46,30 +46,52 @@ def markdown_report(report: dict) -> str:
         if policy["violations"]:
             lines.append("")
     if report["completion"]:
-        lines.extend(["## Completion", "", "| Variant | Completed | Expected | Complete |", "|---|---:|---:|---|"])
-        for variant, stats in report["completion"].items():
+        lines.extend(["## Completion", "", "| Cohort and replicate | Completed | Expected | Complete |", "|---|---:|---:|---|"])
+        for cohort_replicate, stats in report["completion"].items():
             lines.append(
-                f"| {variant} | {stats['completed_cases']} | {stats['expected_cases']} | "
+                f"| {cohort_replicate} | {stats['completed_cases']} | {stats['expected_cases']} | "
                 f"{'yes' if stats['complete'] else 'no'} |"
             )
         lines.append("")
     if report["activation"]:
-        lines.extend(["## Activation", "", "| Variant | Precision | Recall | Accuracy | TP | TN | FP | FN |", "|---|---:|---:|---:|---:|---:|---:|---:|"])
-        for variant, stats in report["activation"].items():
+        lines.extend(["## Activation", "", "| Cohort | Precision | Recall | Specificity | Balanced | Accuracy | 95% CI | FP rate |", "|---|---:|---:|---:|---:|---:|---|---:|"])
+        for cohort, stats in report["activation"].items():
             lines.append(
-                f"| {variant} | {stats['precision']} | {stats['recall']} | {stats['accuracy']} | "
-                f"{stats['tp']} | {stats['tn']} | {stats['fp']} | {stats['fn']} |"
+                f"| {cohort} | {stats['precision']} | {stats['recall']} | {stats['specificity']} | "
+                f"{stats['balanced_accuracy']} | {stats['accuracy']} | "
+                f"{stats['accuracy_confidence_interval_95']} | {stats['false_positive_rate']} |"
             )
         lines.append("")
     if report["behavior"]:
-        lines.extend(["## Behavior", "", "| Variant | Pass rate | Critical failures | Critical ungraded | Ungraded | Hard gate |", "|---|---:|---:|---:|---:|---|"])
-        for variant, stats in report["behavior"].items():
+        lines.extend(["## Behavior", "", "| Cohort | Invariant pass | Case pass | Critical failures | Critical ungraded | Ungraded | Hard gate |", "|---|---:|---:|---:|---:|---:|---|"])
+        for cohort, stats in report["behavior"].items():
             lines.append(
-                f"| {variant} | {stats['pass_rate']} | {stats['critical_failures']} | "
+                f"| {cohort} | {stats['pass_rate']} | {stats['case_pass_rate']} | {stats['critical_failures']} | "
                 f"{stats['critical_ungraded']} | {stats['ungraded']} | "
                 f"{'PASS' if stats['hard_gate_passed'] else 'FAIL'} |"
             )
         lines.append("")
+    if report.get("decisions"):
+        lines.extend(["## Decisions", "", "| Cohort | Exact match | Graded | Ungraded |", "|---|---:|---:|---:|"])
+        for cohort, stats in report["decisions"].items():
+            lines.append(
+                f"| {cohort} | {stats['exact_match_rate']} | {stats['graded_cases']} | "
+                f"{stats['ungraded_cases']} |"
+            )
+        lines.append("")
+    if report.get("review_agreement"):
+        agreement = report["review_agreement"]
+        lines.extend(
+            [
+                "## Review Agreement",
+                "",
+                f"- Minimum reviews per candidate: {agreement.get('minimum_reviews_per_candidate')}",
+                f"- Raw grade agreement: {agreement.get('raw_grade_agreement')}",
+                f"- Chance-corrected grade agreement: {agreement.get('chance_corrected_grade_agreement')}",
+                f"- Decision-set agreement: {agreement.get('decision_set_agreement')}",
+                "",
+            ]
+        )
     if report["usage"]:
         lines.extend(
             [
@@ -112,6 +134,16 @@ def main() -> int:
     parser.add_argument("--markdown-output", type=Path)
     parser.add_argument("--policy", type=Path, help="versioned release policy JSON")
     parser.add_argument(
+        "--review-agreement",
+        type=Path,
+        help="review agreement JSON produced by merge_reviews.py",
+    )
+    parser.add_argument(
+        "--pairwise-report",
+        type=Path,
+        help="pairwise JSON produced by score_pairwise.py",
+    )
+    parser.add_argument(
         "--require-complete",
         action="store_true",
         help="fail unless every loaded case completed for every result variant",
@@ -126,6 +158,26 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 2
     report = score_results(cases, results, require_complete=args.require_complete)
+    if args.review_agreement:
+        try:
+            agreement = json.loads(args.review_agreement.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"cannot load review agreement: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(agreement, dict):
+            print("review agreement must be a JSON object", file=sys.stderr)
+            return 2
+        report["review_agreement"] = agreement
+    if args.pairwise_report:
+        try:
+            pairwise = json.loads(args.pairwise_report.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"cannot load pairwise report: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(pairwise, dict):
+            print("pairwise report must be a JSON object", file=sys.stderr)
+            return 2
+        report["pairwise_report"] = pairwise
     if args.policy:
         try:
             policy = json.loads(args.policy.read_text(encoding="utf-8"))

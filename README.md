@@ -1,6 +1,6 @@
 # Intent-Driven Naming
 
-Version 1.0.0 is an Agent Skill and conformance project for generating, auditing, and safely refactoring software identifiers according to semantic intent across languages and development stacks.
+Version 1.1.0 is an Agent Skill and conformance project for generating, auditing, and safely refactoring software identifiers according to semantic intent across languages and development stacks.
 
 The core skill remains instruction-only. Deterministic tooling surrounds it to validate the package, route context efficiently, execute contract fixtures, run provider-neutral evaluations, and block safety regressions. No script rejects an identifier merely because it is called `data`, `result`, `item`, `i`, or another generic or short name.
 
@@ -36,6 +36,7 @@ intent-driven-naming/
 ├── references/
 │   ├── naming-model.md
 │   ├── language-conventions.md
+│   ├── polyglot-boundaries.md
 │   ├── new-code-workflow.md
 │   ├── audit-and-refactor.md
 │   ├── refactor-safety.md
@@ -70,10 +71,18 @@ This follows the progressive-disclosure design described in the [official OpenAI
 
 ## Install as a Skill
 
-Place the repository so the entrypoint is available at one of these locations:
+Install the runtime-only surface from this checkout:
+
+```powershell
+python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming"
+python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --check
+```
+
+The installer refuses to overwrite an existing destination. For a repository-scoped installation, place the runtime surface so the entrypoint is available at one of these locations:
 
 ```text
 $HOME/.agents/skills/intent-driven-naming/SKILL.md
+$HOME/.codex/skills/intent-driven-naming/SKILL.md
 $REPOSITORY_ROOT/.agents/skills/intent-driven-naming/SKILL.md
 ```
 
@@ -132,7 +141,9 @@ python -m unittest discover -s tests -v
 python harness/verify_fixtures.py
 ```
 
-The repository contains 36 activation cases, 34 behavior cases, and 7 executable or contract-verifiable fixtures across JavaScript, Python, Go, Rust, Java, SQL, and Terraform.
+Install `requirements-dev.lock` when running the same strict JSON Schema and lint checks enforced by CI. The skill runtime itself still has no Python dependency.
+
+The repository contains 60 balanced activation cases, 36 behavior cases with 137 explicit invariants, and 11 executable or contract-verifiable fixtures across JavaScript, TypeScript, Python, Go, Rust, Java, C#, SQL, Terraform, dynamic lookup, and generated code. Activation requests span five locales, and behavior cases include English, Spanish, and Portuguese prompts.
 
 Generated JSONL remains synchronized with the reviewed Markdown source:
 
@@ -149,14 +160,35 @@ python harness/run_adapter.py \
   --cases evals/cases/activation.jsonl \
   --output eval-results/activation.jsonl \
   --variant with-skill \
+  --system-id your-agent-model-config \
+  --replicate-id r1 \
   -- your-adapter-command
 ```
+
+The included Codex CLI adapter can be used as the adapter command. Pin the model version in the benchmark record rather than inferring it later:
+
+```text
+python harness/run_adapter.py \
+  --cases evals/cases/activation.jsonl \
+  --output eval-results/codex-with-skill-r1.jsonl \
+  --variant with-skill \
+  --system-id codex-model-high \
+  --replicate-id r1 \
+  -- python adapters/codex_cli.py \
+     --model MODEL_ID \
+     --model-version PINNED_MODEL_VERSION \
+     --reasoning high \
+     --artifact-output-root eval-results/artifacts
+```
+
+Repeat the same command for `without-skill` and for `r1`, `r2`, and `r3`, changing only the variant or replicate identity.
 
 Create blinded review packets for behavior results. Keep the reidentification key private from reviewers:
 
 ```text
 python harness/prepare_review.py \
   --results eval-results/behavior.jsonl \
+  --artifact-root eval-results/artifacts \
   --packet-output eval-results/review-packets.jsonl \
   --key-output eval-results/review-keys.jsonl
 ```
@@ -169,19 +201,35 @@ python harness/merge_reviews.py \
   --review-keys eval-results/review-keys.jsonl \
   --reviews eval-results/reviews.jsonl \
   --minimum-reviews 2 \
+  --agreement-output eval-results/review-agreement.json \
   --output eval-results/graded-behavior.jsonl
+
+python harness/prepare_pairwise_review.py \
+  --results eval-results/behavior-with.jsonl eval-results/behavior-without.jsonl \
+  --artifact-root eval-results/artifacts \
+  --salt STUDY_SECRET \
+  --packet-output eval-results/pairwise-packets.jsonl \
+  --key-output eval-results/pairwise-keys.jsonl
+
+python harness/score_pairwise.py \
+  --keys eval-results/pairwise-keys.jsonl \
+  --reviews eval-results/pairwise-reviews.jsonl \
+  --minimum-reviews 2 \
+  --output eval-results/pairwise-report.json
 
 python harness/score_results.py \
   --results eval-results/activation.jsonl eval-results/graded-behavior.jsonl \
   --require-complete \
   --policy specification/release-policy.json \
+  --review-agreement eval-results/review-agreement.json \
+  --pairwise-report eval-results/pairwise-report.json \
   --json-output benchmark-results/report.json \
   --markdown-output benchmark-results/report.md
 ```
 
-For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires complete with-skill and without-skill runs, pinned implementation metadata, at least 0.90 activation precision/recall/accuracy, at least 0.90 behavior pass rate, no ungraded invariants, and no regression against the control. The scorer refuses to pass critical failures, duplicate results, malformed data, or incomplete strict runs. The default aggregation policy is conservative: any independent failure fails a critical invariant; noncritical invariants use a strict majority and ties remain ungraded.
+For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires three complete repetitions of with-skill and without-skill cohorts, pinned implementation metadata, at least 0.90 activation precision, recall, specificity, balanced accuracy, and overall accuracy, at least 0.90 invariant pass rate, at least 0.85 case and decision accuracy, calibrated reviewer agreement, no ungraded invariants, and no material regression against the control. Critical failures, duplicate attempts, malformed identities, incomplete repetitions, and unresolved review labels fail the release gate.
 
-Reports separate activation, behavior, completion, critical failures, ungraded invariants, and language or risk slices. A critical failure makes the hard gate fail regardless of aggregate quality.
+Reports separate activation, behavior, completion, confidence intervals, retries, critical failures, decision accuracy, reviewer agreement, and difficulty, locale, language, mode, risk, and expected-decision slices. A critical failure makes the hard gate fail regardless of aggregate quality.
 
 The evaluation design follows the [official OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration of model graders.
 

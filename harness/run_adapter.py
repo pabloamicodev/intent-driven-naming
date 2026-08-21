@@ -13,7 +13,13 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from harness.eval_core import EvaluationDataError, load_case_map, validate_result, write_jsonl
+from harness.eval_core import (
+    EvaluationDataError,
+    canonical_configuration_hash,
+    load_case_map,
+    validate_result,
+    write_jsonl,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +30,14 @@ def main() -> int:
     parser.add_argument("--cases", type=Path, required=True, help="JSONL case dataset")
     parser.add_argument("--output", type=Path, required=True, help="raw result JSONL")
     parser.add_argument("--variant", choices=("with-skill", "without-skill"), required=True)
+    parser.add_argument("--system-id", required=True, help="stable model-and-agent configuration name")
+    parser.add_argument("--replicate-id", default="r1")
+    parser.add_argument("--attempt", type=int, default=1)
+    parser.add_argument(
+        "--implementation-json",
+        type=Path,
+        help="optional pinned implementation metadata; otherwise the adapter must return it",
+    )
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--timeout-seconds", type=int, default=1800)
     parser.add_argument("--max-output-bytes", type=int, default=50_000_000)
@@ -42,6 +56,19 @@ def main() -> int:
         parser.error("--max-output-bytes must be at least 1")
     if args.limit is not None and args.limit < 0:
         parser.error("--limit cannot be negative")
+    if args.attempt < 1:
+        parser.error("--attempt must be at least 1")
+    if not args.replicate_id.strip() or not args.system_id.strip():
+        parser.error("--system-id and --replicate-id must be non-empty")
+
+    declared_implementation = None
+    if args.implementation_json:
+        try:
+            declared_implementation = json.loads(args.implementation_json.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            parser.error(f"cannot read --implementation-json: {exc}")
+        if not isinstance(declared_implementation, dict):
+            parser.error("--implementation-json must contain a JSON object")
 
     try:
         case_map = load_case_map([args.cases])
@@ -58,6 +85,9 @@ def main() -> int:
             {
                 "protocol_version": 1,
                 "run_id": run_id,
+                "system_id": args.system_id,
+                "replicate_id": args.replicate_id,
+                "attempt": args.attempt,
                 "case": case,
                 "skill_path": str(ROOT.resolve()),
                 "variant": args.variant,
@@ -113,7 +143,16 @@ def main() -> int:
         )
         return 2
     for response in responses:
-        for field, expected in (("run_id", run_id), ("variant", args.variant)):
+        case = case_map[response["case_id"]]
+        protected_fields = (
+            ("run_id", run_id),
+            ("system_id", args.system_id),
+            ("replicate_id", args.replicate_id),
+            ("attempt", args.attempt),
+            ("dataset_version", case["dataset_version"]),
+            ("variant", args.variant),
+        )
+        for field, expected in protected_fields:
             if field in response and response[field] != expected:
                 print(
                     f"adapter response {response['case_id']} attempted to change {field}",
@@ -123,7 +162,27 @@ def main() -> int:
         response.setdefault("schema_version", "1.0")
         response.setdefault("protocol_version", 1)
         response.setdefault("run_id", run_id)
+        response.setdefault("system_id", args.system_id)
+        response.setdefault("replicate_id", args.replicate_id)
+        response.setdefault("attempt", args.attempt)
+        response.setdefault("dataset_version", case["dataset_version"])
         response.setdefault("variant", args.variant)
+        if declared_implementation is not None:
+            if "implementation" in response and response["implementation"] != declared_implementation:
+                print(
+                    f"adapter response {response['case_id']} implementation metadata differs from the declared configuration",
+                    file=sys.stderr,
+                )
+                return 2
+            response["implementation"] = declared_implementation
+        implementation = response.get("implementation")
+        if not isinstance(implementation, dict) or not implementation:
+            print(
+                f"adapter response {response['case_id']} requires implementation metadata",
+                file=sys.stderr,
+            )
+            return 2
+        response["configuration_hash"] = canonical_configuration_hash(implementation)
         validation_errors = validate_result(response, case_map)
         if validation_errors:
             print(
@@ -131,7 +190,6 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
-        case = case_map[response["case_id"]]
         if (
             response["status"] == "completed"
             and case["suite"] == "activation"
@@ -144,9 +202,10 @@ def main() -> int:
             return 2
         if response["status"] == "completed" and case["suite"] == "behavior":
             output_text = response.get("output_text")
-            if not isinstance(output_text, str) or not output_text.strip():
+            bundle = response.get("artifact_bundle")
+            if (not isinstance(output_text, str) or not output_text.strip()) and not bundle:
                 print(
-                    f"adapter response {response['case_id']} requires reviewable output_text",
+                    f"adapter response {response['case_id']} requires output_text or artifact_bundle",
                     file=sys.stderr,
                 )
                 return 2
