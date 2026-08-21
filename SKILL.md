@@ -1,48 +1,52 @@
 ---
 name: intent-driven-naming
-description: Apply intent-driven naming when generating, reviewing, modifying, or refactoring application code. Use for code generation and identifier audits that need clearer domain meaning, state, scope, transformations, relationships, or units while preserving behavior; do not use for product, brand, file, or prose naming.
+description: Improve identifier names in generated or existing application code. Use for code generation, naming audits, code review, and behavior-preserving refactors; not for product, brand, file, or prose naming.
 ---
 
 # Intent-Driven Naming
 
-Make every important identifier communicate semantic intent rather than its programming-language type. Prefer the shortest name that remains unambiguous within its scope.
+Make important identifiers communicate durable semantic intent. Prefer the shortest name that remains unambiguous within its actual scope, and do not force a rename when the existing name is already clear.
 
-## Required Reference
+## Route the Task
 
-Read [references/naming-guidelines.md](references/naming-guidelines.md) before performing a naming-sensitive implementation, review, or refactor. Use the guideline as decision criteria, not as a mechanical ban list.
+Read [references/naming-model.md](references/naming-model.md) for every task that uses this skill, then load only the workflow that applies:
 
-## Choose the Scenario
+- For new code, read [references/new-code-workflow.md](references/new-code-workflow.md).
+- For an audit or review, read [references/audit-and-refactor.md](references/audit-and-refactor.md). Report findings without editing unless changes were explicitly requested.
+- For an authorized rename or refactor, read both [references/audit-and-refactor.md](references/audit-and-refactor.md) and [references/refactor-safety.md](references/refactor-safety.md).
+- For TypeScript, JavaScript, React, or React Query code, also read [references/typescript-react-patterns.md](references/typescript-react-patterns.md).
 
-### Generate New Code
+Do not read a mode-specific reference that does not apply.
 
-1. Establish the domain vocabulary already used by the request and codebase.
-2. Name important values by domain meaning, state, scope, transformation, relationship, or unit when those distinctions matter.
-3. Keep related identifiers synchronized, including collections and elements, entities and IDs, booleans, state pairs, callbacks, and query families.
-4. Before completing the implementation, perform a silent semantic naming pass using the final review in the reference.
+## Shared Invariants
 
-Do not add a separate naming report unless the user asks for one.
+- Derive names from domain meaning, not primarily from programming-language type.
+- Use the vocabulary already established by the user, codebase, contracts, and domain documentation.
+- Add state, relationship, representation, scope, cardinality, or unit only when the distinction affects understanding or correctness.
+- Treat generic words as context-dependent signals, not forbidden tokens.
+- Keep naming pairs and semantic families synchronized.
+- Preserve behavior, authorization boundaries, and protected external contracts.
+- Prefer a local, high-confidence improvement over broad cosmetic churn.
+- Follow established language and framework conventions when they conflict with a generic naming preference.
 
-### Audit or Refactor Existing Code
+## Execute the Selected Mode
 
-1. If the user requests an audit or review only, report findings without editing code.
-2. If changes are requested, prioritize dangerous names, then misleading, ambiguous, and inconsistent names.
-3. Preserve runtime behavior and keep the diff limited to the requested scope.
-4. Preserve external contracts, public APIs, schemas, serialized keys, environment variables, URL parameters, framework conventions, and third-party integration fields unless the user explicitly authorizes changing them.
-5. When an external name cannot change, translate it to a semantic internal name at the boundary when useful.
-6. Avoid unrelated architectural refactors and broad cosmetic rename churn.
-
-## Working Rules
-
-- Follow the codebase's established domain vocabulary unless it is demonstrably misleading.
-- Treat generic names as context-dependent, not automatically invalid.
-- Add qualifiers only when they resolve real ambiguity.
-- Describe the resulting state of a transformation instead of using sequence words such as `new`, `updated`, `processed`, or `final`.
-- Keep names searchable without making them unnecessarily long.
-- Do not substitute one business term for another unless they represent the same concept.
+- **New code:** Apply the naming model while designing the code, then perform a silent semantic pass before completion. Do not add a naming report unless requested.
+- **Audit only:** Rank findings by impact and confidence. Include protected names and justified no-op conclusions when relevant. Do not edit files.
+- **Refactor:** Create the smallest safe rename set, protect boundaries, use symbol-aware changes when available, and verify behavior with the repository's existing checks.
 
 ## Completion Criteria
 
 - Important identifiers remain understandable away from their declarations.
-- IDs, entities, collections, booleans, units, states, and transformations are distinguishable where correctness or clarity depends on them.
+- Entities, IDs, collections, booleans, units, states, and transformations are distinguishable where the distinction matters.
 - Related identifiers use consistent semantic families.
-- Existing behavior and protected external contracts remain unchanged unless the user requested otherwise.
+- Audit findings explain evidence, severity, confidence, and contract risk.
+- Refactors preserve behavior and protected contracts, and verification results are reported accurately.
+- Clear existing names remain unchanged.
+
+## Boundaries
+
+- Do not rename public APIs, schemas, serialized keys, environment variables, URL parameters, framework-required identifiers, or third-party fields merely for style.
+- Do not edit generated code when its source or generator should be changed instead.
+- Do not perform unrelated architectural refactors to support a naming change.
+- Stop and report the ambiguity when a safe name depends on unresolved domain meaning or an untraceable dynamic contract.

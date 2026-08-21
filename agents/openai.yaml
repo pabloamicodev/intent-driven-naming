@@ -1,4 +1,4 @@
 interface:
   display_name: "Intent-Driven Naming"
-  short_description: "Make code identifiers communicate intent"
-  default_prompt: "Use $intent-driven-naming to improve identifier names without changing behavior."
+  short_description: "Generate and refactor semantically clear names"
+  default_prompt: "Use $intent-driven-naming to audit this code and apply only safe, behavior-preserving identifier improvements."
