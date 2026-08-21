@@ -102,9 +102,10 @@
       "required": [
         "comparison_variant", "required_usage_fields", "minimum_resource_reporting_rate",
         "minimum_core_resource_rate", "maximum_unknown_resources",
+        "maximum_unnecessary_resources", "maximum_overloaded_profile_results",
         "maximum_unexpected_activation_resource_results", "maximum_input_token_ratio",
         "maximum_skill_context_word_ratio", "maximum_turn_ratio", "maximum_standard_route_words",
-        "maximum_extended_route_words"
+        "maximum_extended_route_words", "maximum_runtime_instruction_words"
       ],
       "properties": {
         "comparison_variant": { "const": "previous-skill" },
@@ -119,12 +120,15 @@
         "minimum_resource_reporting_rate": { "$ref": "#/$defs/ratio" },
         "minimum_core_resource_rate": { "$ref": "#/$defs/ratio" },
         "maximum_unknown_resources": { "type": "integer", "minimum": 0 },
+        "maximum_unnecessary_resources": { "type": "integer", "minimum": 0 },
+        "maximum_overloaded_profile_results": { "type": "integer", "minimum": 0 },
         "maximum_unexpected_activation_resource_results": { "type": "integer", "minimum": 0 },
         "maximum_input_token_ratio": { "$ref": "#/$defs/positiveRatio" },
         "maximum_skill_context_word_ratio": { "$ref": "#/$defs/positiveRatio" },
         "maximum_turn_ratio": { "$ref": "#/$defs/positiveRatio" },
         "maximum_standard_route_words": { "type": "integer", "minimum": 1 },
-        "maximum_extended_route_words": { "type": "integer", "minimum": 1 }
+        "maximum_extended_route_words": { "type": "integer", "minimum": 1 },
+        "maximum_runtime_instruction_words": { "type": "integer", "minimum": 1 }
       }
     },
     "required_implementation_fields": {

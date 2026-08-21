@@ -104,21 +104,33 @@ def _write_installation(destination: Path) -> None:
     )
 
 
-def _next_backup_path(destination: Path) -> Path:
+def default_backup_directory(destination: Path) -> Path:
+    """Keep replacements outside the one-level skill discovery surface."""
+    if destination.parent.name.lower() == "skills":
+        return destination.parent.parent / "skill-backups"
+    return destination.parent / ".skill-backups"
+
+
+def _next_backup_path(destination: Path, backup_directory: Path) -> Path:
     version = "unknown"
     version_path = destination / "VERSION"
     if version_path.is_file():
         version = version_path.read_text(encoding="utf-8").strip() or version
-    base = destination.with_name(f"{destination.name}.backup-{version}")
+    base = backup_directory / f"{destination.name}-{version}"
     candidate = base
     suffix = 1
     while candidate.exists():
-        candidate = destination.with_name(f"{base.name}.{suffix}")
+        candidate = backup_directory / f"{base.name}.{suffix}"
         suffix += 1
     return candidate
 
 
-def install(destination: Path, *, replace: bool = False) -> Path | None:
+def install(
+    destination: Path,
+    *,
+    replace: bool = False,
+    backup_directory: Path | None = None,
+) -> Path | None:
     if destination.exists():
         if not replace:
             raise ValueError(f"destination already exists: {destination}")
@@ -130,7 +142,22 @@ def install(destination: Path, *, replace: bool = False) -> Path | None:
     try:
         _write_installation(staging)
         if destination.exists():
-            backup = _next_backup_path(destination)
+            backup_directory = (backup_directory or default_backup_directory(destination)).resolve()
+            if backup_directory.anchor.lower() != destination.anchor.lower():
+                raise ValueError("backup directory must be on the same filesystem anchor")
+            try:
+                backup_directory.relative_to(destination.resolve())
+            except ValueError:
+                pass
+            else:
+                raise ValueError("backup directory cannot be inside the installed skill")
+            if (
+                destination.parent.name.lower() == "skills"
+                and backup_directory == destination.parent.resolve()
+            ):
+                raise ValueError("backup directory cannot be the one-level skill discovery directory")
+            backup_directory.mkdir(parents=True, exist_ok=True)
+            backup = _next_backup_path(destination, backup_directory)
             destination.replace(backup)
         staging.replace(destination)
     except Exception:
@@ -151,6 +178,11 @@ def main() -> int:
         action="store_true",
         help="Atomically replace an existing installation and retain a versioned backup.",
     )
+    parser.add_argument(
+        "--backup-directory",
+        type=Path,
+        help="Replacement backup directory; defaults outside the skill discovery directory.",
+    )
     args = parser.parse_args()
     destination = args.destination.resolve()
     try:
@@ -161,7 +193,8 @@ def main() -> int:
                 return 1
             print(f"installed runtime matches source: {destination}")
             return 0
-        backup = install(destination, replace=args.replace)
+        backup_directory = args.backup_directory.resolve() if args.backup_directory else None
+        backup = install(destination, replace=args.replace, backup_directory=backup_directory)
     except (OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

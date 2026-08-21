@@ -14,6 +14,13 @@ SENSITIVE_NAME = re.compile(
     r"(^|[._-])(\.env|credentials?|secrets?|tokens?|id_rsa)([._-]|$)|\.(pem|key|p12|pfx)$",
     re.IGNORECASE,
 )
+SENSITIVE_CONTENT = (
+    ("private key", re.compile(r"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")),
+    ("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{36,255}\b")),
+    ("OpenAI-style secret", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
+    ("AWS access key", re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")),
+    ("Slack token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b")),
+)
 
 
 def _resolve_inside(root: Path, relative: str) -> Path:
@@ -56,6 +63,11 @@ def build_bundle(root: Path, includes: list[str], max_bytes: int) -> dict:
             content = content_bytes.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ValueError(f"binary or non-UTF-8 artifact is not allowed: {relative}") from exc
+        for secret_type, pattern in SENSITIVE_CONTENT:
+            if pattern.search(content):
+                raise ValueError(
+                    f"{secret_type} detected in artifact content; exclude or redact {relative}"
+                )
         files.append(
             {
                 "path": relative,

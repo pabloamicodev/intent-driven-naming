@@ -7,6 +7,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -48,7 +49,9 @@ def main() -> int:
     )
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--timeout-seconds", type=int, default=1800)
-    parser.add_argument("--max-output-bytes", type=int, default=50_000_000)
+    parser.add_argument("--max-input-bytes", type=int, default=10_000_000)
+    parser.add_argument("--max-output-bytes", type=int, default=10_000_000)
+    parser.add_argument("--max-stderr-bytes", type=int, default=1_000_000)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("adapter", nargs=argparse.REMAINDER, help="adapter command after --")
     args = parser.parse_args()
@@ -60,8 +63,8 @@ def main() -> int:
         parser.error("an adapter command is required after --")
     if args.timeout_seconds < 1:
         parser.error("--timeout-seconds must be at least 1")
-    if args.max_output_bytes < 1:
-        parser.error("--max-output-bytes must be at least 1")
+    if min(args.max_input_bytes, args.max_output_bytes, args.max_stderr_bytes) < 1:
+        parser.error("adapter byte limits must be at least 1")
     if args.limit is not None and args.limit < 0:
         parser.error("--limit cannot be negative")
     if args.attempt < 1:
@@ -110,35 +113,61 @@ def main() -> int:
             }
         )
     payload = "".join(json.dumps(item, ensure_ascii=False) + "\n" for item in requests)
-
-    try:
-        completed = subprocess.run(
-            adapter,
-            input=payload,
-            text=True,
-            capture_output=True,
-            timeout=args.timeout_seconds,
-            cwd=ROOT,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        print(f"adapter execution failed: {exc}", file=sys.stderr)
-        return 2
-    if completed.stderr:
-        print(completed.stderr, file=sys.stderr, end="")
-    if completed.returncode != 0:
-        print(f"adapter exited with {completed.returncode}", file=sys.stderr)
-        return completed.returncode
-    stdout_size = len(completed.stdout.encode("utf-8"))
-    if stdout_size > args.max_output_bytes:
+    payload_bytes = payload.encode("utf-8")
+    if len(payload_bytes) > args.max_input_bytes:
         print(
-            f"adapter stdout exceeded --max-output-bytes: {stdout_size} > {args.max_output_bytes}",
+            f"adapter input exceeded --max-input-bytes: "
+            f"{len(payload_bytes)} > {args.max_input_bytes}",
             file=sys.stderr,
         )
         return 2
 
+    with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+        try:
+            completed = subprocess.run(
+                adapter,
+                input=payload_bytes,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                timeout=args.timeout_seconds,
+                cwd=ROOT,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(f"adapter execution failed: {exc}", file=sys.stderr)
+            return 2
+        stdout_size = stdout_file.tell()
+        stderr_size = stderr_file.tell()
+        if stderr_size > args.max_stderr_bytes:
+            print(
+                f"adapter stderr exceeded --max-stderr-bytes: "
+                f"{stderr_size} > {args.max_stderr_bytes}",
+                file=sys.stderr,
+            )
+            return 2
+        stderr_file.seek(0)
+        stderr_text = stderr_file.read().decode("utf-8", errors="replace")
+        if stderr_text:
+            print(stderr_text, file=sys.stderr, end="")
+        if completed.returncode != 0:
+            print(f"adapter exited with {completed.returncode}", file=sys.stderr)
+            return completed.returncode
+        if stdout_size > args.max_output_bytes:
+            print(
+                f"adapter stdout exceeded --max-output-bytes: "
+                f"{stdout_size} > {args.max_output_bytes}",
+                file=sys.stderr,
+            )
+            return 2
+        stdout_file.seek(0)
+        try:
+            stdout = stdout_file.read().decode("utf-8")
+        except UnicodeDecodeError as exc:
+            print(f"adapter stdout is not UTF-8: {exc}", file=sys.stderr)
+            return 2
+
     responses = []
-    for line_number, line in enumerate(completed.stdout.splitlines(), start=1):
+    for line_number, line in enumerate(stdout.splitlines(), start=1):
         if not line.strip():
             continue
         try:

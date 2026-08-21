@@ -135,6 +135,9 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
 
 def validate_frontmatter(errors: list[str]) -> dict[str, int]:
     skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    line_count = len(skill.splitlines())
+    if line_count > 500:
+        errors.append(f"SKILL.md: {line_count} lines exceeds the Agent Skills limit of 500")
     if not skill.startswith("---\n"):
         errors.append("SKILL.md: missing YAML frontmatter")
         return {}
@@ -145,8 +148,13 @@ def validate_frontmatter(errors: list[str]) -> dict[str, int]:
     frontmatter = parts[1]
     name_match = re.search(r"^name:\s*(.+)$", frontmatter, re.MULTILINE)
     description_match = re.search(r"^description:\s*(.+)$", frontmatter, re.MULTILINE)
-    if not name_match or name_match.group(1).strip() != "intent-driven-naming":
+    skill_name = name_match.group(1).strip() if name_match else ""
+    if skill_name != "intent-driven-naming":
         errors.append("SKILL.md: unexpected or missing name")
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill_name):
+        errors.append("SKILL.md: name violates the portable Agent Skills naming grammar")
+    if skill_name and skill_name != ROOT.name:
+        errors.append("SKILL.md: name must match the parent directory")
     if not description_match:
         errors.append("SKILL.md: missing description")
         description_length = 0
@@ -163,7 +171,11 @@ def validate_frontmatter(errors: list[str]) -> dict[str, int]:
         short_length = len(short_match.group(1))
         if not 25 <= short_length <= 64:
             errors.append(f"agents/openai.yaml: short_description length is {short_length}, expected 25-64")
-    return {"description_length": description_length, "short_description_length": short_length}
+    return {
+        "description_length": description_length,
+        "short_description_length": short_length,
+        "skill_lines": line_count,
+    }
 
 
 def validate_routes(errors: list[str]) -> dict[str, Any]:
@@ -207,6 +219,10 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
     always_budget = budget_values.get("always-loaded")
     if isinstance(always_budget, int) and always_words > always_budget:
         errors.append(f"always-loaded route exceeds budget: {always_words} > {always_budget}")
+    runtime_words = sum(counts.values())
+    runtime_budget = budget_values.get("runtime-instructions")
+    if isinstance(runtime_budget, int) and runtime_words > runtime_budget:
+        errors.append(f"runtime instructions exceed budget: {runtime_words} > {runtime_budget}")
     modes = list(routes.get("modes", {}).items())
     features = list(routes.get("features", {}).items())
     profiles = list(routes.get("profiles", {}).items())
@@ -266,6 +282,7 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
     return {
         "file_words": counts,
         "always_loaded_words": always_words,
+        "runtime_instruction_words": runtime_words,
         "max_standard_route": {"name": max_standard_label, "words": max_standard},
         "max_extended_route": {"name": max_polyglot_label, "words": max_extended},
         "max_extended_route_words": max_extended,
@@ -302,7 +319,9 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
     if behavior_source_ids != {record.get("id") for record in behavior}:
         errors.append("behavior JSONL IDs do not match behavior-cases.md")
     fixture_manifest = load_json(ROOT / "evals" / "fixtures" / "manifest.json", errors)
+    fixture_count = 0
     if isinstance(fixture_manifest, dict) and isinstance(fixture_manifest.get("fixtures"), list):
+        fixture_count = len(fixture_manifest["fixtures"])
         fixture_ids: set[str] = set()
         behavior_ids = {record.get("id") for record in behavior}
         for fixture in fixture_manifest["fixtures"]:
@@ -316,6 +335,41 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
             unknown_cases = set(fixture.get("related_behavior_cases", [])) - behavior_ids
             if unknown_cases:
                 errors.append(f"fixture {fixture_id} references unknown behavior cases {sorted(unknown_cases)}")
+    manifest = load_json(ROOT / "evals" / "manifest.json", errors)
+    corpus_policy = load_json(ROOT / "specification" / "corpus-policy.json", errors)
+    if isinstance(manifest, dict) and isinstance(corpus_policy, dict):
+        if corpus_policy.get("dataset_version") != manifest.get("dataset_version"):
+            errors.append("corpus policy dataset_version does not match evaluation manifest")
+        counts = dict(manifest.get("counts", {}))
+        counts["fixtures"] = fixture_count
+        for label, minimum in corpus_policy.get("minimum_counts", {}).items():
+            actual = counts.get(label)
+            if not isinstance(actual, int) or actual < minimum:
+                errors.append(f"corpus {label} count {actual} is below required minimum {minimum}")
+        strata = manifest.get("strata", {})
+        expected = strata.get("activation_expected", {})
+        if isinstance(expected, dict):
+            imbalance = abs(expected.get("true", 0) - expected.get("false", 0))
+            maximum_imbalance = corpus_policy.get("maximum_activation_expected_imbalance")
+            if isinstance(maximum_imbalance, int) and imbalance > maximum_imbalance:
+                errors.append(
+                    f"activation expected-label imbalance {imbalance} exceeds {maximum_imbalance}"
+                )
+        for stratum, minimum in corpus_policy.get("minimum_unique_values", {}).items():
+            values = strata.get(stratum, {})
+            actual = len(values) if isinstance(values, dict) else 0
+            if actual < minimum:
+                errors.append(
+                    f"corpus stratum {stratum} has {actual} values, below required {minimum}"
+                )
+        for stratum, minimums in corpus_policy.get("minimum_strata", {}).items():
+            actuals = strata.get(stratum, {})
+            for value, minimum in minimums.items():
+                actual = actuals.get(value, 0) if isinstance(actuals, dict) else 0
+                if actual < minimum:
+                    errors.append(
+                        f"corpus stratum {stratum}.{value} count {actual} is below {minimum}"
+                    )
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for count, label in ((len(activation), "activation"), (len(behavior), "behavior")):
         if str(count) not in readme:
@@ -329,7 +383,11 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
     )
     if export_check.returncode != 0:
         errors.append(export_check.stderr.strip() or "generated evaluation datasets are stale")
-    return {"activation_cases": len(activation), "behavior_cases": len(behavior)}
+    return {
+        "activation_cases": len(activation),
+        "behavior_cases": len(behavior),
+        "fixture_cases": fixture_count,
+    }
 
 
 def validate_governance(errors: list[str]) -> None:
@@ -481,12 +539,15 @@ def validate_governance(errors: list[str]) -> None:
         "minimum_resource_reporting_rate",
         "minimum_core_resource_rate",
         "maximum_unknown_resources",
+        "maximum_unnecessary_resources",
+        "maximum_overloaded_profile_results",
         "maximum_unexpected_activation_resource_results",
         "maximum_input_token_ratio",
         "maximum_skill_context_word_ratio",
         "maximum_turn_ratio",
         "maximum_standard_route_words",
         "maximum_extended_route_words",
+        "maximum_runtime_instruction_words",
     }
     if not isinstance(efficiency, dict) or set(efficiency) != expected_efficiency_fields:
         errors.append("release policy efficiency thresholds are incomplete")
@@ -508,6 +569,12 @@ def validate_governance(errors: list[str]) -> None:
             or isinstance(efficiency.get("maximum_unknown_resources"), bool)
             or not isinstance(efficiency.get("maximum_unknown_resources"), int)
             or efficiency["maximum_unknown_resources"] < 0
+            or isinstance(efficiency.get("maximum_unnecessary_resources"), bool)
+            or not isinstance(efficiency.get("maximum_unnecessary_resources"), int)
+            or efficiency["maximum_unnecessary_resources"] < 0
+            or isinstance(efficiency.get("maximum_overloaded_profile_results"), bool)
+            or not isinstance(efficiency.get("maximum_overloaded_profile_results"), int)
+            or efficiency["maximum_overloaded_profile_results"] < 0
             or isinstance(
                 efficiency.get("maximum_unexpected_activation_resource_results"), bool
             )
@@ -525,16 +592,34 @@ def validate_governance(errors: list[str]) -> None:
                     "maximum_turn_ratio",
                 )
             )
+            or any(
+                isinstance(efficiency.get(field), bool)
+                or not isinstance(efficiency.get(field), int)
+                or efficiency[field] < 1
+                for field in (
+                    "maximum_standard_route_words",
+                    "maximum_extended_route_words",
+                    "maximum_runtime_instruction_words",
+                )
+            )
         ):
             errors.append("release policy efficiency thresholds are invalid")
         route_metrics = validate_routes([])
         standard_limit = efficiency.get("maximum_standard_route_words")
         extended_limit = efficiency.get("maximum_extended_route_words")
-        if route_metrics and isinstance(standard_limit, int) and isinstance(extended_limit, int):
+        runtime_limit = efficiency.get("maximum_runtime_instruction_words")
+        if (
+            route_metrics
+            and isinstance(standard_limit, int)
+            and isinstance(extended_limit, int)
+            and isinstance(runtime_limit, int)
+        ):
             if route_metrics["max_standard_route"]["words"] > standard_limit:
                 errors.append("release policy standard route budget is exceeded")
             if route_metrics["max_extended_route_words"] > extended_limit:
                 errors.append("release policy extended route budget is exceeded")
+            if route_metrics["runtime_instruction_words"] > runtime_limit:
+                errors.append("release policy runtime instruction budget is exceeded")
     required_fields = policy.get("required_implementation_fields")
     expected_fields = {
         "adapter",

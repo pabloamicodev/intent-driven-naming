@@ -4,9 +4,9 @@ Compatibility claims are evidence-scoped. Structural support means the skill can
 
 | Surface | Status in 2.0.0 | Evidence |
 |---|---|---|
-| Agent Skills package structure | Validated locally | `SKILL.md`, metadata, routed references, repository validator |
+| Agent Skills package structure | Validated locally | Portable frontmatter, relative one-level references, routed resources, repository validator |
 | Codex local skill discovery | Installed and smoke-tested | Runtime-only hash-verified install, official package validation, isolated reference-adapter test |
-| Other Agent Skills hosts | Structurally portable | Provider-neutral Markdown core; host behavior must be measured |
+| Claude and other Agent Skills hosts | Structurally portable | Provider-neutral core and `.claude/skills/` packaging; host behavior must be measured |
 | JavaScript contract refactor | Fixture verified | Property shorthand and serialized key |
 | TypeScript serialization mapping | Fixture verified | Compiled internal aliases with preserved snake-case wire key |
 | Python contract refactor | Fixture verified | Public keyword parameter and local binding |

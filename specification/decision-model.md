@@ -18,6 +18,7 @@ The record MUST contain:
 - a meaning with a domain concept and every material role, state, representation, cardinality,
   unit or basis, ownership or trust stage, effect, and scope dimension;
 - a plausible `wrong_read`, or `null` when the name is not materially misleading;
+- `none`, `low`, `material`, or `critical` materiality for the wrong-read cost;
 - exactly one decision, confidence level, contract risk, protected spellings, and unresolved
   surfaces.
 
@@ -36,9 +37,12 @@ preference, length, and membership in a prohibited-word list do not satisfy the 
 | `defer` | Meaning or rename safety cannot be established from available evidence. |
 
 A conforming implementation MUST allow `keep` and `defer`. `rename`, `map`, and `migrate` require
-a proposed name and a non-empty wrong read. `map` requires at least one protected spelling.
+a distinct proposed name, a non-empty wrong read, `material` or `critical` materiality, and at least
+medium confidence. `map`
+requires at least one protected spelling.
 `migrate` requires explicit migration authorization. A direct `rename` MUST NOT be used for an
-external, dynamic, generated, stateful, or unknown-risk symbol.
+external, dynamic, generated, stateful, or unknown-risk symbol. Unknown contract risk MUST block
+all changing decisions.
 
 ## Name fitness
 
@@ -83,12 +87,16 @@ Changes spanning more than a trivial local edit SHOULD be expressed as a
 `rename-plan.schema.json` document and checked with
 `scripts/runtime/validate_rename_plan.py`. Structural analysis SHOULD use an AST, language server,
 compiler index, or symbol graph where available; textual search is supplementary evidence for
-strings, configuration, templates, and dynamic lookup.
+strings, configuration, templates, and dynamic lookup. The plan MUST record analysis methods,
+reference coverage, dynamic surfaces checked, and a maximum authorized changed-symbol count.
+Every changing plan MUST include symbol-aware collision or shadowing evidence.
 
 Applied changes MUST run the strongest relevant contract checks, targeted behavior tests,
 type/compile/static checks, cross-module or state checks, and final diff review. A changing plan
-requires at least one verification command. Non-internal risk requires an explicit contract check.
-Unavailable or failing checks MUST be reported accurately.
+requires at least one verification command and one collision check. Non-internal risk requires an explicit contract check.
+Non-internal changes require complete reference coverage. Dynamic changes require at least one
+checked runtime surface. Migrations require an executable rollback command. Unavailable or failing
+checks MUST be reported accurately.
 
 ## Non-compensable failures
 

@@ -3,7 +3,8 @@
 `validate_rename_plan.py` checks the portable JSON contract in
 `specification/rename-plan.schema.json` without third-party packages. It rejects unsafe direct
 renames at dynamic, generated, stateful, unknown, and external boundaries; enforces explicit
-migration authorization; and requires verification evidence for every changing plan.
+migration authorization, material wrong-read impact, reference coverage, a bounded change budget,
+and verification or rollback evidence for every changing plan.
 
 ```console
 python scripts/runtime/validate_rename_plan.py path/to/rename-plan.json

@@ -10,10 +10,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
-PLAN_FIELDS = {"schema_version", "plan_id", "scope", "authorization", "records", "verification"}
+PLAN_FIELDS = {
+    "schema_version", "plan_id", "scope", "authorization", "analysis", "records", "verification",
+}
+AUTHORIZATION_FIELDS = {"mode", "migration_authorized", "maximum_changed_symbols"}
+ANALYSIS_FIELDS = {"methods", "reference_coverage", "dynamic_surfaces_checked"}
+VERIFICATION_FIELDS = {
+    "commands", "contract_checks", "collision_checks", "rollback_commands",
+}
 RECORD_FIELDS = {
     "symbol_id", "identifier", "symbol_kind", "location", "meaning", "evidence",
-    "wrong_read", "decision", "proposed_name", "confidence", "contract_risk",
+    "wrong_read", "materiality", "decision", "proposed_name", "confidence", "contract_risk",
     "protected_spellings", "unresolved_surfaces",
 }
 MEANING_FIELDS = {
@@ -27,7 +34,12 @@ KINDS = {
 }
 DECISIONS = {"keep", "rename", "map", "migrate", "defer"}
 RISKS = {"internal", "cross-module", "external", "dynamic", "generated", "stateful", "unknown"}
+MATERIALITIES = {"none", "low", "material", "critical"}
+ANALYSIS_METHODS = {
+    "symbol-graph", "language-server", "compiler-index", "ast", "text-search", "manual",
+}
 UNSAFE_DIRECT_RENAME_RISKS = {"external", "dynamic", "generated", "stateful", "unknown"}
+CHANGING_DECISIONS = {"rename", "map", "migrate"}
 
 
 def _string(value: Any) -> bool:
@@ -64,12 +76,15 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
         errors.append("scope must be a non-empty unique string array")
 
     authorization = plan.get("authorization")
-    if not isinstance(authorization, dict) or set(authorization) != {"mode", "migration_authorized"}:
-        errors.append("authorization must contain only mode and migration_authorized")
-        mode, migration_authorized = None, False
+    if not isinstance(authorization, dict) or set(authorization) != AUTHORIZATION_FIELDS:
+        errors.append(
+            "authorization must contain only mode, migration_authorized, and maximum_changed_symbols"
+        )
+        mode, migration_authorized, maximum_changed_symbols = None, False, None
     else:
         mode = authorization.get("mode")
         migration_authorized = authorization.get("migration_authorized")
+        maximum_changed_symbols = authorization.get("maximum_changed_symbols")
         if mode not in {"refactor", "migration"}:
             errors.append("authorization.mode must be refactor or migration")
         if not isinstance(migration_authorized, bool):
@@ -77,6 +92,37 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
             migration_authorized = False
         if mode == "refactor" and migration_authorized:
             errors.append("refactor mode cannot authorize migration")
+        if (
+            isinstance(maximum_changed_symbols, bool)
+            or not isinstance(maximum_changed_symbols, int)
+            or not 0 <= maximum_changed_symbols <= 500
+        ):
+            errors.append("authorization.maximum_changed_symbols must be an integer from 0 to 500")
+            maximum_changed_symbols = None
+
+    analysis = plan.get("analysis")
+    if not isinstance(analysis, dict) or set(analysis) != ANALYSIS_FIELDS:
+        errors.append(
+            "analysis must contain only methods, reference_coverage, and dynamic_surfaces_checked"
+        )
+        methods, reference_coverage, dynamic_surfaces_checked = [], None, []
+    else:
+        methods = analysis.get("methods")
+        reference_coverage = analysis.get("reference_coverage")
+        dynamic_surfaces_checked = analysis.get("dynamic_surfaces_checked")
+        if (
+            not isinstance(methods, list)
+            or not methods
+            or any(not isinstance(method, str) or method not in ANALYSIS_METHODS for method in methods)
+            or len(methods) != len(set(methods))
+        ):
+            errors.append("analysis.methods must be a non-empty unique array of documented methods")
+            methods = []
+        if reference_coverage not in {"complete", "partial", "unknown"}:
+            errors.append("analysis.reference_coverage must be complete, partial, or unknown")
+        if not _string_list(dynamic_surfaces_checked):
+            errors.append("analysis.dynamic_surfaces_checked must be a unique string array")
+            dynamic_surfaces_checked = []
 
     records = plan.get("records")
     if not isinstance(records, list) or not 1 <= len(records) <= 500:
@@ -84,7 +130,7 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
         records = []
     symbol_ids: set[str] = set()
     locations: set[tuple[str, str]] = set()
-    changed = False
+    changed_records: list[dict[str, Any]] = []
     for index, record in enumerate(records):
         prefix = f"records[{index}]"
         if not isinstance(record, dict):
@@ -130,6 +176,7 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
                 ):
                     errors.append(f"{prefix}.evidence[{evidence_index}] must contain source and fact")
         decision = record.get("decision")
+        materiality = record.get("materiality")
         risk = record.get("contract_risk")
         proposed = record.get("proposed_name")
         wrong_read = record.get("wrong_read")
@@ -137,6 +184,8 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
         unresolved = record.get("unresolved_surfaces")
         if decision not in DECISIONS:
             errors.append(f"{prefix}.decision is invalid")
+        if materiality not in MATERIALITIES:
+            errors.append(f"{prefix}.materiality is invalid")
         if risk not in RISKS:
             errors.append(f"{prefix}.contract_risk is invalid")
         if record.get("confidence") not in {"high", "medium", "low"}:
@@ -147,12 +196,16 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
             errors.append(f"{prefix}.protected_spellings must be a unique string array")
         if not _string_list(unresolved):
             errors.append(f"{prefix}.unresolved_surfaces must be a unique string array")
-        if decision in {"rename", "map", "migrate"}:
-            changed = True
+        if decision in CHANGING_DECISIONS:
+            changed_records.append(record)
             if not _string(proposed):
                 errors.append(f"{prefix}.proposed_name is required for {decision}")
+            elif proposed == record.get("identifier"):
+                errors.append(f"{prefix}.proposed_name must differ from identifier")
             if not _string(wrong_read):
                 errors.append(f"{prefix}.wrong_read is required for {decision}")
+            if materiality not in {"material", "critical"}:
+                errors.append(f"{prefix}.{decision} requires material or critical impact")
         elif decision in {"keep", "defer"} and proposed is not None:
             errors.append(f"{prefix}.proposed_name must be null for {decision}")
         if decision == "map" and not protected:
@@ -161,25 +214,59 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
             errors.append(f"{prefix}.migrate requires explicitly authorized migration mode")
         if decision == "rename" and risk in UNSAFE_DIRECT_RENAME_RISKS:
             errors.append(f"{prefix}.rename is unsafe for {risk} risk; use map, migrate, or defer")
-        if decision in {"rename", "map", "migrate"} and unresolved:
+        if decision in CHANGING_DECISIONS and risk == "unknown":
+            errors.append(f"{prefix} cannot change while contract risk is unknown")
+        if decision in CHANGING_DECISIONS and unresolved:
             errors.append(f"{prefix} cannot change while unresolved contract surfaces remain")
-        if record.get("confidence") == "low" and decision not in {"defer", "keep"}:
-            warnings.append(f"{prefix} changes a low-confidence symbol")
+        if record.get("confidence") == "low" and decision in CHANGING_DECISIONS:
+            errors.append(f"{prefix} cannot change a low-confidence symbol; use defer or keep")
+
+    if (
+        maximum_changed_symbols is not None
+        and len(changed_records) > maximum_changed_symbols
+    ):
+        errors.append(
+            f"plan changes {len(changed_records)} symbols but authorization allows "
+            f"{maximum_changed_symbols}"
+        )
+    non_internal_changes = [
+        record for record in changed_records if record.get("contract_risk") != "internal"
+    ]
+    if non_internal_changes and reference_coverage != "complete":
+        errors.append("non-internal changes require complete reference coverage")
+    if (
+        any(record.get("contract_risk") == "dynamic" for record in changed_records)
+        and not dynamic_surfaces_checked
+    ):
+        errors.append("dynamic changes require at least one checked dynamic surface")
 
     verification = plan.get("verification")
-    if not isinstance(verification, dict) or set(verification) != {"commands", "contract_checks"}:
-        errors.append("verification must contain only commands and contract_checks")
+    if not isinstance(verification, dict) or set(verification) != VERIFICATION_FIELDS:
+        errors.append(
+            "verification must contain only commands, contract_checks, collision_checks, "
+            "and rollback_commands"
+        )
     else:
         commands = verification.get("commands")
         checks = verification.get("contract_checks")
+        collision_checks = verification.get("collision_checks")
+        rollback_commands = verification.get("rollback_commands")
         if not _string_list(commands):
             errors.append("verification.commands must be a unique string array")
         if not _string_list(checks):
             errors.append("verification.contract_checks must be a unique string array")
-        if changed and not commands:
+        if not _string_list(collision_checks):
+            errors.append("verification.collision_checks must be a unique string array")
+        if not _string_list(rollback_commands):
+            errors.append("verification.rollback_commands must be a unique string array")
+        if changed_records and not commands:
             errors.append("a changing plan requires at least one verification command")
-        if any(record.get("contract_risk") != "internal" for record in records if isinstance(record, dict)) and not checks:
-            errors.append("non-internal records require at least one contract check")
+        if changed_records and not collision_checks:
+            errors.append("a changing plan requires at least one collision check")
+        if non_internal_changes and not checks:
+            errors.append("non-internal changes require at least one contract check")
+        if any(record.get("decision") == "migrate" for record in changed_records) and not rollback_commands:
+            errors.append("migration requires at least one rollback command")
     return errors, warnings
 
 

@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.install_local_skill import install, verify_installation
+from scripts.install_local_skill import default_backup_directory, install, verify_installation
 
 
 class InstallLocalSkillTest(unittest.TestCase):
@@ -33,7 +33,30 @@ class InstallLocalSkillTest(unittest.TestCase):
             backup = install(destination, replace=True)
             self.assertIsNotNone(backup)
             self.assertTrue((backup / "VERSION").is_file())
+            self.assertEqual(backup.parent, destination.parent / ".skill-backups")
             self.assertEqual(verify_installation(destination), [])
+
+    def test_default_backup_avoids_one_level_skill_discovery(self):
+        destination = Path("agent-home") / "skills" / "intent-driven-naming"
+        self.assertEqual(
+            default_backup_directory(destination),
+            Path("agent-home") / "skill-backups",
+        )
+
+    def test_rejects_backup_inside_installation_or_discovery_root(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            skills = Path(temporary_directory) / "skills"
+            destination = skills / "intent-driven-naming"
+            destination.mkdir(parents=True)
+            (destination / "VERSION").write_text("1.1.0\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "inside the installed skill"):
+                install(
+                    destination,
+                    replace=True,
+                    backup_directory=destination / "backups",
+                )
+            with self.assertRaisesRegex(ValueError, "skill discovery directory"):
+                install(destination, replace=True, backup_directory=skills)
 
 
 if __name__ == "__main__":

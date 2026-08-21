@@ -4,7 +4,13 @@
   "scope": ["src/invoices.py"],
   "authorization": {
     "mode": "refactor",
-    "migration_authorized": false
+    "migration_authorized": false,
+    "maximum_changed_symbols": 1
+  },
+  "analysis": {
+    "methods": ["ast", "text-search"],
+    "reference_coverage": "complete",
+    "dynamic_surfaces_checked": []
   },
   "records": [
     {
@@ -30,6 +36,7 @@
         }
       ],
       "wrong_read": "result could be read as any output and hides both paid-state and cents",
+      "materiality": "material",
       "decision": "rename",
       "proposed_name": "paid_invoice_total_cents",
       "confidence": "high",
@@ -40,6 +47,8 @@
   ],
   "verification": {
     "commands": ["python -m unittest tests.test_invoices"],
-    "contract_checks": []
+    "contract_checks": [],
+    "collision_checks": ["AST scope scan confirms the proposed local is unique"],
+    "rollback_commands": []
   }
 }

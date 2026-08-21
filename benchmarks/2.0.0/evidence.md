@@ -16,10 +16,10 @@ composition algorithm enforced by the repository validator.
 | Measure | 1.1.0 baseline | 2.0.0 candidate | Reduction |
 |---|---:|---:|---:|
 | Entrypoint | 836 | 409 | 51.1% |
-| Always-loaded route | 2,195 | 956 | 56.4% |
-| All runtime instructions | 12,828 | 4,067 | 68.3% |
-| Maximum standard route | 6,850 | 2,839 | 58.6% |
-| Maximum extended route | 9,035 | 3,291 | 63.6% |
+| Always-loaded route | 2,195 | 979 | 55.4% |
+| All runtime instructions | 12,828 | 4,062 | 68.3% |
+| Maximum standard route | 6,850 | 2,834 | 58.6% |
+| Maximum extended route | 9,035 | 3,286 | 63.6% |
 
 These are deterministic context-size measures, not provider token counts. Release evaluation must
 also record provider-reported input tokens and compare the current skill against a frozen previous
@@ -32,8 +32,11 @@ runtime under the same cases and model configuration.
 - 15 fixtures covering runtime, compile-time, serialized, dynamic, generated, stateful, shell,
   security, Protobuf, and observability boundaries.
 - Portable semantic records and rename plans checked by JSON Schema and a dependency-free runtime
-  validator.
-- Deterministic release archive, SHA-256 manifest, SPDX file inventory, and tag provenance workflow.
+  validator, including materiality, collision, coverage, scope-budget, and rollback invariants.
+- Deterministic release archive, internal file manifest, SHA-256 sums, SPDX file inventory, and tag
+  provenance workflow.
+- Case-clustered paired intervals, corpus regression floors, exact resource-route gates, and
+  high-confidence secret rejection for review artifacts.
 
 ## Evidence still required before a release claim
 

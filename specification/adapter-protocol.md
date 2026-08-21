@@ -77,6 +77,9 @@ The adapter writes one JSON object per request:
 
 The harness owns dataset, run, system, replicate, attempt, case, and variant identity; an adapter MUST echo any supplied values unchanged. The runner computes `configuration_hash` from the canonical implementation metadata. Completed activation responses MUST contain a boolean `selected_skill`. Completed behavior responses MUST put the reviewable answer in `output_text`, a sanitized artifact descriptor in `artifact_bundle`, or both. Unknown result fields, identity mismatches, invalid types, out-of-order cases, and oversized output are rejected before results are written.
 
+The reference runner applies explicit input, stdout, stderr, and time limits. Adapter streams are
+spooled to temporary files instead of unbounded in-memory buffers, and stdout must be valid UTF-8.
+
 ## Safety and Reproducibility
 
 - Adapters MUST receive credentials through their host environment, never through dataset files.

@@ -18,6 +18,7 @@ For each important identifier determine the applicable fields; omit fields that 
 | Effect | For a callable, what observable result, I/O, mutation, publication, or failure occurs? |
 | Scope | Which nearby concepts compete with this one, and how far does the name travel? |
 | Contract | Is the spelling internal, cross-module, external, dynamic, generated, stateful, or unknown? |
+| Materiality | Would a wrong read cost nothing, little, materially, or critically? |
 
 Record evidence and confidence when auditing or refactoring. A formal plan may use `specification/rename-plan.schema.json`; ordinary generation does not need to emit the record.
 
@@ -38,7 +39,7 @@ Ask the counterfactual question:
 
 > What plausible wrong assumption could a competent reader make from the current name, and what would it cost?
 
-Rename when the answer is concrete and the candidate removes it without creating greater noise or contract risk. Typical material distinctions include entity versus identifier, singular versus collection, current versus historical state, raw versus trusted representation, unit or time basis, source versus destination, and query versus side effect.
+Rename only for a concrete `material` or `critical` wrong read that the candidate removes without greater noise or risk. `Critical` crosses a security, integrity, safety, or external-contract boundary. Typical distinctions include entity versus identifier, singular versus collection, current versus historical state, raw versus trusted representation, unit or time basis, source versus destination, and query versus side effect.
 
 Keep the name when the alternative is merely longer, restates a type or enclosing scope, replaces an idiom, or lacks stronger evidence. Short names such as `i`, `x`, `err`, `ctx`, `self`, or `acc` can be correct in conventional, compact scopes.
 

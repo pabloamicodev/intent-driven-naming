@@ -7,11 +7,11 @@
   "dataset_version": "2.0.0",
   "output_sha256": {
     "cases/activation.jsonl": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa",
-    "cases/behavior.jsonl": "61165a101473a76be627f8825c1082c5be5b2976e74242f26f4a0d82d8abfa48"
+    "cases/behavior.jsonl": "336d5895e19929fd2b9508ab624fccdf783f2996918fa06303f892ddeb543459"
   },
   "schema_version": "1.0",
   "source_sha256": {
-    "behavior-cases.md": "6f840e031779b3a4f6bd0e8a568021c2ade37649f280d1a925a2032714e0e307",
+    "behavior-cases.md": "167e2e2c49655888fbb6bede64283aed461b32633e7b23e32ec8649975d33425",
     "trigger-cases.md": "cb1aa65b4a157978d1f086b646696c1463a443af2e574b4ada2a458fc0a82674"
   },
   "strata": {
@@ -55,6 +55,9 @@
       "adversarial": 8,
       "edge": 29,
       "standard": 11
+    },
+    "behavior_feature": {
+      "high-risk": 5
     },
     "behavior_language": {
       "csharp": 2,

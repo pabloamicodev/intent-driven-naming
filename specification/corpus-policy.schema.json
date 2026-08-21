@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/corpus-policy.schema.json",
+  "title": "Evaluation Corpus Regression Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "dataset_version", "minimum_counts",
+    "maximum_activation_expected_imbalance", "minimum_unique_values", "minimum_strata"
+  ],
+  "$defs": {
+    "minimumMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "dataset_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "minimum_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activation", "behavior", "invariants", "fixtures"],
+      "properties": {
+        "activation": { "type": "integer", "minimum": 1 },
+        "behavior": { "type": "integer", "minimum": 1 },
+        "invariants": { "type": "integer", "minimum": 1 },
+        "fixtures": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "maximum_activation_expected_imbalance": { "type": "integer", "minimum": 0 },
+    "minimum_unique_values": { "$ref": "#/$defs/minimumMap" },
+    "minimum_strata": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/minimumMap" }
+    }
+  }
+}

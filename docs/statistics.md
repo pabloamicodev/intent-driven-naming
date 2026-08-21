@@ -7,8 +7,10 @@ or grader policies within a system invalidates the comparison.
 
 Activation and invariant proportions include Wilson 95% intervals. Paired quality deltas use a
 deterministic 10,000-sample percentile bootstrap with a published seed. The bootstrap resamples
-matched observations and reports the mean with-skill minus without-skill delta. Report effect size,
-interval, matched-pair count, wins, losses, and ties; a p-value alone is insufficient.
+case clusters and keeps all replicates and invariants from each sampled case together. This avoids
+treating correlated invariants or repeated runs of one task as independent evidence. It reports the
+mean with-skill minus without-skill delta, cluster count, matched-pair count, wins, losses, and ties;
+a p-value alone is insufficient.
 
 The release gate also requires minimum per-slice results. Small slices are diagnostic and must not
 be advertised as standalone proof. Adding many slices increases false-discovery risk, so post-hoc
@@ -24,3 +26,8 @@ cannot be compensated by aggregate improvements.
 External release evidence must publish the dataset version, case exclusions, preregistered policy,
 systems, configuration hashes, replicate count, usage coverage, intervals, reviewer agreement, and
 all gate violations. The offline suite alone cannot establish cross-model effectiveness.
+
+`specification/corpus-policy.json` prevents a maintenance change from silently shrinking the
+balanced activation set, risk and decision coverage, language diversity, generation coverage, or
+executable fixture floor. Raising those floors requires reviewed corpus evidence; lowering one
+requires an explicit policy change visible in the diff.

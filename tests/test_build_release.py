@@ -1,4 +1,5 @@
 import hashlib
+import json
 import tempfile
 import unittest
 import zipfile
@@ -17,8 +18,17 @@ class BuildReleaseTest(unittest.TestCase):
             self.assertEqual(first_hash, second_hash)
             with zipfile.ZipFile(first_artifacts["archive"]) as archive:
                 names = archive.namelist()
+                manifest = json.loads(
+                    archive.read("intent-driven-naming/PACKAGE-MANIFEST.json")
+                )
             self.assertIn("intent-driven-naming/SKILL.md", names)
             self.assertIn("intent-driven-naming/scripts/runtime/validate_rename_plan.py", names)
+            self.assertEqual(manifest["skill"], "intent-driven-naming")
+            self.assertIn("SKILL.md", manifest["files"])
+            with zipfile.ZipFile(first_artifacts["archive"]) as archive:
+                for relative, expected_digest in manifest["files"].items():
+                    content = archive.read(f"intent-driven-naming/{relative}")
+                    self.assertEqual(hashlib.sha256(content).hexdigest(), expected_digest)
             self.assertFalse(any("evals/" in name for name in names))
 
 

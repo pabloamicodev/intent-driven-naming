@@ -12,6 +12,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from harness.routing import allowed_behavior_resources, loaded_profile_count
+
 VALID_GRADES = {"pass", "fail", "not-applicable"}
 QUALITY_VARIANTS = {"with-skill", "without-skill"}
 VALID_VARIANTS = {*QUALITY_VARIANTS, "previous-skill"}
@@ -315,25 +317,37 @@ def _wilson_interval(successes: int, total: int, z: float = 1.96) -> list[float]
 
 
 def _paired_difference(outcomes: dict[Any, dict[str, int]]) -> dict[str, Any] | None:
-    differences = [
-        variants["with-skill"] - variants["without-skill"]
-        for variants in outcomes.values()
+    paired = [
+        (key, variants["with-skill"] - variants["without-skill"])
+        for key, variants in outcomes.items()
         if QUALITY_VARIANTS.issubset(variants)
     ]
+    differences = [difference for _, difference in paired]
     if not differences:
         return None
+    differences_by_case: dict[Any, list[int]] = defaultdict(list)
+    for key, difference in paired:
+        case_id = key[1] if isinstance(key, tuple) and len(key) > 1 else key
+        differences_by_case[case_id].append(difference)
+    case_ids = sorted(differences_by_case, key=str)
     mean = sum(differences) / len(differences)
     randomizer = random.Random(20260821)
-    bootstrap_means = sorted(
-        sum(randomizer.choice(differences) for _ in differences) / len(differences)
-        for _ in range(10_000)
-    )
+    bootstrap_means: list[float] = []
+    for _ in range(10_000):
+        sampled_differences = [
+            difference
+            for _ in case_ids
+            for difference in differences_by_case[randomizer.choice(case_ids)]
+        ]
+        bootstrap_means.append(sum(sampled_differences) / len(sampled_differences))
+    bootstrap_means.sort()
     lower_index = int(0.025 * (len(bootstrap_means) - 1))
     upper_index = int(0.975 * (len(bootstrap_means) - 1))
     return {
-        "method": "paired-percentile-bootstrap-95",
+        "method": "paired-case-cluster-percentile-bootstrap-95",
         "bootstrap_samples": 10_000,
         "bootstrap_seed": 20260821,
+        "clusters": len(case_ids),
         "matched_pairs": len(differences),
         "candidate_better": sum(difference > 0 for difference in differences),
         "baseline_better": sum(difference < 0 for difference in differences),
@@ -470,6 +484,8 @@ def score_results(
             "unexpected_activation_resource_results": 0,
             "total_resource_loads": 0,
             "unknown_resources": Counter(),
+            "unnecessary_resources": Counter(),
+            "overloaded_profile_results": 0,
         }
     )
     implementation_fields: dict[str, Counter[str]] = defaultdict(Counter)
@@ -531,6 +547,14 @@ def score_results(
             resource_values[cohort]["unknown_resources"].update(
                 resource for resource in resources if resource not in routed_resources
             )
+            if variant != "without-skill" and case["suite"] == "behavior":
+                resource_set = set(resources)
+                allowed = allowed_behavior_resources(case, route_data)
+                resource_values[cohort]["unnecessary_resources"].update(
+                    resource for resource in resource_set if resource in routed_resources - allowed
+                )
+                if loaded_profile_count(resource_set, route_data) > 2:
+                    resource_values[cohort]["overloaded_profile_results"] += 1
         for field, value in (result.get("implementation") or {}).items():
             if value is not None and value != "":
                 implementation_fields[cohort][field] += 1
@@ -705,6 +729,10 @@ def score_results(
                 values["total_resource_loads"], values["reported_results"]
             ),
             "unknown_resources": dict(sorted(values["unknown_resources"].items())),
+            "unnecessary_resources": dict(
+                sorted(values["unnecessary_resources"].items())
+            ),
+            "overloaded_profile_results": values["overloaded_profile_results"],
         }
         for cohort, values in sorted(resource_values.items())
     }
@@ -949,6 +977,22 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
         if maximum_unknown is not None and unknown_count > maximum_unknown:
             violations.append(
                 f"{candidate_cohort}: unknown loaded resources {unknown_count} exceeds {maximum_unknown}"
+            )
+        maximum_unnecessary = efficiency_policy.get("maximum_unnecessary_resources")
+        unnecessary_count = sum(
+            resource_loading.get("unnecessary_resources", {}).values()
+        )
+        if maximum_unnecessary is not None and unnecessary_count > maximum_unnecessary:
+            violations.append(
+                f"{candidate_cohort}: unnecessary loaded resources {unnecessary_count} "
+                f"exceeds {maximum_unnecessary}"
+            )
+        maximum_overloaded = efficiency_policy.get("maximum_overloaded_profile_results")
+        overloaded_results = resource_loading.get("overloaded_profile_results", 0)
+        if maximum_overloaded is not None and overloaded_results > maximum_overloaded:
+            violations.append(
+                f"{candidate_cohort}: overloaded profile results {overloaded_results} "
+                f"exceeds {maximum_overloaded}"
             )
         maximum_unexpected = efficiency_policy.get(
             "maximum_unexpected_activation_resource_results"

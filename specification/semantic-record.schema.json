@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "symbol_id", "identifier", "symbol_kind", "location", "meaning", "evidence",
-    "wrong_read", "decision", "proposed_name", "confidence", "contract_risk",
+    "wrong_read", "materiality", "decision", "proposed_name", "confidence", "contract_risk",
     "protected_spellings", "unresolved_surfaces"
   ],
   "properties": {
@@ -50,6 +50,7 @@
       }
     },
     "wrong_read": { "type": ["string", "null"] },
+    "materiality": { "enum": ["none", "low", "material", "critical"] },
     "decision": { "enum": ["keep", "rename", "map", "migrate", "defer"] },
     "proposed_name": { "type": ["string", "null"] },
     "confidence": { "enum": ["high", "medium", "low"] },
@@ -70,7 +71,15 @@
   "allOf": [
     {
       "if": { "properties": { "decision": { "enum": ["rename", "map", "migrate"] } } },
-      "then": { "properties": { "proposed_name": { "type": "string", "minLength": 1 } } }
+      "then": {
+        "properties": {
+          "wrong_read": { "type": "string", "minLength": 1 },
+          "materiality": { "enum": ["material", "critical"] },
+          "proposed_name": { "type": "string", "minLength": 1 },
+          "confidence": { "enum": ["high", "medium"] },
+          "unresolved_surfaces": { "maxItems": 0 }
+        }
+      }
     },
     {
       "if": { "properties": { "decision": { "enum": ["keep", "defer"] } } },
@@ -79,6 +88,14 @@
     {
       "if": { "properties": { "decision": { "const": "map" } } },
       "then": { "properties": { "protected_spellings": { "minItems": 1 } } }
+    },
+    {
+      "if": { "properties": { "decision": { "const": "rename" } } },
+      "then": { "properties": { "contract_risk": { "enum": ["internal", "cross-module"] } } }
+    },
+    {
+      "if": { "properties": { "contract_risk": { "const": "unknown" } } },
+      "then": { "properties": { "decision": { "enum": ["keep", "defer"] } } }
     }
   ]
 }

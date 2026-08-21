@@ -69,7 +69,10 @@ intent-driven-naming/
 
 `SKILL.md` remains the small router. The semantic core is always loaded; workflows, callable guidance, local-variable guidance, convention discovery, and language profiles are conditional. Specifications, datasets, fixtures, and maintenance scripts stay outside normal task context.
 
-This follows the progressive-disclosure design described in the [official OpenAI documentation for Skills](https://learn.chatgpt.com/docs/build-skills).
+This follows the portable [Agent Skills specification](https://agentskills.io/specification) and
+the progressive-disclosure model documented by both
+[OpenAI](https://developers.openai.com/codex/use-cases) and
+[Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview).
 
 ## Install as a Skill
 
@@ -80,7 +83,9 @@ python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-
 python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --check
 ```
 
-The installer refuses to overwrite an existing destination unless `--replace` is explicit. Replacement is atomic and retains a versioned backup:
+The installer refuses to overwrite an existing destination unless `--replace` is explicit.
+Replacement is atomic and retains a versioned backup outside the one-level discovery directory, so
+the previous copy cannot activate as a duplicate skill:
 
 ```powershell
 python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --replace
@@ -91,7 +96,9 @@ For a repository-scoped installation, place the runtime surface so the entrypoin
 ```text
 $HOME/.agents/skills/intent-driven-naming/SKILL.md
 $HOME/.codex/skills/intent-driven-naming/SKILL.md
+$HOME/.claude/skills/intent-driven-naming/SKILL.md
 $REPOSITORY_ROOT/.agents/skills/intent-driven-naming/SKILL.md
+$REPOSITORY_ROOT/.claude/skills/intent-driven-naming/SKILL.md
 ```
 
 The skill itself has no runtime dependency. Python is required only for repository validation and evaluation tooling.
@@ -157,6 +164,9 @@ python -m unittest discover -s tests -v
 python harness/verify_fixtures.py
 python scripts/build_release.py --clean
 ```
+
+The deterministic archive includes a per-file `PACKAGE-MANIFEST.json`; release output also includes
+SHA-256 checksums and an SPDX 2.3 inventory.
 
 Install `requirements-dev.lock` when running the same strict JSON Schema and lint checks enforced by CI. The skill runtime itself still has no Python dependency.
 
@@ -255,7 +265,7 @@ python harness/score_results.py \
   --markdown-output benchmark-results/report.md
 ```
 
-For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires three complete repetitions of current-skill, previous-skill, and no-skill cohorts; complete usage and loaded-resource telemetry; pinned implementation metadata; quality thresholds; calibrated reviewer agreement; and no ungraded invariants. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, incomplete repetitions, unresolved reviews, unknown resources, and efficiency regressions fail the gate.
+For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires three complete repetitions of current-skill, previous-skill, and no-skill cohorts; complete usage and loaded-resource telemetry; pinned implementation metadata; quality thresholds; calibrated reviewer agreement; and no ungraded invariants. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, incomplete repetitions, unresolved reviews, unknown or unnecessary resources, profile overloading, and efficiency regressions fail the gate.
 
 Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, resource loading, input/output usage, latency, turns, tool calls, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. A critical failure makes the hard gate fail regardless of aggregate quality. See the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
 

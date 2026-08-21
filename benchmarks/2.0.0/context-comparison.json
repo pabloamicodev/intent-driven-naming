@@ -14,25 +14,25 @@
   },
   "baseline_ref": "44fe691f9cc7e3182df1cb0da947ea9ca206cf8e",
   "current": {
-    "always_loaded_words": 956,
+    "always_loaded_words": 979,
     "entrypoint_words": 409,
     "maximum_extended_route": {
       "name": "refactor+callable+local-variable+high-risk+web-framework+systems",
-      "words": 3291
+      "words": 3286
     },
     "maximum_standard_route": {
       "name": "refactor+callable+local-variable+high-risk+web-framework",
-      "words": 2839
+      "words": 2834
     },
-    "runtime_instruction_words": 4067
+    "runtime_instruction_words": 4062
   },
   "measurement": "whitespace-delimited words",
   "reductions": {
-    "always_loaded": 0.564465,
+    "always_loaded": 0.553986,
     "entrypoint": 0.510766,
-    "maximum_extended_route": 0.63575,
-    "maximum_standard_route": 0.585547,
-    "runtime_instructions": 0.682959
+    "maximum_extended_route": 0.636303,
+    "maximum_standard_route": 0.586277,
+    "runtime_instructions": 0.683349
   },
   "schema_version": "1.0"
 }

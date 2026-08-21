@@ -86,6 +86,33 @@ class RunAdapterTest(unittest.TestCase):
             self.assertEqual(completed.returncode, 2)
             self.assertIn("--baseline-skill-path is required", completed.stderr)
 
+    def test_rejects_oversized_adapter_output_without_memory_buffering(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory) / "results.jsonl"
+            command = [
+                sys.executable,
+                str(ROOT / "harness" / "run_adapter.py"),
+                "--cases",
+                str(ROOT / "evals" / "cases" / "activation.jsonl"),
+                "--output",
+                str(output),
+                "--variant",
+                "with-skill",
+                "--system-id",
+                "size-test",
+                "--limit",
+                "1",
+                "--max-output-bytes",
+                "10",
+                "--",
+                sys.executable,
+                str(ROOT / "tests" / "fixtures" / "mock_adapter.py"),
+            ]
+            completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("exceeded --max-output-bytes", completed.stderr)
+            self.assertFalse(output.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

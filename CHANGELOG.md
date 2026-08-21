@@ -14,12 +14,16 @@ All notable changes are documented here. The project follows Semantic Versioning
 - Twelve behavior cases and twenty-four balanced activation cases across additional locales and high-risk domains, raising the corpus to 84 activation cases and 48 behavior cases with 185 invariants.
 - Security trust-stage, shell process-contract, generated Protobuf mapping, and telemetry fixtures, raising executable coverage to 15 fixtures.
 - Private held-out-suite validation, data-minimization guidance, deterministic release archives, checksums, SPDX inventory, and atomic installation replacement with backup.
+- Materiality, structural-coverage, collision, dynamic-surface, change-budget, and rollback invariants in portable rename plans.
+- Corpus regression policy, schema-to-runtime parity tests, clustered paired intervals, package manifests, and high-confidence secret scanning for review artifacts.
+- Bounded adapter input, stdout, and stderr handling with disk-backed streams instead of unbounded memory capture.
 
 ### Changed
 
 - Reduced entrypoint, reference, standard-route, and extended-route context budgets substantially.
 - Upgraded release, audit, semantic, and efficiency contracts to version 2.0.
 - Made generated-code risk explicit and required unresolved contract surfaces to block a changing plan.
+- Moved installation backups outside one-level skill discovery paths to prevent duplicate activation.
 
 ## 1.1.0 — 2026-08-21
 

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ def main() -> int:
     try:
         from jsonschema import Draft202012Validator
         from jsonschema.exceptions import SchemaError, ValidationError
+        from referencing import Registry, Resource
     except ImportError:
         print("install requirements-dev.txt before running schema validation", file=sys.stderr)
         return 2
@@ -30,6 +32,11 @@ def main() -> int:
     try:
         for schema in schemas.values():
             Draft202012Validator.check_schema(schema)
+        registry = Registry().with_resources(
+            (schema["$id"], Resource.from_contents(schema))
+            for schema in schemas.values()
+            if "$id" in schema
+        )
         case_validator = Draft202012Validator(schemas["eval-case.schema.json"])
         case_count = 0
         for dataset in ("activation.jsonl", "behavior.jsonl"):
@@ -48,6 +55,32 @@ def main() -> int:
         Draft202012Validator(schemas["release-policy.schema.json"]).validate(
             json.loads((schema_dir / "release-policy.json").read_text(encoding="utf-8"))
         )
+        Draft202012Validator(schemas["corpus-policy.schema.json"]).validate(
+            json.loads((schema_dir / "corpus-policy.json").read_text(encoding="utf-8"))
+        )
+        rename_validator = Draft202012Validator(
+            schemas["rename-plan.schema.json"], registry=registry
+        )
+        rename_example = json.loads(
+            (ROOT / "examples" / "rename-plan.json").read_text(encoding="utf-8")
+        )
+        rename_validator.validate(rename_example)
+        invalid_plans: list[tuple[str, dict]] = []
+        low_materiality = copy.deepcopy(rename_example)
+        low_materiality["records"][0]["materiality"] = "low"
+        invalid_plans.append(("low-materiality change", low_materiality))
+        low_confidence = copy.deepcopy(rename_example)
+        low_confidence["records"][0]["confidence"] = "low"
+        invalid_plans.append(("low-confidence change", low_confidence))
+        incomplete_coverage = copy.deepcopy(rename_example)
+        incomplete_coverage["records"][0]["decision"] = "map"
+        incomplete_coverage["records"][0]["contract_risk"] = "external"
+        incomplete_coverage["records"][0]["protected_spellings"] = ["result"]
+        incomplete_coverage["analysis"]["reference_coverage"] = "partial"
+        invalid_plans.append(("incomplete external coverage", incomplete_coverage))
+        for label, invalid_plan in invalid_plans:
+            if rename_validator.is_valid(invalid_plan):
+                raise ValidationError(f"rename-plan schema accepted {label}")
     except (KeyError, OSError, json.JSONDecodeError, SchemaError, ValidationError) as exc:
         message = f"schema validation failed: {exc}"
         if args.json_output:

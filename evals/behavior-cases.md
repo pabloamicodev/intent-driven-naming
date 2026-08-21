@@ -920,6 +920,7 @@ def do(data):
 - Languages: python
 - Contract risk: internal
 - Expected decisions: not-applicable
+- Features: high-risk
 
 ### Prompt
 
@@ -944,6 +945,7 @@ Implement a Python authentication helper that parses an untrusted authorization 
 - Languages: go
 - Contract risk: cross-module
 - Expected decisions: rename, defer
+- Features: high-risk
 
 ### Prompt
 
@@ -968,6 +970,7 @@ Audit a concurrent Go cache where `data` can mean the mutable live map, a locked
 - Languages: java
 - Contract risk: internal
 - Expected decisions: not-applicable
+- Features: high-risk
 
 ### Prompt
 
@@ -992,6 +995,7 @@ Implement Java timeout logic using a wall-clock creation timestamp, a monotonic 
 - Languages: python
 - Contract risk: internal
 - Expected decisions: not-applicable
+- Features: high-risk
 
 ### Prompt
 
@@ -1016,6 +1020,7 @@ Create a Python inference function that accepts token IDs shaped batch by sequen
 - Languages: generic
 - Contract risk: external
 - Expected decisions: map, keep
+- Features: high-risk
 
 ### Prompt
 

@@ -1,6 +1,6 @@
 import unittest
 
-from harness.eval_core import apply_release_policy, score_results, validate_case
+from harness.eval_core import _paired_difference, apply_release_policy, score_results, validate_case
 
 DATASET_VERSION = "2.0.0"
 HASH = "a" * 64
@@ -114,6 +114,8 @@ def policy(minimum_replicates=1):
             "minimum_resource_reporting_rate": 1.0,
             "minimum_core_resource_rate": 1.0,
             "maximum_unknown_resources": 0,
+            "maximum_unnecessary_resources": 0,
+            "maximum_overloaded_profile_results": 0,
             "maximum_unexpected_activation_resource_results": 0,
             "maximum_input_token_ratio": 0.95,
             "maximum_skill_context_word_ratio": 0.6,
@@ -126,6 +128,20 @@ def policy(minimum_replicates=1):
 
 
 class EvalCoreTest(unittest.TestCase):
+    def test_paired_interval_resamples_case_clusters(self):
+        outcomes = {
+            ("r1", "case-a", "i1"): {"with-skill": 1, "without-skill": 0},
+            ("r1", "case-a", "i2"): {"with-skill": 1, "without-skill": 0},
+            ("r1", "case-b", "i1"): {"with-skill": 0, "without-skill": 1},
+        }
+        comparison = _paired_difference(outcomes)
+        self.assertEqual(comparison["clusters"], 2)
+        self.assertEqual(comparison["matched_pairs"], 3)
+        self.assertEqual(
+            comparison["method"],
+            "paired-case-cluster-percentile-bootstrap-95",
+        )
+
     def test_validates_activation_case(self):
         self.assertEqual(validate_case(activation_case()), [])
 
@@ -241,6 +257,32 @@ class EvalCoreTest(unittest.TestCase):
         )
         self.assertIn(
             "unexpected activation resource results 1 exceeds 0",
+            "\n".join(evaluated["policy"]["violations"]),
+        )
+
+    def test_policy_rejects_known_but_unnecessary_behavior_resource(self):
+        cases = {"T01": activation_case(), "B01": behavior_case()}
+        results = []
+        for variant in ("with-skill", "previous-skill", "without-skill"):
+            behavior_result = result(
+                "B01",
+                variant=variant,
+                output_text="candidate",
+                invariant_grades={"b01-01": "pass"},
+                observed_decisions=["map"],
+            )
+            if variant == "with-skill":
+                behavior_result["loaded_resources"].append(
+                    "references/systems-languages.md"
+                )
+            results.extend(
+                [result("T01", variant=variant, selected_skill=True), behavior_result]
+            )
+        evaluated = apply_release_policy(
+            score_results(cases, results, require_complete=True), policy()
+        )
+        self.assertIn(
+            "unnecessary loaded resources 1 exceeds 0",
             "\n".join(evaluated["policy"]["violations"]),
         )
 

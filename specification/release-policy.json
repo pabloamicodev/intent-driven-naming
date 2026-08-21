@@ -50,12 +50,15 @@
     "minimum_resource_reporting_rate": 1.0,
     "minimum_core_resource_rate": 1.0,
     "maximum_unknown_resources": 0,
+    "maximum_unnecessary_resources": 0,
+    "maximum_overloaded_profile_results": 0,
     "maximum_unexpected_activation_resource_results": 0,
     "maximum_input_token_ratio": 0.95,
     "maximum_skill_context_word_ratio": 0.6,
     "maximum_turn_ratio": 1.0,
-    "maximum_standard_route_words": 3000,
-    "maximum_extended_route_words": 4000
+    "maximum_standard_route_words": 2900,
+    "maximum_extended_route_words": 3400,
+    "maximum_runtime_instruction_words": 4200
   },
   "required_implementation_fields": [
     "adapter", "adapter_version", "agent", "agent_version", "model", "model_version", "reasoning"

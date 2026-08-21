@@ -11,7 +11,8 @@ language-server references, AST queries, and bounded snippets over copying a rep
 secrets, production records, credentials, unrelated files, or full histories to an external model.
 
 `loaded_resources` records only repository-relative skill resource names. Evaluation artifacts use
-sanitized bundles and content hashes; they must not contain credentials or absolute developer paths.
+sanitized bundles and content hashes; sensitive filenames, binary content, and high-confidence token
+or private-key signatures are rejected without echoing the secret. They must not contain credentials or absolute developer paths.
 Private benchmark cases and raw external results belong in ignored directories or an access-
 controlled evidence store.
 

@@ -21,11 +21,11 @@ Only Markdown files routed for the current task become instructions. Specificati
 
 The skill performs semantic judgment. Repository scripts do not reject names from spelling alone. Deterministic checks validate observable facts such as package integrity, duplicated content, compilation, output shapes, state migrations, and score accounting.
 
-Non-trivial audits produce semantic records. Rename plans carry those records, explicit authorization, protected spellings, unresolved surfaces, and verification obligations. The dependency-free runtime validator rejects cross-field safety violations; repository tools and language analyzers then verify project-specific behavior.
+Non-trivial audits produce semantic records. Rename plans carry materiality, analysis coverage, explicit authorization and change budgets, protected spellings, unresolved surfaces, and verification or rollback obligations. The dependency-free runtime validator rejects cross-field safety violations; repository tools and language analyzers then verify project-specific behavior.
 
 Structural discovery prefers symbol graphs, language servers, ASTs, compiler indexes, and reference search. Only the smallest evidence slice needed for a decision should enter model context. See the [data-handling policy](data-handling.md).
 
-Agent and grader adapters are external trust boundaries. They communicate through JSONL, run without shell interpolation, and must be isolated by their host.
+Agent and grader adapters are external trust boundaries. They communicate through JSONL, run without shell interpolation, and must be isolated by their host. Reported resources are checked against case mode, features, and language profiles so irrelevant references cannot hide inside aggregate token totals.
 
 ## Source of Truth
 

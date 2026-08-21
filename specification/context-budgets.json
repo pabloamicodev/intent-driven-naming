@@ -2,13 +2,14 @@
   "schema_version": "2.0",
   "measurement": "whitespace-delimited words",
   "budgets": {
-    "entrypoint": 500,
-    "always-loaded": 1100,
-    "standard-route": 3000,
-    "extended-route": 4000,
+    "entrypoint": 450,
+    "always-loaded": 1000,
+    "standard-route": 2900,
+    "extended-route": 3400,
+    "runtime-instructions": 4200,
     "single-reference": 650
   },
   "maximum_simultaneous_profiles": 2,
   "exceptions": {},
-  "policy": "Every ordinary route stays under 3000 words. Uncertain or polyglot work may load compact boundary guidance and at most two ecosystem cards while remaining under 4000 words. A new reference must replace or route detail rather than silently raising a budget."
+  "policy": "Every ordinary route stays under 2900 words. Uncertain or polyglot work may load compact boundary guidance and at most two ecosystem cards while remaining under 3400 words. The entire runtime instruction surface stays under 4200 words. New detail must replace or route existing detail rather than silently raising a budget."
 }
