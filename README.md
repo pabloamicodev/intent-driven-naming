@@ -1,6 +1,6 @@
 # Intent-Driven Naming
 
-Version 1.1.0 is an Agent Skill and conformance project for generating, auditing, and safely refactoring software identifiers according to semantic intent across languages and development stacks.
+Version 2.0.0 is an Agent Skill and conformance project for generating, auditing, and safely refactoring software identifiers according to semantic intent across languages and development stacks.
 
 The core skill remains instruction-only. Deterministic tooling surrounds it to validate the package, route context efficiently, execute contract fixtures, run provider-neutral evaluations, and block safety regressions. No script rejects an identifier merely because it is called `data`, `result`, `item`, `i`, or another generic or short name.
 
@@ -40,6 +40,8 @@ intent-driven-naming/
 │   ├── new-code-workflow.md
 │   ├── audit-and-refactor.md
 │   ├── refactor-safety.md
+│   ├── structural-analysis.md
+│   ├── high-risk-semantics.md
 │   ├── callable-naming.md
 │   ├── local-variable-naming.md
 │   ├── typescript-javascript.md
@@ -78,7 +80,13 @@ python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-
 python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --check
 ```
 
-The installer refuses to overwrite an existing destination. For a repository-scoped installation, place the runtime surface so the entrypoint is available at one of these locations:
+The installer refuses to overwrite an existing destination unless `--replace` is explicit. Replacement is atomic and retains a versioned backup:
+
+```powershell
+python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --replace
+```
+
+For a repository-scoped installation, place the runtime surface so the entrypoint is available at one of these locations:
 
 ```text
 $HOME/.agents/skills/intent-driven-naming/SKILL.md
@@ -107,6 +115,14 @@ Apply a safe refactor:
 ```text
 $intent-driven-naming Rename dangerous or misleading identifiers without changing behavior or external contracts.
 ```
+
+For non-trivial changes, emit and validate the portable semantic plan before editing:
+
+```text
+python scripts/runtime/validate_rename_plan.py rename-plan.json
+```
+
+See the [complete rename-plan example](examples/rename-plan.json).
 
 ## Language and Development Coverage
 
@@ -139,11 +155,12 @@ python scripts/export_evals.py --check
 python scripts/validate_repository.py
 python -m unittest discover -s tests -v
 python harness/verify_fixtures.py
+python scripts/build_release.py --clean
 ```
 
 Install `requirements-dev.lock` when running the same strict JSON Schema and lint checks enforced by CI. The skill runtime itself still has no Python dependency.
 
-The repository contains 60 balanced activation cases, 36 behavior cases with 137 explicit invariants, and 11 executable or contract-verifiable fixtures across JavaScript, TypeScript, Python, Go, Rust, Java, C#, SQL, Terraform, dynamic lookup, and generated code. Activation requests span five locales, and behavior cases include English, Spanish, and Portuguese prompts.
+The repository contains 84 balanced activation cases, 48 behavior cases with 185 explicit invariants, and 15 executable or contract-verifiable fixtures. Activation requests span seven locales; behavior cases include six locales and high-risk security, distributed-state, time, ML, observability, shell, generated-code, and stateful-migration scenarios.
 
 Generated JSONL remains synchronized with the reviewed Markdown source:
 
@@ -181,7 +198,18 @@ python harness/run_adapter.py \
      --artifact-output-root eval-results/artifacts
 ```
 
-Repeat the same command for `without-skill` and for `r1`, `r2`, and `r3`, changing only the variant or replicate identity.
+Repeat for `without-skill`, `previous-skill`, and `r1`, `r2`, and `r3`. The previous-skill cohort requires a frozen runtime checkout:
+
+```text
+python harness/run_adapter.py \
+  --cases evals/cases/activation.jsonl \
+  --output eval-results/activation-previous-r1.jsonl \
+  --variant previous-skill \
+  --baseline-skill-path /path/to/frozen/previous/runtime \
+  --system-id your-agent-model-config \
+  --replicate-id r1 \
+  -- your-adapter-command
+```
 
 Create blinded review packets for behavior results. Keep the reidentification key private from reviewers:
 
@@ -227,9 +255,9 @@ python harness/score_results.py \
   --markdown-output benchmark-results/report.md
 ```
 
-For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires three complete repetitions of with-skill and without-skill cohorts, pinned implementation metadata, at least 0.90 activation precision, recall, specificity, balanced accuracy, and overall accuracy, at least 0.90 invariant pass rate, at least 0.85 case and decision accuracy, calibrated reviewer agreement, no ungraded invariants, and no material regression against the control. Critical failures, duplicate attempts, malformed identities, incomplete repetitions, and unresolved review labels fail the release gate.
+For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires three complete repetitions of current-skill, previous-skill, and no-skill cohorts; complete usage and loaded-resource telemetry; pinned implementation metadata; quality thresholds; calibrated reviewer agreement; and no ungraded invariants. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, incomplete repetitions, unresolved reviews, unknown resources, and efficiency regressions fail the gate.
 
-Reports separate activation, behavior, completion, confidence intervals, retries, critical failures, decision accuracy, reviewer agreement, and difficulty, locale, language, mode, risk, and expected-decision slices. A critical failure makes the hard gate fail regardless of aggregate quality.
+Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, resource loading, input/output usage, latency, turns, tool calls, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. A critical failure makes the hard gate fail regardless of aggregate quality. See the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
 
 The evaluation design follows the [official OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration of model graders.
 

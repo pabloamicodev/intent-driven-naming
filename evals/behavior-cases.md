@@ -910,6 +910,294 @@ def do(data):
 - [major][semantic] The parameter communicates that it is the event payload without inventing a richer domain type.
 - [critical][semantic] The `invoice_id` lookup and enqueue behavior remain unchanged.
 
+## B37 — Trust Stages Stay Explicit
+
+### Case metadata
+
+- Mode: generation
+- Difficulty: edge
+- Locale: en
+- Languages: python
+- Contract risk: internal
+- Expected decisions: not-applicable
+
+### Prompt
+
+```text
+Implement a Python authentication helper that parses an untrusted authorization header, validates its token, and returns an authenticated principal. Name every function, parameter, local, and result so trust stages cannot be confused.
+```
+
+### Required invariants
+
+- [critical][semantic] Untrusted input, validated token data, and authenticated principal have distinct names.
+- [major][semantic] Callable names describe validation and authentication effects instead of using generic parse or process names.
+- [major][semantic] A value is not named authenticated before authentication evidence exists.
+- [critical][semantic] Naming does not imply sanitization, authorization, or verification that the implementation does not perform.
+
+## B38 — Live State, Snapshots, and Replicas Differ
+
+### Case metadata
+
+- Mode: audit
+- Difficulty: edge
+- Locale: en
+- Languages: go
+- Contract risk: cross-module
+- Expected decisions: rename, defer
+
+### Prompt
+
+```text
+Audit a concurrent Go cache where `data` can mean the mutable live map, a locked snapshot, or a possibly stale replica. Recommend only evidence-supported identifier changes.
+```
+
+### Required invariants
+
+- [critical][semantic] Proposed names distinguish mutable live state, immutable snapshots, and replica freshness.
+- [major][semantic] Lock ownership and snapshot lifetime are used as evidence rather than guessed from type names.
+- [major][semantic] Ambiguous symbols are deferred when synchronization or replication semantics cannot be proven.
+- [critical][semantic] The audit does not imply that a renamed value is thread-safe or current without evidence.
+
+## B39 — Time Basis and Units Are Part of Meaning
+
+### Case metadata
+
+- Mode: generation
+- Difficulty: edge
+- Locale: en
+- Languages: java
+- Contract risk: internal
+- Expected decisions: not-applicable
+
+### Prompt
+
+```text
+Implement Java timeout logic using a wall-clock creation timestamp, a monotonic start reading, an elapsed duration in nanoseconds, and a deadline in epoch milliseconds. Make the names misuse-resistant.
+```
+
+### Required invariants
+
+- [critical][semantic] Wall-clock and monotonic readings cannot be mistaken for each other.
+- [critical][semantic] Nanoseconds and epoch milliseconds are explicit where their numeric types would otherwise collide.
+- [major][semantic] Durations, instants, elapsed values, and deadlines use different concepts.
+- [major][semantic] Function names describe whether they measure, compare, or decide timeout state.
+
+## B40 — Tensor Axes and Representations Remain Visible
+
+### Case metadata
+
+- Mode: generation
+- Difficulty: edge
+- Locale: en
+- Languages: python
+- Contract risk: internal
+- Expected decisions: not-applicable
+
+### Prompt
+
+```text
+Create a Python inference function that accepts token IDs shaped batch by sequence, an attention mask, hidden states shaped batch by sequence by embedding, and returns class logits. Name functions and locals for safe review.
+```
+
+### Required invariants
+
+- [critical][semantic] Token IDs, attention masks, hidden states, and class logits remain distinct representations.
+- [major][semantic] Batch, sequence, embedding, and class axes are visible in names or adjacent type/shape contracts.
+- [major][semantic] Singular and plural naming matches tensors versus individual elements.
+- [critical][semantic] Names do not claim probabilities when values are unnormalized logits.
+
+## B41 — Stable Metric Contracts and Low Cardinality
+
+### Case metadata
+
+- Mode: refactor
+- Difficulty: edge
+- Locale: en
+- Languages: generic
+- Contract risk: external
+- Expected decisions: map, keep
+
+### Prompt
+
+```text
+Improve internal metric-building names while preserving the exported metric `checkout_attempts_total` and its labels `result` and `payment_method`. Do not introduce unbounded customer IDs as labels.
+```
+
+### Required invariants
+
+- [critical][semantic] The exported metric and label spellings remain unchanged.
+- [major][semantic] Internal identifiers distinguish metric name, label keys, label values, and increment amount.
+- [critical][semantic] The refactor does not add high-cardinality identity labels.
+- [major][semantic] The result uses mapping when internal vocabulary differs from the telemetry contract.
+
+## B42 — Shell Locals Do Not Rewrite Process Contracts
+
+### Case metadata
+
+- Mode: refactor
+- Difficulty: edge
+- Locale: en
+- Languages: shell
+- Contract risk: external
+- Expected decisions: map, rename
+
+### Prompt
+
+```text
+Improve a shell deployment function whose locals are `x` and `v`, but preserve exported `DEPLOY_ENV`, the `--dry-run` flag, and the exit-status behavior.
+```
+
+### Required invariants
+
+- [critical][semantic] `DEPLOY_ENV`, `--dry-run`, and exit status remain exact external contracts.
+- [major][semantic] Local names communicate deployment target and dry-run state without imitating environment-variable casing.
+- [major][semantic] The function name communicates the deployment action and target scope.
+- [critical][semantic] Quoting, argument boundaries, and command execution behavior remain unchanged.
+
+## B43 — Kotlin Named Arguments Are Source Contracts
+
+### Case metadata
+
+- Mode: refactor
+- Difficulty: edge
+- Locale: pt
+- Languages: kotlin
+- Contract risk: external
+- Expected decisions: keep, rename
+
+### Prompt
+
+```text
+Melhore os nomes internos desta função Kotlin pública, mas chamadas externas usam argumentos nomeados `customerId` e `retryCount`.
+```
+
+### Required invariants
+
+- [critical][semantic] Public parameter spellings used by named arguments remain unchanged without migration authorization.
+- [major][semantic] Function locals may be renamed independently when they are not captured or reflected.
+- [major][semantic] Names preserve identifier versus retry-count concepts and cardinality.
+- [critical][semantic] The result does not treat all parameters as private merely because the function body is local.
+
+## B44 — Generated Protobuf Surface Uses a Mapping Layer
+
+### Case metadata
+
+- Mode: generation
+- Difficulty: edge
+- Locale: en
+- Languages: protobuf, typescript
+- Contract risk: generated
+- Expected decisions: map, keep
+
+### Prompt
+
+```text
+Create a TypeScript adapter from generated Protobuf fields `customer_id` and `created_at_ms` to idiomatic application names. Generated files must not be edited.
+```
+
+### Required invariants
+
+- [critical][semantic] Generated field spellings and generated source files remain unchanged.
+- [major][semantic] The adapter exposes idiomatic application names with identifier and millisecond semantics intact.
+- [major][semantic] Mapping direction is clear at the callable and local-variable levels.
+- [critical][semantic] No name loses the timestamp unit or invents a timezone conversion.
+
+## B45 — Vertrauensgrenzen Werden Nicht Erfunden
+
+### Case metadata
+
+- Mode: audit
+- Difficulty: adversarial
+- Locale: de
+- Languages: rust
+- Contract risk: internal
+- Expected decisions: rename, defer
+
+### Prompt
+
+```text
+Prüfe die Namen in einer Rust-Pipeline mit `raw`, `value` und `ok`. Einige Werte sind geparst, aber es ist unklar, ob sie kryptografisch verifiziert wurden.
+```
+
+### Required invariants
+
+- [critical][semantic] Parsed values are not renamed as verified without cryptographic evidence.
+- [major][semantic] Evidence-supported representation stages receive distinct Rust-idiomatic names.
+- [major][semantic] Unproven trust semantics produce defer decisions rather than confident renames.
+- [critical][semantic] Ownership and borrowing claims are not inferred from generic prose alone.
+
+## B46 — Migration SQL Explicite et Réversible
+
+### Case metadata
+
+- Mode: refactor
+- Difficulty: edge
+- Locale: fr
+- Languages: sql
+- Contract risk: stateful
+- Expected decisions: migrate
+
+### Prompt
+
+```text
+Renomme la colonne publique `amt` en `invoice_total_cents`. La migration de schéma est explicitement autorisée et doit rester réversible pour les consommateurs existants.
+```
+
+### Required invariants
+
+- [critical][semantic] The rename is treated as a stateful migration rather than a local edit.
+- [major][semantic] The target name preserves invoice, total, and cents semantics.
+- [critical][semantic] A compatibility or rollback path is included for existing consumers.
+- [major][semantic] Verification covers stored data, reads, writes, and schema-dependent integrations.
+
+## B47 — 日本語の依頼でも意味をコード規約に合わせる
+
+### Case metadata
+
+- Mode: generation
+- Difficulty: standard
+- Locale: ja
+- Languages: typescript
+- Contract risk: internal
+- Expected decisions: not-applicable
+
+### Prompt
+
+```text
+支払い済み請求書だけを抽出し、金額をセント単位で合計するTypeScript関数を作ってください。関数、引数、ローカル変数にも意図が分かる名前を付けてください。
+```
+
+### Required invariants
+
+- [major][semantic] TypeScript identifiers are idiomatic even though the request is Japanese.
+- [major][semantic] Collection and element names form a coherent invoice plural and singular family.
+- [critical][semantic] Paid status and cents units remain explicit in predicates, accumulators, and result names.
+- [major][semantic] The callable name describes the returned total rather than generic processing.
+
+## B48 — Un Índice Pequeño Puede Quedarse
+
+### Case metadata
+
+- Mode: audit
+- Difficulty: adversarial
+- Locale: es
+- Languages: go
+- Contract risk: internal
+- Expected decisions: keep
+
+### Prompt
+
+```text
+Audita `for i := 0; i < len(bytes); i++` dentro de una función de cinco líneas. La única solicitud es mejorar nombres que realmente inducen a error.
+```
+
+### Required invariants
+
+- [major][semantic] The conventional tiny-loop index `i` is kept when its scope and role are obvious.
+- [major][semantic] The audit applies the wrong-read test instead of a minimum-name-length rule.
+- [major][semantic] A no-op result is explicit and evidence-based.
+- [critical][semantic] No unrelated restructuring or behavior change is proposed.
+
 ## Scoring
 
 Score each required invariant as:

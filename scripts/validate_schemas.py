@@ -8,7 +8,6 @@ import json
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -34,10 +33,9 @@ def main() -> int:
         case_validator = Draft202012Validator(schemas["eval-case.schema.json"])
         case_count = 0
         for dataset in ("activation.jsonl", "behavior.jsonl"):
-            for line_number, line in enumerate(
-                (ROOT / "evals" / "cases" / dataset).read_text(encoding="utf-8").splitlines(),
-                start=1,
-            ):
+            for line in (ROOT / "evals" / "cases" / dataset).read_text(
+                encoding="utf-8"
+            ).splitlines():
                 if line.strip():
                     case_validator.validate(json.loads(line))
                     case_count += 1

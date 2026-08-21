@@ -1,0 +1,45 @@
+{
+  "schema_version": "2.0",
+  "plan_id": "paid-invoice-total-locals",
+  "scope": ["src/invoices.py"],
+  "authorization": {
+    "mode": "refactor",
+    "migration_authorized": false
+  },
+  "records": [
+    {
+      "symbol_id": "src/invoices.py:18:result",
+      "identifier": "result",
+      "symbol_kind": "local",
+      "location": "src/invoices.py:18",
+      "meaning": {
+        "concept": "paid invoice total",
+        "role": "accumulator",
+        "state": "final after loop",
+        "representation": "integer",
+        "cardinality": "single aggregate",
+        "unit_or_basis": "cents",
+        "ownership_or_trust": null,
+        "effect": null,
+        "scope": "function local"
+      },
+      "evidence": [
+        {
+          "source": "assignment and loop predicate",
+          "fact": "adds amount_in_cents only when invoice status is paid"
+        }
+      ],
+      "wrong_read": "result could be read as any output and hides both paid-state and cents",
+      "decision": "rename",
+      "proposed_name": "paid_invoice_total_cents",
+      "confidence": "high",
+      "contract_risk": "internal",
+      "protected_spellings": [],
+      "unresolved_surfaces": []
+    }
+  ],
+  "verification": {
+    "commands": ["python -m unittest tests.test_invoices"],
+    "contract_checks": []
+  }
+}

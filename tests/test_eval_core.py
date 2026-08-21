@@ -2,8 +2,7 @@ import unittest
 
 from harness.eval_core import apply_release_policy, score_results, validate_case
 
-
-DATASET_VERSION = "1.1.0"
+DATASET_VERSION = "2.0.0"
 HASH = "a" * 64
 COHORT = "test-system::with-skill"
 
@@ -63,6 +62,20 @@ def result(case_id, variant="with-skill", replicate="r1", attempt=1, **overrides
         "case_id": case_id,
         "variant": variant,
         "status": "completed",
+        "loaded_resources": (
+            ["SKILL.md", "references/naming-model.md"]
+            if variant != "without-skill"
+            else []
+        ),
+        "usage": {
+            "input_tokens": 90 if variant == "with-skill" else 100,
+            "output_tokens": 10,
+            "latency_ms": 10,
+            "cost_usd": 0,
+            "skill_context_words": 50 if variant == "with-skill" else 100 if variant == "previous-skill" else 0,
+            "turns": 1,
+            "tool_calls": 0,
+        },
         "implementation": {
             "adapter": "test",
             "adapter_version": "1",
@@ -79,11 +92,11 @@ def result(case_id, variant="with-skill", replicate="r1", attempt=1, **overrides
 
 def policy(minimum_replicates=1):
     return {
-        "schema_version": "1.1",
+        "schema_version": "2.0",
         "dataset_version": DATASET_VERSION,
         "name": "test",
-        "version": "1.1.0",
-        "required_variants": ["with-skill", "without-skill"],
+        "version": "2.0.0",
+        "required_variants": ["with-skill", "previous-skill", "without-skill"],
         "gated_variant": "with-skill",
         "minimum_replicates": minimum_replicates,
         "activation": {"minimum_accuracy": 1.0},
@@ -92,6 +105,19 @@ def policy(minimum_replicates=1):
             "baseline_variant": "without-skill",
             "minimum_activation_accuracy_delta": 0.0,
             "minimum_behavior_pass_rate_delta": 0.0,
+        },
+        "efficiency": {
+            "comparison_variant": "previous-skill",
+            "required_usage_fields": [
+                "input_tokens", "output_tokens", "latency_ms", "skill_context_words", "turns", "tool_calls"
+            ],
+            "minimum_resource_reporting_rate": 1.0,
+            "minimum_core_resource_rate": 1.0,
+            "maximum_unknown_resources": 0,
+            "maximum_unexpected_activation_resource_results": 0,
+            "maximum_input_token_ratio": 0.95,
+            "maximum_skill_context_word_ratio": 0.6,
+            "maximum_turn_ratio": 1.0,
         },
         "required_implementation_fields": [
             "adapter", "adapter_version", "agent", "agent_version", "model", "model_version", "reasoning"
@@ -168,7 +194,7 @@ class EvalCoreTest(unittest.TestCase):
     def test_policy_gates_candidate_while_comparing_control(self):
         cases = {"T01": activation_case(), "B01": behavior_case()}
         results = []
-        for variant in ("with-skill", "without-skill"):
+        for variant in ("with-skill", "previous-skill", "without-skill"):
             results.extend(
                 [
                     result("T01", variant=variant, selected_skill=True),
@@ -192,6 +218,30 @@ class EvalCoreTest(unittest.TestCase):
         self.assertIn(
             "activation_accuracy delta 0.0 is below 0.01",
             "\n".join(tie_rejected["policy"]["violations"]),
+        )
+
+    def test_policy_rejects_skill_resources_on_negative_activation(self):
+        cases = {"T02": activation_case("T02", expected=False), "B01": behavior_case()}
+        results = []
+        for variant in ("with-skill", "previous-skill", "without-skill"):
+            results.extend(
+                [
+                    result("T02", variant=variant, selected_skill=False),
+                    result(
+                        "B01",
+                        variant=variant,
+                        output_text="candidate",
+                        invariant_grades={"b01-01": "pass"},
+                        observed_decisions=["map"],
+                    ),
+                ]
+            )
+        evaluated = apply_release_policy(
+            score_results(cases, results, require_complete=True), policy()
+        )
+        self.assertIn(
+            "unexpected activation resource results 1 exceeds 0",
+            "\n".join(evaluated["policy"]["violations"]),
         )
 
 

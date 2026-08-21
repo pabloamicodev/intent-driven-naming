@@ -11,5 +11,7 @@ coverage.xml
 dist/
 benchmark-results/
 eval-results/
+evals/private/
+private-eval-results/
 *.class
 *.exe

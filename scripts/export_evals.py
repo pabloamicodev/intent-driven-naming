@@ -12,7 +12,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 TRIGGER_SOURCE = ROOT / "evals" / "trigger-cases.md"
 BEHAVIOR_SOURCE = ROOT / "evals" / "behavior-cases.md"
@@ -32,7 +31,9 @@ INVARIANT_ROW = re.compile(
 )
 VALID_MODES = {"generation", "audit", "refactor"}
 VALID_DIFFICULTIES = {"easy", "standard", "edge", "adversarial"}
-VALID_RISKS = {"internal", "cross-module", "external", "dynamic", "stateful", "unknown"}
+VALID_RISKS = {
+    "internal", "cross-module", "external", "dynamic", "generated", "stateful", "unknown"
+}
 VALID_DECISIONS = {"keep", "rename", "map", "migrate", "defer", "not-applicable"}
 
 

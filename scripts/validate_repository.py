@@ -13,7 +13,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -204,6 +203,10 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
             errors.append(f"{relative} exceeds reference budget: {count} > {limit}")
 
     always = routes.get("always", [])
+    always_words = sum(counts.get(path, 0) for path in dict.fromkeys(always))
+    always_budget = budget_values.get("always-loaded")
+    if isinstance(always_budget, int) and always_words > always_budget:
+        errors.append(f"always-loaded route exceeds budget: {always_words} > {always_budget}")
     modes = list(routes.get("modes", {}).items())
     features = list(routes.get("features", {}).items())
     profiles = list(routes.get("profiles", {}).items())
@@ -262,6 +265,7 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
         )
     return {
         "file_words": counts,
+        "always_loaded_words": always_words,
         "max_standard_route": {"name": max_standard_label, "words": max_standard},
         "max_extended_route": {"name": max_polyglot_label, "words": max_extended},
         "max_extended_route_words": max_extended,
@@ -355,8 +359,8 @@ def validate_governance(errors: list[str]) -> None:
         return
     if version_path.exists() and policy.get("version") != version_path.read_text(encoding="utf-8").strip():
         errors.append("release policy version does not match VERSION")
-    if policy.get("schema_version") != "1.1":
-        errors.append("release policy schema_version must be 1.1")
+    if policy.get("schema_version") != "2.0":
+        errors.append("release policy schema_version must be 2.0")
     dataset_version_path = ROOT / "evals" / "DATASET_VERSION"
     if (
         dataset_version_path.exists()
@@ -366,8 +370,10 @@ def validate_governance(errors: list[str]) -> None:
     variants = policy.get("required_variants")
     if not isinstance(variants, list) or any(not isinstance(value, str) for value in variants):
         errors.append("release policy required_variants must be a string array")
-    elif set(variants) != {"with-skill", "without-skill"}:
-        errors.append("release policy must require with-skill and without-skill variants")
+    elif set(variants) != {"with-skill", "previous-skill", "without-skill"}:
+        errors.append(
+            "release policy must require with-skill, previous-skill, and without-skill variants"
+        )
     if policy.get("gated_variant") != "with-skill":
         errors.append("release policy must gate the with-skill variant")
     minimum_replicates = policy.get("minimum_replicates")
@@ -468,6 +474,67 @@ def validate_governance(errors: list[str]) -> None:
         )
     ):
         errors.append("release policy comparison deltas are invalid")
+    efficiency = policy.get("efficiency")
+    expected_efficiency_fields = {
+        "comparison_variant",
+        "required_usage_fields",
+        "minimum_resource_reporting_rate",
+        "minimum_core_resource_rate",
+        "maximum_unknown_resources",
+        "maximum_unexpected_activation_resource_results",
+        "maximum_input_token_ratio",
+        "maximum_skill_context_word_ratio",
+        "maximum_turn_ratio",
+        "maximum_standard_route_words",
+        "maximum_extended_route_words",
+    }
+    if not isinstance(efficiency, dict) or set(efficiency) != expected_efficiency_fields:
+        errors.append("release policy efficiency thresholds are incomplete")
+    else:
+        usage_fields = efficiency.get("required_usage_fields")
+        required_usage_fields = {
+            "input_tokens", "output_tokens", "latency_ms", "skill_context_words", "turns", "tool_calls"
+        }
+        if (
+            efficiency.get("comparison_variant") != "previous-skill"
+            or not isinstance(usage_fields, list)
+            or not required_usage_fields.issubset(usage_fields)
+            or any(
+                isinstance(efficiency.get(field), bool)
+                or not isinstance(efficiency.get(field), (int, float))
+                or not 0 <= efficiency[field] <= 1
+                for field in ("minimum_resource_reporting_rate", "minimum_core_resource_rate")
+            )
+            or isinstance(efficiency.get("maximum_unknown_resources"), bool)
+            or not isinstance(efficiency.get("maximum_unknown_resources"), int)
+            or efficiency["maximum_unknown_resources"] < 0
+            or isinstance(
+                efficiency.get("maximum_unexpected_activation_resource_results"), bool
+            )
+            or not isinstance(
+                efficiency.get("maximum_unexpected_activation_resource_results"), int
+            )
+            or efficiency["maximum_unexpected_activation_resource_results"] < 0
+            or any(
+                isinstance(efficiency.get(field), bool)
+                or not isinstance(efficiency.get(field), (int, float))
+                or efficiency[field] <= 0
+                for field in (
+                    "maximum_input_token_ratio",
+                    "maximum_skill_context_word_ratio",
+                    "maximum_turn_ratio",
+                )
+            )
+        ):
+            errors.append("release policy efficiency thresholds are invalid")
+        route_metrics = validate_routes([])
+        standard_limit = efficiency.get("maximum_standard_route_words")
+        extended_limit = efficiency.get("maximum_extended_route_words")
+        if route_metrics and isinstance(standard_limit, int) and isinstance(extended_limit, int):
+            if route_metrics["max_standard_route"]["words"] > standard_limit:
+                errors.append("release policy standard route budget is exceeded")
+            if route_metrics["max_extended_route_words"] > extended_limit:
+                errors.append("release policy extended route budget is exceeded")
     required_fields = policy.get("required_implementation_fields")
     expected_fields = {
         "adapter",

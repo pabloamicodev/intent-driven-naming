@@ -1,91 +1,97 @@
 # Intent-Driven Naming Decision Specification
 
-Version 1.0.0
+Version 2.0.0
 
-This document defines the observable decisions required from a conforming implementation. `MUST`, `MUST NOT`, `SHOULD`, `SHOULD NOT`, and `MAY` indicate requirement strength. The instructional references explain how to satisfy these requirements; this specification defines what success means.
+This document defines observable requirements for a conforming implementation. `MUST`, `MUST
+NOT`, `SHOULD`, `SHOULD NOT`, and `MAY` indicate requirement strength.
 
-## Decision Outcomes
+## Semantic record
 
-Every reviewed identifier MUST resolve to one of these outcomes:
+Every identifier considered in audit or refactor mode MUST have one semantic record. The portable
+shape is defined by `semantic-record.schema.json`. Its stable `symbol_id` and source location
+identify the declaration; identifier spelling alone is never identity.
 
-| Outcome | Meaning |
+The record MUST contain:
+
+- evidence from definitions, assignments, types, callers, consumers, tests, contracts, or runtime
+  lookup surfaces;
+- a meaning with a domain concept and every material role, state, representation, cardinality,
+  unit or basis, ownership or trust stage, effect, and scope dimension;
+- a plausible `wrong_read`, or `null` when the name is not materially misleading;
+- exactly one decision, confidence level, contract risk, protected spellings, and unresolved
+  surfaces.
+
+The wrong-read test is counterfactual: could a competent maintainer plausibly choose an incorrect
+operation, unit, state, trust assumption, representation, or boundary because of this name? Style
+preference, length, and membership in a prohibited-word list do not satisfy the test.
+
+## Decision outcomes
+
+| Outcome | Normative meaning |
 |---|---|
-| `keep` | The existing name is clear, idiomatic, contract-bound, or not worth the churn. |
-| `rename` | A supported internal rename produces material semantic gain. |
-| `map` | An external spelling remains fixed while an internal semantic alias is introduced. |
-| `migrate` | The desired name changes a public, persisted, stateful, or runtime contract and requires an explicit migration. |
+| `keep` | Clear, idiomatic, contract-bound, or not worth churn. |
+| `rename` | Evidence supports an internal rename with material semantic gain. |
+| `map` | A protected spelling remains fixed while an internal semantic alias is introduced. |
+| `migrate` | A public, persisted, generated, dynamic, or stateful identity changes under explicit migration authorization. |
 | `defer` | Meaning or rename safety cannot be established from available evidence. |
 
-A conforming implementation MUST allow `keep` and `defer`; it MUST NOT manufacture a rename to appear useful.
+A conforming implementation MUST allow `keep` and `defer`. `rename`, `map`, and `migrate` require
+a proposed name and a non-empty wrong read. `map` requires at least one protected spelling.
+`migrate` requires explicit migration authorization. A direct `rename` MUST NOT be used for an
+external, dynamic, generated, stateful, or unknown-risk symbol.
 
-## Evidence Requirements
+## Name fitness
 
-A naming decision MUST be supported by the identifier's actual role. Relevant evidence includes declarations, types, assignments, transformations, callers, consumers, return paths, side effects, tests, schemas, runtime registrations, and established domain vocabulary.
+A proposed name MUST describe the actual concept, action, question, result, or effect and MUST use
+repository vocabulary when that vocabulary is consistent with behavior. It MUST expose a semantic
+dimension only when omission creates a plausible wrong read.
 
-Generic spelling alone is insufficient evidence. An implementation MUST NOT reject `data`, `result`, `item`, `i`, `x`, `err`, or similar identifiers without considering scope and meaning.
+Related declarations, parameters, locals, errors, results, and effects SHOULD form one coherent
+family. Public parameters and argument labels are contracts when callers bind by name. Query-like
+callable names MUST NOT hide persistence, publication, authorization, deletion, or other material
+effects. Short conventional locals MAY remain when scope removes ambiguity.
 
-When evidence conflicts, the implementation SHOULD prefer the smallest safe improvement. It MUST choose `defer` when a wrong interpretation could alter behavior or a protected contract.
+High-risk domains require special scrutiny:
 
-## Semantic Requirements
+- security and privacy: trust, validation, authentication, authorization, sensitivity, and
+  redaction stages;
+- distributed and concurrent systems: ownership, mutability, consistency, snapshot status,
+  freshness, retry, idempotency, and lock scope;
+- time: instant versus duration, wall versus monotonic clock, timezone, deadline, and unit;
+- data and ML: encoding, shape, axes, sampling, normalization, labels, predictions, and units;
+- observability: metric identity, label keys and values, cardinality, and stable telemetry names;
+- resources and performance: bytes versus elements, capacity versus length, ownership, lifetime,
+  and allocation behavior.
 
-A proposed name MUST:
+A name MUST NOT claim a stronger trust, consistency, normalization, safety, or validation property
+than the evidence proves.
 
-- describe the actual concept, action, question, result, or effect;
-- distinguish entities from identifiers and singular values from collections when needed;
-- expose state, representation, relationship, cardinality, or unit when omission creates a plausible wrong interpretation;
-- use the repository's canonical domain vocabulary;
-- remain proportionate to its scope and role;
-- follow the target language and framework conventions;
-- avoid redundant type, container, or enclosing-scope words.
+## Contract and authorization safety
 
-Related identifiers SHOULD form a coherent semantic family. Cross-language forms MAY differ in casing, affixes, visibility, and predicate syntax while preserving the same concept.
+A behavior-preserving refactor MUST preserve runtime behavior, values, control flow, side effects,
+public exports, serialized fields, schemas, database identities, environment keys, routes, flags,
+ABI/FFI, reflection, dependency injection, registries, protocol and override requirements,
+generated sources, property shorthand output, named arguments, captures, and infrastructure state.
 
-## Callable and Local Requirements
+Audit mode is read-only. Naming authorization does not authorize extraction, signature redesign,
+architecture changes, dependency changes, broad formatting, or migration. Unresolved dynamic or
+generated surfaces require `defer`; they MUST NOT be hidden by a confidence claim.
 
-A callable name MUST agree with its observable behavior. Query-like names MUST NOT hide creation, persistence, publication, deletion, or other material effects.
+## Rename plans and verification
 
-Parameters MUST describe what callers provide. Public parameter names and argument labels MUST be treated as contracts when callers can bind by name.
+Changes spanning more than a trivial local edit SHOULD be expressed as a
+`rename-plan.schema.json` document and checked with
+`scripts/runtime/validate_rename_plan.py`. Structural analysis SHOULD use an AST, language server,
+compiler index, or symbol graph where available; textual search is supplementary evidence for
+strings, configuration, templates, and dynamic lookup.
 
-Local variables SHOULD reveal meaningful data-flow states without narrating syntax. Short conventional bindings MAY remain when their scope removes ambiguity. Accumulators SHOULD state their invariant when multiple meanings, dangerous units, or long scopes coexist.
+Applied changes MUST run the strongest relevant contract checks, targeted behavior tests,
+type/compile/static checks, cross-module or state checks, and final diff review. A changing plan
+requires at least one verification command. Non-internal risk requires an explicit contract check.
+Unavailable or failing checks MUST be reported accurately.
 
-## Contract-Safety Requirements
+## Non-compensable failures
 
-A behavior-preserving refactor MUST preserve:
-
-- runtime behavior, control flow, values, and side effects;
-- public exports and documented APIs unless migration is authorized;
-- serialized fields, schemas, database identifiers, environment keys, routes, and CLI surfaces;
-- ABI, FFI, reflection, dependency-injection, registry, and string-based lookup names;
-- protocol, trait, interface, override, framework, and generated-code requirements;
-- property shorthand output keys, destructuring semantics, named arguments, captures, and stateful infrastructure addresses.
-
-If a protected spelling is semantically weak, the implementation SHOULD use `map` rather than silently changing the boundary.
-
-## Authorization Requirements
-
-Audit-only work MUST remain read-only. A naming refactor MUST NOT expand into extraction, signature redesign, architecture changes, migrations, dependency changes, or broad formatting unless separately authorized.
-
-The implementation MUST stop or choose `defer` when safe completion depends on unavailable dynamic references, unresolved domain meaning, generated sources outside scope, or a contract migration that was not authorized.
-
-## Verification Requirements
-
-An applied rename MUST use the strongest relevant checks available, in this order of concern:
-
-1. Contract and serialized-shape checks.
-2. Targeted behavioral tests.
-3. Type checking, compilation, linting, or static analysis.
-4. Cross-module, schema, query, or infrastructure verification.
-5. Final diff review for value, control-flow, and formatting changes.
-
-Unavailable or failing checks MUST be reported accurately. Textual replacement alone is not evidence of behavior preservation.
-
-## Non-Compensable Failures
-
-These failures automatically fail conformance regardless of stylistic quality:
-
-- behavior regression;
-- silent public or persisted contract change;
-- invented domain meaning presented as fact;
-- unauthorized mutation in audit mode;
-- unreported dynamic or generated-code uncertainty;
-- a migration represented as a behavior-preserving rename.
+Behavior regression, silent contract change, invented meaning, unauthorized mutation, unreported
+dynamic or generated uncertainty, fabricated verification, and a migration represented as a local
+rename fail conformance regardless of aggregate style or benchmark score.

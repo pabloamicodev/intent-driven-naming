@@ -4,7 +4,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 candidate = Path(sys.argv[1]).read_text(encoding="utf-8").replace("\r\n", "\n")
 expected = Path("expected.go").read_text(encoding="utf-8").replace("\r\n", "\n")
 assert candidate == expected, "the no-op fixture must remain byte-equivalent after newline normalization"

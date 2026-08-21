@@ -2,6 +2,25 @@
 
 All notable changes are documented here. The project follows Semantic Versioning.
 
+## 2.0.0 — 2026-08-21
+
+### Added
+
+- A compact semantic decision kernel with explicit wrong-read analysis and high-risk guidance for security, distributed systems, time, data/ML, observability, and resource semantics.
+- Portable semantic-record and rename-plan schemas plus a dependency-free runtime safety validator.
+- Structural-analysis guidance for symbol graphs, language servers, ASTs, compiler indexes, dynamic strings, and minimal evidence collection.
+- A three-cohort evaluation protocol: current skill versus no-skill for quality and frozen previous skill for efficiency.
+- Resource-loading telemetry, context-word, token, latency, turn, and tool-call coverage gates; deterministic paired bootstrap intervals; and a documented statistical protocol.
+- Twelve behavior cases and twenty-four balanced activation cases across additional locales and high-risk domains, raising the corpus to 84 activation cases and 48 behavior cases with 185 invariants.
+- Security trust-stage, shell process-contract, generated Protobuf mapping, and telemetry fixtures, raising executable coverage to 15 fixtures.
+- Private held-out-suite validation, data-minimization guidance, deterministic release archives, checksums, SPDX inventory, and atomic installation replacement with backup.
+
+### Changed
+
+- Reduced entrypoint, reference, standard-route, and extended-route context budgets substantially.
+- Upgraded release, audit, semantic, and efficiency contracts to version 2.0.
+- Made generated-code risk explicit and required unresolved contract surfaces to block a changing plan.
+
 ## 1.1.0 — 2026-08-21
 
 ### Added

@@ -2,7 +2,6 @@ import json
 import sys
 from pathlib import Path
 
-
 if "--version" in sys.argv:
     print("codex-cli fake-1.0")
     raise SystemExit(0)

@@ -1,4 +1,4 @@
 interface:
   display_name: "Intent-Driven Naming"
   short_description: "Clear function and variable names across languages"
-  default_prompt: "Use $intent-driven-naming to generate, audit, or safely refactor identifiers using repository evidence while preserving behavior and protected contracts."
+  default_prompt: "Use $intent-driven-naming to design or safely improve identifiers from repository evidence while preserving behavior and contracts."

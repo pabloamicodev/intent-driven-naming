@@ -1,7 +1,6 @@
 import json
 import sys
 
-
 for line in sys.stdin:
     request = json.loads(line)
     case = request["case"]
@@ -17,6 +16,9 @@ for line in sys.stdin:
             "output_tokens": 1,
             "latency_ms": 1,
             "cost_usd": 0,
+            "skill_context_words": 0,
+            "turns": 1,
+            "tool_calls": 0,
         },
         "implementation": {"adapter": "mock"},
         "error": None,

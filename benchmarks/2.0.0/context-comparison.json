@@ -1,0 +1,38 @@
+{
+  "baseline": {
+    "always_loaded_words": 2195,
+    "entrypoint_words": 836,
+    "maximum_extended_route": {
+      "name": "refactor+callable+local-variable+web-framework+data-infrastructure",
+      "words": 9035
+    },
+    "maximum_standard_route": {
+      "name": "refactor+callable+local-variable+web-framework",
+      "words": 6850
+    },
+    "runtime_instruction_words": 12828
+  },
+  "baseline_ref": "44fe691f9cc7e3182df1cb0da947ea9ca206cf8e",
+  "current": {
+    "always_loaded_words": 956,
+    "entrypoint_words": 409,
+    "maximum_extended_route": {
+      "name": "refactor+callable+local-variable+high-risk+web-framework+systems",
+      "words": 3291
+    },
+    "maximum_standard_route": {
+      "name": "refactor+callable+local-variable+high-risk+web-framework",
+      "words": 2839
+    },
+    "runtime_instruction_words": 4067
+  },
+  "measurement": "whitespace-delimited words",
+  "reductions": {
+    "always_loaded": 0.564465,
+    "entrypoint": 0.510766,
+    "maximum_extended_route": 0.63575,
+    "maximum_standard_route": 0.585547,
+    "runtime_instructions": 0.682959
+  },
+  "schema_version": "1.0"
+}

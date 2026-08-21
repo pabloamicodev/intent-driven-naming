@@ -8,18 +8,18 @@ class ExportEvalsTest(unittest.TestCase):
     def test_exports_versioned_cases_and_manifest(self):
         outputs = build_outputs()
         by_name = {path.name: content for path, content in outputs.items()}
-        self.assertEqual(len(by_name["activation.jsonl"].splitlines()), 60)
-        self.assertEqual(len(by_name["behavior.jsonl"].splitlines()), 36)
+        self.assertEqual(len(by_name["activation.jsonl"].splitlines()), 84)
+        self.assertEqual(len(by_name["behavior.jsonl"].splitlines()), 48)
         manifest = json.loads(by_name["manifest.json"])
-        self.assertEqual(manifest["dataset_version"], "1.1.0")
-        self.assertEqual(manifest["counts"]["activation"], 60)
-        self.assertEqual(manifest["counts"]["behavior"], 36)
+        self.assertEqual(manifest["dataset_version"], "2.0.0")
+        self.assertEqual(manifest["counts"]["activation"], 84)
+        self.assertEqual(manifest["counts"]["behavior"], 48)
 
     def test_activation_parser_requires_explicit_strata(self):
         cases = parse_activation_cases(
             "| T01 | Improve function names. | Trigger | standard | en | Identifier work. |\n"
             "| T02 | Name a product. | Do not trigger | adversarial | es | Brand work. |\n",
-            "1.1.0",
+            "2.0.0",
         )
         self.assertEqual([case["expected_activation"] for case in cases], [True, False])
         self.assertEqual(cases[1]["difficulty"], "adversarial")
@@ -52,7 +52,7 @@ Improve this function.
 
 ## Scoring
 """
-        cases = parse_behavior_cases(markdown, "1.1.0")
+        cases = parse_behavior_cases(markdown, "2.0.0")
         self.assertEqual(cases[0]["id"], "B01")
         self.assertEqual(cases[0]["languages"], ["typescript", "python"])
         self.assertEqual(cases[0]["expected_decisions"], ["map"])

@@ -19,7 +19,6 @@ from harness.eval_core import (
     score_results,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -97,15 +96,34 @@ def markdown_report(report: dict) -> str:
             [
                 "## Usage",
                 "",
-                "| Variant | Results | Input tokens | Output tokens | Latency ms | Cost USD |",
-                "|---|---:|---:|---:|---:|---:|",
+                "| Cohort | Results | Input tokens | Output tokens | Context words | Turns | Tool calls | Latency ms | Cost USD |",
+                "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
             ]
         )
         for variant, stats in report["usage"].items():
             lines.append(
                 f"| {variant} | {stats['completed_results']} | {stats['input_tokens']['total']} | "
-                f"{stats['output_tokens']['total']} | {stats['latency_ms']['total']} | "
+                f"{stats['output_tokens']['total']} | {stats['skill_context_words']['total']} | "
+                f"{stats['turns']['total']} | {stats['tool_calls']['total']} | "
+                f"{stats['latency_ms']['total']} | "
                 f"{stats['cost_usd']['total']} |"
+            )
+        lines.append("")
+    if report.get("resource_loading"):
+        lines.extend(
+            [
+                "## Resource Loading",
+                "",
+                "| Cohort | Reporting rate | Core rate | Mean resources | Unknown loads | Unexpected activation loads |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for cohort, stats in report["resource_loading"].items():
+            unknown = sum(stats["unknown_resources"].values())
+            lines.append(
+                f"| {cohort} | {stats['reporting_rate']} | {stats['core_complete_rate']} | "
+                f"{stats['mean_resources_per_result']} | {unknown} | "
+                f"{stats['unexpected_activation_resource_results']} |"
             )
         lines.append("")
     if report["by_tag"]:

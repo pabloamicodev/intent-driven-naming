@@ -4,7 +4,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 candidate = Path(sys.argv[1]).resolve()
 typescript_compiler = shutil.which("tsc")
 assert typescript_compiler is not None

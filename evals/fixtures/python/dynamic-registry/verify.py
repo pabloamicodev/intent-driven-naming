@@ -2,7 +2,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-
 candidate = Path(sys.argv[1])
 spec = importlib.util.spec_from_file_location("candidate_registry", candidate)
 module = importlib.util.module_from_spec(spec)

@@ -4,13 +4,28 @@ from __future__ import annotations
 
 import hashlib
 from collections import Counter, defaultdict
+from pathlib import Path
 from typing import Any
 
 from harness.eval_core import validate_result
 from harness.review_core import ReviewDataError, _load_artifact
 
-
 VALID_PREFERENCES = {"A", "B", "tie"}
+
+
+def _review_candidate(
+    variants: dict[str, dict[str, Any]],
+    artifact_root: Path | None,
+    pair_id: str,
+    label: str,
+    variant: str,
+) -> dict[str, Any]:
+    result = variants[variant]
+    artifact = _load_artifact(result, artifact_root)
+    output_text = result.get("output_text")
+    if (not isinstance(output_text, str) or not output_text.strip()) and artifact is None:
+        raise ReviewDataError(f"{pair_id}: candidate {label} has no reviewable output")
+    return {"label": label, "output_text": output_text, "artifact": artifact}
 
 
 def prepare_pairwise_packet(
@@ -58,14 +73,6 @@ def prepare_pairwise_packet(
             else ("without-skill", "with-skill")
         )
 
-        def candidate(label: str, variant: str) -> dict[str, Any]:
-            result = variants[variant]
-            artifact = _load_artifact(result, artifact_root)
-            output_text = result.get("output_text")
-            if (not isinstance(output_text, str) or not output_text.strip()) and artifact is None:
-                raise ReviewDataError(f"{pair_id}: candidate {label} has no reviewable output")
-            return {"label": label, "output_text": output_text, "artifact": artifact}
-
         case = cases[group[2]]
         packets.append(
             {
@@ -79,7 +86,10 @@ def prepare_pairwise_packet(
                     "contract_risk": case["contract_risk"],
                     "invariants": case["invariants"],
                 },
-                "candidates": [candidate("A", orientation[0]), candidate("B", orientation[1])],
+                "candidates": [
+                    _review_candidate(variants, artifact_root, pair_id, "A", orientation[0]),
+                    _review_candidate(variants, artifact_root, pair_id, "B", orientation[1]),
+                ],
                 "instructions": {
                     "preference": ["A", "B", "tie"],
                     "judge_correctness_and_contract_safety_before_style": True,

@@ -1,0 +1,49 @@
+{
+  "errors": [],
+  "metrics": {
+    "activation_cases": 84,
+    "behavior_cases": 48,
+    "description_length": 360,
+    "markdown_files": 57,
+    "references": 17,
+    "routes": {
+      "always_loaded_words": 956,
+      "file_words": {
+        "SKILL.md": 409,
+        "references/audit-and-refactor.md": 323,
+        "references/callable-naming.md": 250,
+        "references/data-infrastructure.md": 136,
+        "references/dynamic-languages.md": 131,
+        "references/functional-concurrent-languages.md": 121,
+        "references/high-risk-semantics.md": 274,
+        "references/language-conventions.md": 161,
+        "references/local-variable-naming.md": 211,
+        "references/managed-mobile-languages.md": 136,
+        "references/naming-model.md": 547,
+        "references/new-code-workflow.md": 252,
+        "references/polyglot-boundaries.md": 153,
+        "references/refactor-safety.md": 356,
+        "references/structural-analysis.md": 202,
+        "references/systems-languages.md": 138,
+        "references/typescript-javascript.md": 144,
+        "references/web-frameworks.md": 123
+      },
+      "max_extended_route": {
+        "name": "refactor+callable+local-variable+high-risk+web-framework+systems",
+        "words": 3291
+      },
+      "max_extended_route_words": 3291,
+      "max_standard_route": {
+        "name": "refactor+callable+local-variable+high-risk+web-framework",
+        "words": 2839
+      },
+      "maximum_simultaneous_profiles": 2
+    },
+    "short_description_length": 50
+  },
+  "schema_version": "1.0",
+  "valid": true,
+  "warnings": [
+    "large Markdown surface: 57 files"
+  ]
+}

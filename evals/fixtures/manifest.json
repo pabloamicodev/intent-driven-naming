@@ -139,6 +139,56 @@
       "required_tool": "tsc",
       "verify_command": ["{python}", "verify.py", "{candidate}"],
       "timeout_seconds": 60
+    },
+    {
+      "id": "FX12",
+      "language": "python-security",
+      "related_behavior_cases": ["B37"],
+      "expected_decisions": ["not-applicable"],
+      "directory": "python/trust-stages",
+      "candidate_filename": "implementation.py",
+      "reference": "expected.py",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX13",
+      "language": "shell",
+      "related_behavior_cases": ["B42"],
+      "expected_decisions": ["map", "rename"],
+      "directory": "shell/process-contract",
+      "candidate_filename": "implementation.sh",
+      "reference": "expected.sh",
+      "critical": true,
+      "required_tool": "bash",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "FX14",
+      "language": "typescript-protobuf",
+      "related_behavior_cases": ["B44"],
+      "expected_decisions": ["map", "keep"],
+      "directory": "typescript/protobuf-mapping",
+      "candidate_filename": "implementation.ts",
+      "reference": "expected.ts",
+      "critical": true,
+      "required_tool": "tsc",
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 45
+    },
+    {
+      "id": "FX15",
+      "language": "python-observability",
+      "related_behavior_cases": ["B41"],
+      "expected_decisions": ["map", "keep"],
+      "directory": "python/metric-contract",
+      "candidate_filename": "implementation.py",
+      "reference": "expected.py",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
     }
   ]
 }

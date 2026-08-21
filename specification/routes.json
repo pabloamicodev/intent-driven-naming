@@ -8,11 +8,16 @@
   "modes": {
     "new-code": ["references/new-code-workflow.md"],
     "audit": ["references/audit-and-refactor.md"],
-    "refactor": ["references/audit-and-refactor.md", "references/refactor-safety.md"]
+    "refactor": [
+      "references/audit-and-refactor.md",
+      "references/refactor-safety.md",
+      "references/structural-analysis.md"
+    ]
   },
   "features": {
     "callable": ["references/callable-naming.md"],
-    "local-variable": ["references/local-variable-naming.md"]
+    "local-variable": ["references/local-variable-naming.md"],
+    "high-risk": ["references/high-risk-semantics.md"]
   },
   "profiles": {
     "typescript-javascript": ["references/typescript-javascript.md"],

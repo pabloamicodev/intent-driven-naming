@@ -10,7 +10,6 @@ import re
 import sys
 from pathlib import Path
 
-
 SENSITIVE_NAME = re.compile(
     r"(^|[._-])(\.env|credentials?|secrets?|tokens?|id_rsa)([._-]|$)|\.(pem|key|p12|pfx)$",
     re.IGNORECASE,

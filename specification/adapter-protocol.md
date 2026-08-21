@@ -23,7 +23,7 @@ Each input line is one JSON object:
 }
 ```
 
-`variant` is `with-skill` or `without-skill`. An adapter MUST isolate cases from one another unless a case explicitly declares conversation state.
+`variant` is `with-skill`, `previous-skill`, or `without-skill`. The previous variant uses a frozen prior runtime while preserving every model and adapter setting. An adapter MUST isolate cases from one another unless a case explicitly declares conversation state.
 
 ## Response
 
@@ -32,7 +32,7 @@ The adapter writes one JSON object per request:
 ```json
 {
   "protocol_version": 1,
-  "dataset_version": "1.1.0",
+  "dataset_version": "2.0.0",
   "run_id": "run-2026-08-21",
   "system_id": "codex-gpt-5.6-high",
   "configuration_hash": "64-lowercase-hex-characters",
@@ -55,7 +55,10 @@ The adapter writes one JSON object per request:
     "input_tokens": null,
     "output_tokens": null,
     "latency_ms": null,
-    "cost_usd": null
+    "cost_usd": null,
+    "skill_context_words": null,
+    "turns": null,
+    "tool_calls": null
   },
   "implementation": {
     "adapter": "example-adapter",
@@ -78,10 +81,12 @@ The harness owns dataset, run, system, replicate, attempt, case, and variant ide
 
 - Adapters MUST receive credentials through their host environment, never through dataset files.
 - Fixtures MUST run in isolated temporary directories.
-- Model names, versions, reasoning settings, agent versions, and adapter versions MUST be recorded with each result. The release policy checks the standard `implementation` fields shown above for both variants.
+- Model names, versions, reasoning settings, agent versions, and adapter versions MUST be recorded with each result. The release policy checks the standard `implementation` fields for all variants.
 - Every cohort uses a stable `system_id`; stochastic repetitions use distinct `replicate_id` values. Retried cases increment `attempt`, retain earlier raw records, and record the reason for retry.
 - Side-effecting external tools MUST be disabled unless the benchmark explicitly requires and authorizes them.
 - The without-skill adapter path MUST omit the skill instructions while preserving every other controlled setting.
+- The previous-skill path MUST use an immutable runtime snapshot and report its identity in operator evidence.
+- `skill_context_words` is the exact whitespace-delimited size of reported skill resources; `input_tokens` remains the provider-reported end-to-end measure. Operators MUST NOT substitute one for the other.
 
 ## Grading Handoff
 

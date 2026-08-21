@@ -1,16 +1,14 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "measurement": "whitespace-delimited words",
   "budgets": {
-    "entrypoint": 900,
-    "standard-route": 7000,
-    "extended-route": 9500,
-    "single-reference": 1600
+    "entrypoint": 500,
+    "always-loaded": 1100,
+    "standard-route": 3000,
+    "extended-route": 4000,
+    "single-reference": 650
   },
   "maximum_simultaneous_profiles": 2,
-  "exceptions": {
-    "references/callable-naming.md": 900,
-    "references/local-variable-naming.md": 800
-  },
-  "policy": "A route may exceed standard-route only for uncertain conventions or a polyglot boundary. Polyglot tasks use the compact boundary protocol and at most two full profiles at once. No checked-in reference may exceed its applicable single-reference budget."
+  "exceptions": {},
+  "policy": "Every ordinary route stays under 3000 words. Uncertain or polyglot work may load compact boundary guidance and at most two ecosystem cards while remaining under 4000 words. A new reference must replace or route detail rather than silently raising a budget."
 }

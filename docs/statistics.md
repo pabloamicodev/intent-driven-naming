@@ -1,0 +1,26 @@
+# Statistical evaluation protocol
+
+Release conclusions use paired observations from identical cases, model configuration, and
+replicate IDs. Current-skill quality is compared with the no-skill control; efficiency is compared
+with a frozen previous-skill runtime. Mixing model versions, reasoning settings, adapter versions,
+or grader policies within a system invalidates the comparison.
+
+Activation and invariant proportions include Wilson 95% intervals. Paired quality deltas use a
+deterministic 10,000-sample percentile bootstrap with a published seed. The bootstrap resamples
+matched observations and reports the mean with-skill minus without-skill delta. Report effect size,
+interval, matched-pair count, wins, losses, and ties; a p-value alone is insufficient.
+
+The release gate also requires minimum per-slice results. Small slices are diagnostic and must not
+be advertised as standalone proof. Adding many slices increases false-discovery risk, so post-hoc
+slice findings are hypotheses until reproduced on held-out data. Failed, skipped, retried, and
+ungraded cases remain visible; only the highest declared retry attempt is scored, and completeness
+is checked per replicate.
+
+Human semantic grades require at least two independent blinded reviews, evidence for every label,
+raw agreement, chance-corrected agreement, and decision-set agreement. Pairwise preference uses a
+separate blinded orientation and private randomization salt. Critical contract or behavior failures
+cannot be compensated by aggregate improvements.
+
+External release evidence must publish the dataset version, case exclusions, preregistered policy,
+systems, configuration hashes, replicate count, usage coverage, intervals, reviewer agreement, and
+all gate violations. The offline suite alone cannot establish cross-model effectiveness.

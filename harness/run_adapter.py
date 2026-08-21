@@ -21,7 +21,6 @@ from harness.eval_core import (
     write_jsonl,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,7 +28,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, required=True, help="JSONL case dataset")
     parser.add_argument("--output", type=Path, required=True, help="raw result JSONL")
-    parser.add_argument("--variant", choices=("with-skill", "without-skill"), required=True)
+    parser.add_argument(
+        "--variant",
+        choices=("with-skill", "previous-skill", "without-skill"),
+        required=True,
+    )
+    parser.add_argument(
+        "--baseline-skill-path",
+        type=Path,
+        help="required frozen runtime checkout for the previous-skill variant",
+    )
     parser.add_argument("--system-id", required=True, help="stable model-and-agent configuration name")
     parser.add_argument("--replicate-id", default="r1")
     parser.add_argument("--attempt", type=int, default=1)
@@ -58,6 +66,10 @@ def main() -> int:
         parser.error("--limit cannot be negative")
     if args.attempt < 1:
         parser.error("--attempt must be at least 1")
+    if args.variant == "previous-skill" and not args.baseline_skill_path:
+        parser.error("--baseline-skill-path is required for previous-skill")
+    if args.baseline_skill_path and not (args.baseline_skill_path / "SKILL.md").is_file():
+        parser.error("--baseline-skill-path must contain SKILL.md")
     if not args.replicate_id.strip() or not args.system_id.strip():
         parser.error("--system-id and --replicate-id must be non-empty")
 
@@ -89,7 +101,11 @@ def main() -> int:
                 "replicate_id": args.replicate_id,
                 "attempt": args.attempt,
                 "case": case,
-                "skill_path": str(ROOT.resolve()),
+                "skill_path": str(
+                    args.baseline_skill_path.resolve()
+                    if args.variant == "previous-skill"
+                    else ROOT.resolve()
+                ),
                 "variant": args.variant,
             }
         )

@@ -17,6 +17,7 @@ Conformance is cumulative. A higher level includes every lower-level requirement
 - Audit requests remain read-only.
 - Refactor requests do not imply contract migrations or unrelated redesign.
 - Context routes remain within their declared word budgets.
+- Current-skill context and end-to-end input usage meet the versioned efficiency gate against a frozen previous runtime.
 
 ## Level 2 — Semantic Decisions
 
@@ -33,6 +34,7 @@ Conformance is cumulative. A higher level includes every lower-level requirement
 - Public APIs, keyword parameters, serialization keys, dynamic references, generated sources, ABI surfaces, and stateful infrastructure are represented in the corpus.
 - Critical contract-safety fixtures pass at 100%.
 - Every applied rename records the checks run and unresolved surfaces.
+- Non-trivial changes conform to the semantic-record and rename-plan contracts.
 
 ## Level 4 — Organization-Grade Evidence
 
