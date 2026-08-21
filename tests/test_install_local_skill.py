@@ -33,7 +33,7 @@ class InstallLocalSkillTest(unittest.TestCase):
             backup = install(destination, replace=True)
             self.assertIsNotNone(backup)
             self.assertTrue((backup / "VERSION").is_file())
-            self.assertEqual(backup.parent, destination.parent / ".skill-backups")
+            self.assertTrue(backup.parent.samefile(destination.parent / ".skill-backups"))
             self.assertEqual(verify_installation(destination), [])
 
     def test_default_backup_avoids_one_level_skill_discovery(self):
