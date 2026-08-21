@@ -244,6 +244,156 @@ Audit these names: `config`, `result`, `data`, and `item`. You do not have their
 - The skill requests or identifies the missing semantic context needed to classify them.
 - It does not invent domain-specific replacements without evidence.
 
+## B15 — Python Preserves External Field Aliases
+
+### Prompt
+
+```text
+Refactor this Python API model to use idiomatic internal names while preserving the external JSON field `customerId`.
+```
+
+### Required invariants
+
+- Internal Python identifiers use the repository's Python convention, such as `customer_id`.
+- The serialized `customerId` field remains unchanged through an alias or adapter.
+- The skill does not import JavaScript casing into all Python locals.
+- Framework model fields and validation behavior remain intact.
+
+## B16 — Rust Conversion Names Preserve Semantics
+
+### Prompt
+
+```text
+Review Rust methods named `to_order`, `into_order`, and `as_order`. Rename only if their ownership behavior and names disagree.
+```
+
+### Required invariants
+
+- The audit inspects whether each method borrows, allocates or clones, or consumes its receiver.
+- `as_`, `to_`, and `into_` are not treated as interchangeable stylistic prefixes.
+- No rename is proposed without evidence from signatures and implementations.
+- Public trait and serialization contracts are considered.
+
+## B17 — Java Overrides Remain Stable
+
+### Prompt
+
+```text
+Improve method names in this Java class, but several methods implement a third-party interface.
+```
+
+### Required invariants
+
+- Interface implementations and overrides retain required signatures.
+- Internal helper methods can improve when their meaning is supported.
+- The skill does not add vague `Manager`, `Helper`, or `Util` suffixes.
+- Reflection, annotations, serializers, and framework lifecycle methods are checked before rename.
+
+## B18 — C# Async Convention Is Contextual
+
+### Prompt
+
+```text
+Audit a published C# API containing `FetchOrdersAsync` and an internal local function that also returns a Task.
+```
+
+### Required invariants
+
+- The public `Async` suffix is evaluated against .NET and repository API conventions.
+- The suffix is not removed merely because the return type already communicates `Task`.
+- The internal function is not forced to adopt the same public naming rule without local evidence.
+- Public parameter names and named-call compatibility are considered.
+
+## B19 — Swift Argument Labels Are Part of the API
+
+### Prompt
+
+```text
+Improve this Swift API: `func orders(_ id: CustomerID)`. Existing callers are outside the repository.
+```
+
+### Required invariants
+
+- The full call-site meaning, including argument labels, is evaluated.
+- The skill recognizes that changing a public argument label can break source compatibility.
+- A clearer new API can be proposed without claiming an uncoordinated rename is behavior-preserving.
+- Protocol requirements, Codable keys, and Objective-C selectors are protected when applicable.
+
+## B20 — Functional Pipeline Does Not Gain Object-Oriented Noise
+
+### Prompt
+
+```text
+Improve naming in an Elixir pipeline that filters pending orders, groups them by customer ID, and emits `{:orders_ready, payload}` messages.
+```
+
+### Required invariants
+
+- Pipeline stages use domain transformations only where intermediate names help.
+- Predicates use the language's idiomatic form.
+- The message tag `:orders_ready` is treated as a runtime protocol and preserved unless migration is authorized.
+- The solution does not introduce managers, setters, or handler classes.
+
+## B21 — SQL Uses Aliases Instead of an Unrequested Migration
+
+### Prompt
+
+```text
+The legacy database column `price` stores cents and cannot be migrated. Make this reporting query clearer.
+```
+
+### Required invariants
+
+- The stored column remains `price`.
+- A semantic query alias such as `price_in_cents` is used when supported by the query context.
+- The skill does not convert the value or change its unit.
+- Downstream result-shape compatibility is considered before changing a public alias.
+
+## B22 — Terraform Resource Address Is Stateful
+
+### Prompt
+
+```text
+Rename `aws_s3_bucket.data` to `customer_exports` in an existing Terraform deployment.
+```
+
+### Required invariants
+
+- The resource label is recognized as part of the Terraform state address.
+- The skill does not treat the change as a harmless local-variable rename.
+- A state move or equivalent migration and plan verification are identified as necessary when authorized.
+- The remote resource name, module outputs, and consumers are distinguished from the local label.
+
+## B23 — PowerShell Public Parameters Remain Compatible
+
+### Prompt
+
+```text
+Improve a PowerShell function named `Run-CustomerSync` and rename its public `-Id` parameter to something clearer without breaking scripts.
+```
+
+### Required invariants
+
+- The command name is evaluated against the module's Verb-Noun convention.
+- The public parameter is recognized as a caller-facing interface.
+- A compatibility alias or migration is considered instead of a silent breaking rename.
+- Automatic and preference variables are not treated as ordinary locals.
+
+## B24 — Polyglot Layers Share Meaning, Not Casing
+
+### Prompt
+
+```text
+An API uses `customer_id`, TypeScript uses `customerId`, Python uses `customer_id`, and C# exposes `CustomerId`. Audit their consistency.
+```
+
+### Required invariants
+
+- The different casing forms are not reported as inconsistent by themselves.
+- The audit verifies that all forms represent the same customer identifier concept.
+- Boundary mappings and serialized spellings remain explicit.
+- The skill does not force one language's casing across every layer.
+
 ## Scoring
 
 Score each required invariant as:
@@ -259,6 +409,8 @@ Track these aggregate dimensions:
 - behavior preservation;
 - proportionality of rename scope;
 - respect for language conventions;
+- preservation of language-specific API, protocol, schema, ABI, CLI, and infrastructure contracts;
+- semantic continuity across polyglot layers without forced casing uniformity;
 - ability to produce a no-op;
 - quality of audit evidence;
 - absence of unnecessary explanation in generation mode.

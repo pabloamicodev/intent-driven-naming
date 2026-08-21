@@ -1,6 +1,6 @@
 ---
 name: intent-driven-naming
-description: Improve identifier names in generated or existing application code. Use for code generation, naming audits, code review, and behavior-preserving refactors; not for product, brand, file, or prose naming.
+description: Improve software identifiers across languages, frameworks, schemas, queries, and infrastructure code. Use for generation, naming audits, code review, and behavior-preserving refactors; not for product, brand, file, branch, or prose naming.
 ---
 
 # Intent-Driven Naming
@@ -9,18 +9,29 @@ Make important identifiers communicate durable semantic intent. Prefer the short
 
 ## Route the Task
 
-Read [references/naming-model.md](references/naming-model.md) for every task that uses this skill, then load only the workflow that applies:
+Read both [references/naming-model.md](references/naming-model.md) and [references/language-conventions.md](references/language-conventions.md) for every task that uses this skill, then load only the workflow and language profile that apply.
+
+Select the workflow:
 
 - For new code, read [references/new-code-workflow.md](references/new-code-workflow.md).
 - For an audit or review, read [references/audit-and-refactor.md](references/audit-and-refactor.md). Report findings without editing unless changes were explicitly requested.
 - For an authorized rename or refactor, read both [references/audit-and-refactor.md](references/audit-and-refactor.md) and [references/refactor-safety.md](references/refactor-safety.md).
-- For TypeScript, JavaScript, React, or React Query code, also read [references/typescript-react-patterns.md](references/typescript-react-patterns.md).
 
-Do not read a mode-specific reference that does not apply.
+Select at most the relevant language profile for each affected part of the task:
+
+- TypeScript, JavaScript, Node.js, or browser UI frameworks: read [references/typescript-javascript.md](references/typescript-javascript.md).
+- Python, Ruby, or PHP: read [references/dynamic-languages.md](references/dynamic-languages.md).
+- Go, Rust, C, or C++: read [references/systems-languages.md](references/systems-languages.md).
+- Java, Kotlin, C#, Swift, or Dart: read [references/managed-mobile-languages.md](references/managed-mobile-languages.md).
+- Haskell, OCaml, F#, Scala, Clojure, Erlang, or Elixir: read [references/functional-concurrent-languages.md](references/functional-concurrent-languages.md).
+- SQL, data pipelines, shell scripts, PowerShell, schemas, or infrastructure as code: read [references/data-infrastructure.md](references/data-infrastructure.md).
+
+The profiles are refinements, not a supported-language allowlist. For an unlisted language, apply the naming model and the repository-discovery protocol in `language-conventions.md`. Do not load an unrelated profile merely because its syntax looks similar. Do not read a mode or profile reference that does not apply.
 
 ## Shared Invariants
 
 - Derive names from domain meaning, not primarily from programming-language type.
+- Choose semantic meaning before translating it into the target language's casing, affixes, visibility, and API conventions.
 - Use the vocabulary already established by the user, codebase, contracts, and domain documentation.
 - Add state, relationship, representation, scope, cardinality, or unit only when the distinction affects understanding or correctness.
 - Treat generic words as context-dependent signals, not forbidden tokens.
@@ -28,6 +39,7 @@ Do not read a mode-specific reference that does not apply.
 - Preserve behavior, authorization boundaries, and protected external contracts.
 - Prefer a local, high-confidence improvement over broad cosmetic churn.
 - Follow established language and framework conventions when they conflict with a generic naming preference.
+- Preserve framework magic, protocol requirements, overrides, schema fields, and interop names as contracts.
 
 ## Execute the Selected Mode
 
@@ -40,13 +52,14 @@ Do not read a mode-specific reference that does not apply.
 - Important identifiers remain understandable away from their declarations.
 - Entities, IDs, collections, booleans, units, states, and transformations are distinguishable where the distinction matters.
 - Related identifiers use consistent semantic families.
+- Names are idiomatic for the target language and role without losing cross-layer domain continuity.
 - Audit findings explain evidence, severity, confidence, and contract risk.
 - Refactors preserve behavior and protected contracts, and verification results are reported accurately.
 - Clear existing names remain unchanged.
 
 ## Boundaries
 
-- Do not rename public APIs, schemas, serialized keys, environment variables, URL parameters, framework-required identifiers, or third-party fields merely for style.
+- Do not rename public APIs, schemas, serialized keys, environment variables, URL parameters, framework-required identifiers, overrides, protocol requirements, or third-party fields merely for style.
 - Do not edit generated code when its source or generator should be changed instead.
 - Do not perform unrelated architectural refactors to support a naming change.
 - Stop and report the ambiguity when a safe name depends on unresolved domain meaning or an untraceable dynamic contract.

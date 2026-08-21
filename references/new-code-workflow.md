@@ -1,6 +1,6 @@
 # New-Code Naming Workflow
 
-Apply this workflow while designing non-trivial application code. Naming is part of the implementation, not a cleanup phase detached from behavior.
+Apply this workflow while designing non-trivial software in any programming language, query language, schema, or infrastructure format. Naming is part of the implementation, not a cleanup phase detached from behavior.
 
 ## 1. Establish the Domain Language
 
@@ -31,7 +31,18 @@ Tiny conventional locals do not require the same descriptive burden as long-live
 
 ## 3. Apply the Semantic Model
 
-Use the naming model to build the shortest unambiguous name.
+Use the naming model to build the shortest unambiguous semantic payload, then render it according to the target language and project conventions.
+
+Equivalent intent can have different idiomatic spellings:
+
+```text
+TypeScript: const priceInCents = 2_499;
+Python:     price_in_cents = 2_499
+C#:         public int PriceInCents { get; init; }
+SQL:        price_in_cents INTEGER NOT NULL
+```
+
+Do not copy casing, visibility, or affixes from an example written in another ecosystem.
 
 Avoid naming by programming-language type:
 
@@ -149,11 +160,11 @@ Before completing the code:
 
 1. Re-read important names without relying on their declarations.
 2. Check entity/ID, singular/plural, boolean, unit, state, and representation distinctions.
-3. Check callback parameters, derived values, function names, and related pairs.
+3. Check callback or closure parameters, derived values, callable names, variants, messages, bindings, and related families.
 4. Remove type words and redundant scope.
 5. Replace vague transformation labels with the resulting semantic state.
-6. Confirm that terminology matches the surrounding codebase.
-7. Shorten any name that can lose a word without becoming ambiguous.
+6. Confirm that terminology and surface form match the surrounding codebase and target ecosystem.
+7. Shorten any name that can lose a word without becoming ambiguous in that ecosystem.
 
 Do this silently. Return the requested implementation rather than a separate naming essay unless the user asks for rationale.
 
@@ -183,4 +194,5 @@ The longer version repeats information that the scope and collection already com
 - Related identifiers use one vocabulary.
 - Potentially dangerous units or representations are explicit.
 - Conventional short locals remain short.
+- Casing, visibility, predicate style, and public API form are idiomatic for the target language.
 - No protected external contract was renamed for style.

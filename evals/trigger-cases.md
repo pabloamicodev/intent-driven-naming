@@ -34,6 +34,21 @@ These cases evaluate routing only. They do not prescribe exact response wording.
 | T19 | Generate a UUID for this test fixture. | Do not trigger | Value generation with no naming-sensitive application code. |
 | T20 | Rename my Git branch to `feature/checkout`. | Do not trigger | Repository branch naming, not code identifiers. |
 
+## Additional Ecosystem Cases
+
+| ID | Prompt | Expected | Why |
+|---|---|---|---|
+| T21 | Implement a Rust parser that distinguishes raw, parsed, and validated configuration without unnecessary type suffixes. | Trigger | New systems code with representation and language-convention decisions. |
+| T22 | Review this Java service for misleading domain names and preserve all interface overrides. | Trigger | Naming audit with object-oriented contract boundaries. |
+| T23 | Refactor these C# async methods so their intent is clear without breaking the published .NET API. | Trigger | Behavior-preserving naming work with ecosystem-specific async conventions. |
+| T24 | Design a Swift repository API whose argument labels read naturally at the call site. | Trigger | New public identifiers where labels are part of API meaning. |
+| T25 | Improve the names in this Elixir pipeline and message protocol without changing registered atoms. | Trigger | Functional/concurrent naming with runtime protocol constraints. |
+| T26 | Design SQL tables and columns for order totals, currencies, and timestamps with explicit units. | Trigger | New schema identifiers with correctness-critical semantics. |
+| T27 | Rename these Terraform resources safely and account for existing state addresses. | Trigger | Infrastructure naming can change persisted operational identity. |
+| T28 | Review this PowerShell module's cmdlet and parameter names for clarity and compatibility. | Trigger | Software identifier audit with public CLI conventions. |
+| T29 | Rename internal C++ symbols while preserving exported C ABI names and generated bindings. | Trigger | Systems refactor with ABI and generation boundaries. |
+| T30 | Create a Python API model that maps an external `customerId` field to idiomatic internal names. | Trigger | Polyglot boundary mapping and dynamic-language conventions. |
+
 ## Borderline Review
 
 When a result differs from `Expected`, inspect the description before adding more rules:
@@ -47,5 +62,6 @@ When a result differs from `Expected`, inspect the description before adding mor
 
 - All explicit naming audits and identifier refactors trigger.
 - Representative non-trivial code-generation prompts trigger.
+- Representative dynamic, systems, managed, functional, data, shell, and infrastructure prompts trigger.
 - Product, brand, file, branch, and prose naming prompts do not trigger.
 - A safe-contract case triggers even when the correct outcome may be to preserve the external name.

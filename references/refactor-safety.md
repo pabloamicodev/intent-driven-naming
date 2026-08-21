@@ -32,12 +32,14 @@ Preserve these names unless the user explicitly requests and scopes a migration:
 - environment variables and configuration keys;
 - URL parameters, query parameters, routes, and form field names;
 - public package exports and documented consumer APIs;
+- public parameter names or argument labels when callers can bind by name;
 - framework-required lifecycle methods, hooks, conventions, and magic names;
 - third-party integration fields;
 - event names, queue topics, telemetry dimensions, and metric names;
 - dependency-injection tokens and runtime registration keys;
 - reflection, decorators, annotations, and string-based property access;
 - CSS selectors, template bindings, snapshots, and fixtures when they form runtime or test contracts;
+- CLI commands and flags, infrastructure resource addresses, state identifiers, manifest keys, and automation inputs;
 - generated files whose source or generator should be changed instead.
 
 An unusual external name is not automatically a defect.
@@ -105,7 +107,7 @@ Run the repository's existing relevant checks in proportion to the change:
 1. Targeted tests for the affected module or behavior.
 2. Type checking or compilation.
 3. Linting and static analysis.
-4. Broader tests or builds when the symbol crosses modules or packages.
+4. Broader tests, builds, schema checks, query checks, or infrastructure previews when the identifier crosses modules, packages, data, or operational state.
 5. A final diff review for accidental value, control-flow, serialization, or formatting changes.
 
 When a check is unavailable or already failing, report that limitation accurately. Do not claim behavior preservation solely because a textual rename completed.

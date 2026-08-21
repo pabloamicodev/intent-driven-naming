@@ -54,7 +54,7 @@ Classify the rename surface:
 
 - **Internal:** Private local, parameter, callback, or unexported symbol with traceable references.
 - **Cross-module:** Exported or shared within the repository.
-- **External:** Public API, schema, serialized field, environment variable, URL, framework hook, generated interface, or third-party contract.
+- **External:** Public API or parameter label, schema, serialized field, environment variable, CLI surface, URL, infrastructure resource address, framework hook, generated interface, or third-party contract.
 - **Dynamic:** Referenced by strings, reflection, templates, dependency injection, configuration, or runtime registration.
 
 Internal symbols are normally the safest. Cross-module changes require repository-wide reference analysis. External and dynamic names should be preserved or explicitly mapped at a boundary unless the user authorizes a contract migration.
@@ -115,7 +115,7 @@ When edits are authorized, build the smallest rename set that restores semantic 
 current symbol -> proposed symbol -> related symbols -> protected boundaries
 ```
 
-Include related pairs and families only when leaving them unchanged would create a mismatch. A local variable rename does not authorize renaming a public type, endpoint, database column, or event name.
+Include related pairs and families only when leaving them unchanged would create a mismatch. A local variable rename does not authorize renaming a public type, parameter label, endpoint, database column, CLI flag, infrastructure resource address, or event name.
 
 Read `refactor-safety.md` before applying changes.
 

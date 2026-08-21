@@ -1,6 +1,6 @@
 # Semantic Naming Model
 
-Use this model to decide what information an identifier must carry. It is a decision framework, not a formula for producing long names.
+Use this language-independent model to decide what information an identifier must carry. It is a decision framework, not a formula for producing long names or a casing convention.
 
 ## Core Principle
 
@@ -12,7 +12,7 @@ Start with the domain concept, then add only the semantic dimensions needed to p
 identifier = concept + necessary distinctions
 ```
 
-The objective is durable meaning, not maximum description.
+The objective is durable meaning, not maximum description. Select the semantic payload here, then translate it into the target language's idiomatic spelling through `language-conventions.md`.
 
 ## Discover the Vocabulary First
 
@@ -24,11 +24,7 @@ Use this evidence order before inventing terminology:
 4. UI copy, API fields, database schemas, events, and tests that reveal business meaning.
 5. A new term only when existing vocabulary is absent, contradictory, or demonstrably misleading.
 
-Treat external names as evidence, not automatic internal names. A fixed external field may be translated at a boundary:
-
-```ts
-const customerId = apiResponse.cust_id;
-```
+Treat external names as evidence, not automatic internal names. A fixed external field such as `cust_id` may map to the internal concept “customer identifier” without changing the boundary spelling.
 
 Do not alternate among `customer`, `client`, `user`, and `account` unless they represent different concepts.
 
@@ -43,8 +39,8 @@ What domain entity, value, action, or policy does it represent?
 ```text
 customer
 order
-shippingAddress
-passwordResetToken
+shipping address
+password reset token
 ```
 
 ### Role or Relationship
@@ -52,10 +48,10 @@ passwordResetToken
 How does it relate to another concept?
 
 ```text
-billingContact
-ordersByCustomerId
-parentOrganization
-assignedReviewer
+billing contact
+orders indexed by customer identifier
+parent organization
+assigned reviewer
 ```
 
 ### State or Lifecycle
@@ -63,10 +59,10 @@ assignedReviewer
 What meaningful state does the value encode?
 
 ```text
-pendingOrders
-authenticatedUser
-isPaymentAuthorized
-expiredSubscriptions
+pending orders
+authenticated user
+payment is authorized
+expired subscriptions
 ```
 
 Do not add state that is already guaranteed by the type or scope.
@@ -76,11 +72,11 @@ Do not add state that is already guaranteed by the type or scope.
 Which representation coexists with this one, or what meaningful transformation produced it?
 
 ```text
-rawPhoneNumber
-normalizedPhoneNumber
-validatedCheckoutRequest
-productsSortedByPrice
-ordersGroupedByCustomerId
+raw phone number
+normalized phone number
+validated checkout request
+products sorted by price
+orders grouped by customer identifier
 ```
 
 Avoid sequence-only words such as `new`, `updated`, `processed`, and `final` when the resulting state can be named directly.
@@ -90,10 +86,10 @@ Avoid sequence-only words such as `new`, `updated`, `processed`, and `final` whe
 Is the value one entity, a collection, a set of identifiers, or an index?
 
 ```text
-selectedProduct
-selectedProducts
-selectedProductIds
-productsById
+selected product
+selected products
+selected product identifiers
+products indexed by identifier
 ```
 
 Collections are normally plural. Callback parameters preserve the singular entity name.
@@ -103,11 +99,11 @@ Collections are normally plural. Callback parameters preserve the singular entit
 Could another engineer reasonably assume the wrong unit, currency, time basis, or scale?
 
 ```text
-requestTimeoutMs
-priceInCents
-maximumUploadSizeBytes
-discountPercent
-createdAtUtc
+request timeout in milliseconds
+price in cents
+maximum upload size in bytes
+discount percentage
+creation time in UTC
 ```
 
 Add a unit only when the domain or type does not make it reliably obvious.
@@ -116,7 +112,7 @@ Add a unit only when the domain or type does not make it reliably obvious.
 
 Does the current scope contain competing values of the same concept?
 
-Use `users` when only one user collection exists. Use `organizationUsers` and `accountUsers` when both coexist. Do not repeat context already supplied by the module, class, namespace, or receiver.
+Use the local equivalent of `users` when only one user collection exists. Distinguish organization users from account users when both coexist. Do not repeat context already supplied by the module, class, namespace, package, receiver, or schema.
 
 ## Decision Procedure
 
@@ -139,6 +135,20 @@ Candidate: selectedCheckoutProductIdentifiers
 Reduced: selectedProductIds
 ```
 
+## Separate Semantics From Surface Form
+
+The same semantic payload can be rendered differently without losing continuity:
+
+```text
+JavaScript local: priceInCents
+Python local:     price_in_cents
+C# property:      PriceInCents
+SQL column:       price_in_cents
+Environment key: PRICE_IN_CENTS
+```
+
+Do not demand identical spelling across layers. Demand that each spelling refer to the same concept and that boundary mappings remain explicit.
+
 ## Candidate Quality Test
 
 Compare candidate names using these questions:
@@ -149,36 +159,20 @@ Compare candidate names using these questions:
 - **Scope fit:** Is it sufficiently specific for this scope without repeating it?
 - **Searchability:** Can an engineer search for the domain concept reliably?
 - **Brevity:** Can any word be removed without losing important meaning?
+- **Idiomatic form:** Does its casing, affix, visibility, and role match the target ecosystem?
 - **Contract safety:** Is the identifier free to change, or is it externally constrained?
 
 Do not use a numeric score mechanically. Prefer a clearly superior candidate; preserve the existing name when tradeoffs are marginal.
 
 ## Semantic Families
 
-Identifiers representing the same concept should share terminology:
+Identifiers representing the same concept should share terminology. Render related concepts as an idiomatic family in the target ecosystem: customer orders, their error state, their loading state, and the operation that retrieves them should not switch arbitrarily to client purchases or generic data.
 
-```ts
-customerOrders
-customerOrdersError
-areCustomerOrdersLoading
-fetchCustomerOrders
-```
-
-Keep related pairs aligned:
-
-```ts
-selectedProduct
-setSelectedProduct
-
-isCheckoutOpen
-setIsCheckoutOpen
-```
-
-Avoid mismatches such as `product` with `setSelected`, or `orders` with `fetchClientPurchases` when all values represent customer orders.
+Keep related state, mutation, message, and result concepts aligned. A language may express these relationships with setters, mutable references, records, reducers, variants, messages, or transformations; do not impose setter pairs where the language does not use them.
 
 ## Booleans as Propositions
 
-Boolean names should make a condition read naturally and distinguish state, capability, policy, and history:
+Boolean or predicate names should read naturally in the target language and distinguish state, capability, policy, and history:
 
 ```ts
 isAuthenticated
@@ -191,11 +185,11 @@ requiresShippingAddress
 didCompleteCheckout
 ```
 
-Avoid ambiguous nouns such as `permission`, `loading`, and `validation` for booleans. Avoid negative names that create double negatives when a positive proposition expresses the same concept clearly.
+Avoid ambiguous bare nouns equivalent to `permission`, `loading`, and `validation` when the language offers a clearer predicate form. Avoid negative names that create double negatives when a positive proposition expresses the same concept clearly. Respect predicate suffixes or question-mark forms where supported.
 
 ## Callables as Actions or Questions
 
-Functions that cause or compute something normally use a precise action plus its object:
+Callables that cause or compute something normally use a precise action plus its object, translated into the target convention:
 
 ```text
 calculateOrderTotal
@@ -226,24 +220,9 @@ Existing project and framework conventions take precedence.
 
 ## Contextual Exceptions
 
-Generic or short names are acceptable when their meaning is established by a tiny, conventional scope:
+Generic or short names are acceptable when their meaning is established by a tiny, conventional scope. Examples include `i` as a loop index, `x` in a short mathematical transform, `err` in a small Go error branch, and `self` or `this` where required by the language.
 
-```ts
-for (let i = 0; i < products.length; i += 1) {
-  // `i` is a conventional local index.
-}
-
-products.map((product) => product.id);
-```
-
-Type or role suffixes can be semantic when they distinguish architectural roles or contracts:
-
-```text
-UserDto
-PaymentEvent
-CheckoutOptions
-ValidationError
-```
+Type or role affixes can be semantic when they distinguish real architectural roles or contracts, such as a DTO, event, options object, error type, protocol implementation, database row, or message type.
 
 Names such as `config`, `options`, `context`, `result`, or `data` are not forbidden. Improve them only when the scope contains a more useful domain distinction.
 
