@@ -394,6 +394,156 @@ An API uses `customer_id`, TypeScript uses `customerId`, Python uses `customer_i
 - Boundary mappings and serialized spellings remain explicit.
 - The skill does not force one language's casing across every layer.
 
+## B25 — Callable Name Matches the Observable Contract
+
+### Prompt
+
+```text
+Audit a function named `getCustomer` that creates a customer when none exists, persists it, and returns it. Also review its parameters and locals.
+```
+
+### Required invariants
+
+- The audit identifies that `getCustomer` hides an observable creation and persistence effect.
+- A proposed declaration name reflects the actual contract instead of an incidental implementation step.
+- Parameter and local recommendations use the same customer vocabulary as the callable.
+- The skill does not claim a public function can be renamed safely without inspecting callers and contracts.
+
+## B26 — Local Names Reveal Meaningful Data-Flow Stages
+
+### Prompt
+
+```text
+Improve the names in a function that reads `data`, parses it into `temp`, validates it into `processed`, and returns `result` as a normalized checkout request.
+```
+
+### Required invariants
+
+- Names distinguish source, parsed, validated, and normalized representations only where those values coexist or affect correctness.
+- Chronological placeholders are replaced by stable semantic states supported by the transformations.
+- The function declaration and returned value agree about the final result.
+- The skill does not introduce a binding for every trivial expression merely to make the names longer.
+
+## B27 — Short Locals Use a Scope-and-Risk Budget
+
+### Prompt
+
+```text
+Review `i`, `x`, `err`, and `acc` in a three-line loop, a one-expression mathematical map, a small Go error branch, and a multi-stage reducer with two monetary accumulators.
+```
+
+### Required invariants
+
+- Tiny conventional `i`, `x`, and `err` bindings can remain when unambiguous and idiomatic.
+- The reducer's accumulators are evaluated more strictly because multiple monetary meanings coexist.
+- Units are added when confusing cents, dollars, tax, or subtotal could cause a wrong assumption.
+- The skill does not enforce a minimum identifier length or ban single-letter names.
+
+## B28 — Public Parameter and Private Local Have Different Risk
+
+### Prompt
+
+```text
+Refactor a published Python function whose parameter `id` is used by external keyword callers. Its body also has a local `data` containing pending invoices.
+```
+
+### Required invariants
+
+- The public parameter is recognized as a keyword-call contract rather than an ordinary local.
+- Compatibility, an alias, or a coordinated migration is required before changing `id`.
+- The internal `data` binding can become an idiomatic semantic name when its meaning is proven.
+- The skill does not import camelCase into Python or conflate the two rename risks.
+
+## B29 — Local Rename Preserves Property Shorthand Contract
+
+### Prompt
+
+```text
+In JavaScript, rename local `customerId` to `selectedCustomerId`, but the function returns `{ customerId }` as a public JSON payload.
+```
+
+### Required invariants
+
+- The local binding may be renamed while the emitted `customerId` key remains unchanged.
+- Property shorthand is expanded to an explicit mapping when necessary.
+- Tests or verification include the serialized output shape, not only type checking.
+- A global text replacement is rejected as insufficient.
+
+## B30 — Collection, Callback, and Capture Vocabulary Align
+
+### Prompt
+
+```text
+Name a function that schedules reminders for pending orders. It filters `items`, maps each `x`, and captures `data` in an async callback used later.
+```
+
+### Required invariants
+
+- The callable name describes scheduling order reminders rather than generic processing.
+- The collection is plural and callback elements use the aligned singular domain term.
+- The captured value receives enough context to remain clear at its later execution site.
+- Async or closure boundaries increase the required clarity without forcing verbose names everywhere.
+
+## B31 — Accumulator Names Describe Their Invariants
+
+### Prompt
+
+```text
+Improve a reducer with `acc1` for subtotal cents, `acc2` for tax cents, and `n` for the number of billable order lines.
+```
+
+### Required invariants
+
+- Each accumulator is named for the value it maintains, not its position in the reducer.
+- Monetary units remain explicit because confusing them would be dangerous.
+- The counter distinguishes billable line count from monetary totals.
+- The surrounding function name and final result use the same order-total vocabulary.
+
+## B32 — Handler and Query Verbs Do Not Hide Effects
+
+### Prompt
+
+```text
+Review `handleOrders`, which is a reusable business function that fetches orders, and `getPayment`, which authorizes and persists a payment.
+```
+
+### Required invariants
+
+- `handle` is not retained merely as a universal business-logic prefix when no event boundary exists.
+- The order function's name sets an accurate data-access expectation using repository evidence.
+- `getPayment` is identified as misleading because it hides authorization and persistence effects.
+- Replacement names describe observable contracts rather than listing every internal statement.
+
+## B33 — Naming Signal Does Not Authorize Extraction
+
+### Prompt
+
+```text
+Rename `doEverything`, a function that validates an order, charges a payment, writes the order, and sends a receipt. This is a naming-only refactor.
+```
+
+### Required invariants
+
+- The skill recognizes that a precise name is difficult because the function coordinates several effects.
+- A workflow-level name can be proposed if supported by the domain.
+- The mixed-responsibility signal is reported separately.
+- The skill does not extract functions, redesign the signature, or alter control flow under naming-only authorization.
+
+## B34 — Same Function Intent Renders Idiomatically Across Languages
+
+### Prompt
+
+```text
+Implement the same operation in TypeScript, Python, and Elixir: filter pending orders and calculate their total in cents. Name the functions, parameters, predicates, intermediate values, and accumulator idiomatically.
+```
+
+### Required invariants
+
+- All implementations preserve the same order, pending-state, total, and cents concepts.
+- Casing and predicate forms follow each language rather than being copied from TypeScript.
+- Parameters, collections, elements, intermediate values, and results form coherent families in each implementation.
+- Conventional functional pipelines are not forced to introduce unnecessary intermediate variables or object-oriented wrappers.
+
 ## Scoring
 
 Score each required invariant as:
@@ -411,6 +561,9 @@ Track these aggregate dimensions:
 - respect for language conventions;
 - preservation of language-specific API, protocol, schema, ABI, CLI, and infrastructure contracts;
 - semantic continuity across polyglot layers without forced casing uniformity;
+- coherence between callable declarations, parameters, locals, errors, returned values, and effects;
+- scope-sensitive treatment of conventional short locals, callbacks, captures, and accumulators;
+- preservation of property keys, named-argument compatibility, and other intrafunction contract surfaces;
 - ability to produce a no-op;
 - quality of audit evidence;
 - absence of unnecessary explanation in generation mode.

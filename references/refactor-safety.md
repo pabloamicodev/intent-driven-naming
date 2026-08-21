@@ -18,6 +18,8 @@ For every symbol selected for change, identify:
 - paired or derived identifiers that would become inconsistent;
 - tests, fixtures, snapshots, comments, and documentation that refer to the code concept;
 - string-based or runtime references;
+- lexical shadowing, nested scopes, closures, captures, patterns, and destructuring;
+- object or record shorthand where a binding name can become an output field;
 - boundaries where the old spelling must remain.
 
 Prefer symbol-aware navigation and rename operations when the environment provides them. Literal search is still necessary for string references and serialized names, but do not use global text replacement as a substitute for semantic analysis.
@@ -65,6 +67,19 @@ function mapApiOrder(apiOrder: ApiOrder): Order {
 
 Do not silently change the serialized output while improving internal names.
 
+## Verify Intrafunction Renames Semantically
+
+A parameter or local binding can participate in behavior beyond its lexical identifier. Before renaming it:
+
+- distinguish the binding from destructured keys, record fields, pattern constructors, and named-argument labels;
+- inspect nested functions, callbacks, captures, macros, templates, reflection, and runtime lookup;
+- prevent new shadowing against parameters, receiver fields, imports, or bindings in nested scopes;
+- expand property or record shorthand explicitly when the output key must remain fixed;
+- preserve ownership, mutability, capture mode, and concurrency semantics in languages where rename tooling may rewrite more than spelling;
+- verify emitted objects, logs, snapshots, fixtures, and serialized output when they can expose the original name.
+
+Use symbol-aware tooling for the binding, then inspect protected literal keys separately. A successful compiler or type check does not prove that an emitted field name stayed compatible.
+
 ## Apply Renames in a Controlled Order
 
 1. Confirm the final rename map and protected spellings.
@@ -72,8 +87,9 @@ Do not silently change the serialized output while improving internal names.
 3. Update paired identifiers and semantic families only where necessary.
 4. Update imports, exports, type relationships, overrides, and call sites.
 5. Inspect literal references separately; change only those proven to refer to the internal symbol rather than a protected contract.
-6. Update tests and documentation when they describe the internal identifier or behavior, not merely to hide a broken contract.
-7. Format only the touched code needed for the rename.
+6. Review shadowing, captures, destructuring, shorthand output fields, and named-call compatibility.
+7. Update tests and documentation when they describe the internal identifier or behavior, not merely to hide a broken contract.
+8. Format only the touched code needed for the rename.
 
 Avoid combining the rename with extraction, reordering, control-flow changes, or formatting churn. A focused diff makes behavior preservation reviewable.
 

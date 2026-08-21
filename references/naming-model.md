@@ -189,7 +189,7 @@ Avoid ambiguous bare nouns equivalent to `permission`, `loading`, and `validatio
 
 ## Callables as Actions or Questions
 
-Callables that cause or compute something normally use a precise action plus its object, translated into the target convention:
+Callables that cause or compute something normally use a precise action plus its object, translated into the target convention. Derive that action from the observable contract across callers, inputs, outputs, side effects, and failure paths rather than from one implementation statement:
 
 ```text
 calculateOrderTotal
@@ -218,6 +218,8 @@ When the codebase has no stronger convention, these verbs can clarify data acces
 
 Existing project and framework conventions take precedence.
 
+Keep the callable declaration and its body at compatible semantic levels. Parameters should describe what callers provide; meaningful local bindings should describe the value's current role or transformation; the returned value and effects should fulfill the declaration name. Use `function-and-local-naming.md` for the detailed function and intrafunction workflow.
+
 ## Contextual Exceptions
 
 Generic or short names are acceptable when their meaning is established by a tiny, conventional scope. Examples include `i` as a loop index, `x` in a short mathematical transform, `err` in a small Go error branch, and `self` or `this` where required by the language.
@@ -237,5 +239,6 @@ Before completing the selected workflow, ask:
 5. Does the name remain understandable away from its declaration?
 6. Is any word redundant in this scope?
 7. Would a rename improve meaning enough to justify its risk and diff size?
+8. For a callable, do its parameters, local data flow, returned value, and effects support the declaration name?
 
 If the existing name passes these checks, keep it.

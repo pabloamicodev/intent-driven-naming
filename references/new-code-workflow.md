@@ -24,6 +24,7 @@ Pay particular attention to values whose meaning can change or be confused:
 - amounts, units, currencies, durations, sizes, and percentages;
 - derived and transformed values;
 - callbacks, event handlers, and asynchronous results;
+- callable declarations, parameters, closure captures, accumulators, and intermediate data-flow stages;
 - errors, options, policies, and configuration;
 - public functions, exported types, and cross-module concepts.
 
@@ -131,7 +132,7 @@ const didCompleteCheckout = false;
 
 ### Functions
 
-Name the observable action, result, or question:
+Name the observable contract at the same abstraction level as its callers:
 
 ```ts
 calculateOrderTotal()
@@ -141,6 +142,10 @@ canCancelOrder()
 ```
 
 Avoid `process`, `handle`, `execute`, or `run` when a more precise action is supported by the behavior. These words remain valid when they are the established domain operation.
+
+Keep the declaration honest about side effects. A query-like name must not conceal creation, persistence, publication, deletion, or external communication. Use `handle` for a real event, request, command, or failure boundary rather than as a generic prefix for all business logic.
+
+Inside the callable, align parameters and local bindings with the declaration's vocabulary. Name meaningful transformations by their resulting state, accumulators by their invariant when needed, and callback elements as singular members of their collection. Read `function-and-local-naming.md` for the full callable and intrafunction decision model.
 
 ### Errors and Results
 
@@ -160,7 +165,7 @@ Before completing the code:
 
 1. Re-read important names without relying on their declarations.
 2. Check entity/ID, singular/plural, boolean, unit, state, and representation distinctions.
-3. Check callback or closure parameters, derived values, callable names, variants, messages, bindings, and related families.
+3. Check that callable declarations, parameters, callback or closure bindings, accumulators, derived values, errors, and returns form one coherent semantic narrative.
 4. Remove type words and redundant scope.
 5. Replace vague transformation labels with the resulting semantic state.
 6. Confirm that terminology and surface form match the surrounding codebase and target ecosystem.
@@ -190,6 +195,8 @@ The longer version repeats information that the scope and collection already com
 ## Completion Invariants
 
 - Important names express domain meaning rather than storage type.
+- Function and method names match their observable contract, including important effects.
+- Parameters and local variables make meaningful data-flow stages clear without over-naming tiny scopes.
 - Meaningful transformations are visible in derived values.
 - Related identifiers use one vocabulary.
 - Potentially dangerous units or representations are explicit.

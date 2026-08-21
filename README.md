@@ -5,6 +5,7 @@ An instruction-only Agent Skill that helps AI coding agents generate, audit, and
 The skill combines a reusable naming model with separate workflows for:
 
 - generating new code, queries, schemas, scripts, and infrastructure with clear, durable names;
+- naming functions and methods from their observable contracts, then aligning parameters and local variables with the intrafunction data flow;
 - auditing dangerous, misleading, ambiguous, or inconsistent identifiers;
 - applying behavior-preserving renames without breaking external contracts;
 - translating one semantic model into the idioms of each language, framework, schema, and tool.
@@ -23,6 +24,7 @@ intent-driven-naming/
 │   ├── data-infrastructure.md
 │   ├── dynamic-languages.md
 │   ├── functional-concurrent-languages.md
+│   ├── function-and-local-naming.md
 │   ├── language-conventions.md
 │   ├── managed-mobile-languages.md
 │   ├── naming-model.md
@@ -101,14 +103,33 @@ This is a decision model, not a required naming formula. A candidate is evaluate
 
 Meaning and spelling are deliberately separated. The same concept may be `priceInCents`, `price_in_cents`, `PriceInCents`, or `PRICE_IN_CENTS` depending on the language and role. Cross-layer consistency means preserving the concept and explicit mappings, not forcing identical casing.
 
+## Functions and Variables Inside Functions
+
+The skill evaluates a callable as one semantic unit:
+
+```text
+observable contract
+├── function or method declaration
+├── parameters and argument labels
+├── meaningful local data-flow stages
+├── callbacks, captures, accumulators, errors, and results
+└── returned value and side effects
+```
+
+Function names describe the action, result, question, or externally visible effect rather than an incidental loop, query, or parsing step. Parameters are named from the caller and callee perspectives. Local variables describe their current semantic state—such as raw, parsed, validated, normalized, filtered, grouped, or unit-bearing values—only when that distinction matters.
+
+The skill uses a scope-and-risk budget instead of banning short identifiers. Conventional names such as `i`, `x`, `err`, or `acc` can remain in a tiny unambiguous scope; they become candidates for improvement when they travel farther, cross closures or async boundaries, compete with similar values, or hide units, representations, or accumulated meaning.
+
+Intrafunction refactors also check property shorthand, destructuring, closure captures, named arguments, reflection, serialization, and generated code before assuming a local rename is behavior-preserving.
+
 Audits classify findings as dangerous, misleading, ambiguous, inconsistent, or cosmetic. They also record confidence and contract risk so a suspicious name is not automatically converted into a large refactor.
 
 ## Evaluation
 
 The repository includes two evaluation suites:
 
-- `evals/trigger-cases.md` contains 30 cases covering application code, systems code, schemas, data, shell, infrastructure, and negative routing boundaries.
-- `evals/behavior-cases.md` contains 24 cases testing semantic accuracy, idiomatic rendering, no-op decisions, polyglot continuity, contract preservation, refactor safety, and proportionality.
+- `evals/trigger-cases.md` contains 36 cases covering function declarations, local variables, application code, systems code, schemas, data, shell, infrastructure, and negative routing boundaries.
+- `evals/behavior-cases.md` contains 34 cases testing callable contracts, intrafunction data flow, semantic accuracy, idiomatic rendering, no-op decisions, polyglot continuity, contract preservation, refactor safety, and proportionality.
 
 Run behavior cases both with and without the skill. Score the observable invariants instead of comparing exact response wording. Treat behavior or contract regressions as more severe than missed cosmetic improvements.
 
@@ -121,6 +142,8 @@ When the `description` changes, rerun the trigger cases. When workflows or refer
 - Progressive disclosure keeps unrelated language, framework, and refactor instructions out of context.
 - Existing behavior, authorization boundaries, generated sources, and external contracts are protected by default.
 - Generic and short identifiers are evaluated in their real scope rather than mechanically banned.
+- Function declarations and their internal variables are reviewed as one semantic unit.
+- Local naming detail scales with scope, competition, transformation depth, and correctness risk.
 - Audits can produce a justified no-op.
 - Language and framework conventions override blanket verbosity.
 - Language profiles are optional refinements rather than a closed support list.

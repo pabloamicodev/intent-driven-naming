@@ -1,6 +1,6 @@
 ---
 name: intent-driven-naming
-description: Improve software identifiers across languages, frameworks, schemas, queries, and infrastructure code. Use for generation, naming audits, code review, and behavior-preserving refactors; not for product, brand, file, branch, or prose naming.
+description: Improve function, method, parameter, local-variable, type, schema, query, and infrastructure identifiers across languages. Use for code generation, naming audits, review, and behavior-preserving refactors; not for product, brand, file, branch, or prose naming.
 ---
 
 # Intent-Driven Naming
@@ -16,6 +16,8 @@ Select the workflow:
 - For new code, read [references/new-code-workflow.md](references/new-code-workflow.md).
 - For an audit or review, read [references/audit-and-refactor.md](references/audit-and-refactor.md). Report findings without editing unless changes were explicitly requested.
 - For an authorized rename or refactor, read both [references/audit-and-refactor.md](references/audit-and-refactor.md) and [references/refactor-safety.md](references/refactor-safety.md).
+
+When the affected code creates, reviews, or renames a callable or its body, also read [references/function-and-local-naming.md](references/function-and-local-naming.md). This includes functions, methods, constructors, parameters, local bindings, callbacks, closure captures, accumulators, and intermediate results.
 
 Select at most the relevant language profile for each affected part of the task:
 
@@ -36,6 +38,7 @@ The profiles are refinements, not a supported-language allowlist. For an unliste
 - Add state, relationship, representation, scope, cardinality, or unit only when the distinction affects understanding or correctness.
 - Treat generic words as context-dependent signals, not forbidden tokens.
 - Keep naming pairs and semantic families synchronized.
+- Keep callable declarations, parameters, local data-flow stages, errors, and returned values semantically coherent.
 - Preserve behavior, authorization boundaries, and protected external contracts.
 - Prefer a local, high-confidence improvement over broad cosmetic churn.
 - Follow established language and framework conventions when they conflict with a generic naming preference.
@@ -50,6 +53,7 @@ The profiles are refinements, not a supported-language allowlist. For an unliste
 ## Completion Criteria
 
 - Important identifiers remain understandable away from their declarations.
+- Callable names state their observable action, result, question, or effect, while parameters and locals reveal meaningful data flow at a scope-appropriate level.
 - Entities, IDs, collections, booleans, units, states, and transformations are distinguishable where the distinction matters.
 - Related identifiers use consistent semantic families.
 - Names are idiomatic for the target language and role without losing cross-layer domain continuity.
@@ -60,6 +64,7 @@ The profiles are refinements, not a supported-language allowlist. For an unliste
 ## Boundaries
 
 - Do not rename public APIs, schemas, serialized keys, environment variables, URL parameters, framework-required identifiers, overrides, protocol requirements, or third-party fields merely for style.
+- Do not assume an intrafunction rename is private when property shorthand, destructuring, named arguments, closures, reflection, serialization, or generated code exposes the spelling.
 - Do not edit generated code when its source or generator should be changed instead.
 - Do not perform unrelated architectural refactors to support a naming change.
 - Stop and report the ambiguity when a safe name depends on unresolved domain meaning or an untraceable dynamic contract.

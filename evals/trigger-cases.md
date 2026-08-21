@@ -49,6 +49,17 @@ These cases evaluate routing only. They do not prescribe exact response wording.
 | T29 | Rename internal C++ symbols while preserving exported C ABI names and generated bindings. | Trigger | Systems refactor with ABI and generation boundaries. |
 | T30 | Create a Python API model that maps an external `customerId` field to idiomatic internal names. | Trigger | Polyglot boundary mapping and dynamic-language conventions. |
 
+## Function and Local-Variable Cases
+
+| ID | Prompt | Expected | Why |
+|---|---|---|---|
+| T31 | Rename this function so its declaration describes what it returns, then improve the variables inside it. | Trigger | Explicit callable-contract and intrafunction naming refactor. |
+| T32 | Audit a method named `process` whose body uses `data`, `temp`, and `result`; determine which names are actually unclear. | Trigger | Evidence-based review of a callable and its local data flow. |
+| T33 | Review whether `i`, `item`, and `acc` should stay short inside these small Go loops and reducers. | Trigger | Scope-sensitive local-variable naming with idiomatic exceptions. |
+| T34 | Improve a public Python function's parameter and local names without breaking callers that use keyword arguments. | Trigger | Parameter naming crosses a source-level contract while locals may remain internal. |
+| T35 | Name the function, closure parameters, intermediate values, and accumulator in this Rust transformation pipeline. | Trigger | Function-body generation across ownership-aware nested scopes. |
+| T36 | Rename a JavaScript local variable but keep the emitted JSON property `customerId` unchanged. | Trigger | A local binding participates in property shorthand and serialization. |
+
 ## Borderline Review
 
 When a result differs from `Expected`, inspect the description before adding more rules:
@@ -63,5 +74,6 @@ When a result differs from `Expected`, inspect the description before adding mor
 - All explicit naming audits and identifier refactors trigger.
 - Representative non-trivial code-generation prompts trigger.
 - Representative dynamic, systems, managed, functional, data, shell, and infrastructure prompts trigger.
+- Explicit function-declaration, parameter, callback, accumulator, and local-variable naming requests trigger.
 - Product, brand, file, branch, and prose naming prompts do not trigger.
 - A safe-contract case triggers even when the correct outcome may be to preserve the external name.

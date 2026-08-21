@@ -17,7 +17,7 @@ Do not judge an identifier from its spelling alone. Determine what it represents
 - declaration and type;
 - assignments and transformations;
 - callers and consumers;
-- return values and control flow;
+- parameters, captures, return values, side effects, and control flow;
 - tests and fixtures;
 - public contracts and serialized forms;
 - nearby domain vocabulary.
@@ -59,6 +59,22 @@ Classify the rename surface:
 
 Internal symbols are normally the safest. Cross-module changes require repository-wide reference analysis. External and dynamic names should be preserved or explicitly mapped at a boundary unless the user authorizes a contract migration.
 
+A binding declared inside a function is not automatically private in effect. Object or record shorthand, destructuring, closure captures, reflection, named arguments, macros, serialization, and generated code can expose its spelling or make a mechanical rename unsafe.
+
+## Audit a Callable as One Semantic Unit
+
+When a function or method is in scope, review it from the outside inward:
+
+1. Determine the observable action, result, question, side effects, and failure behavior.
+2. Compare that contract with the declaration name.
+3. Check whether parameter names truthfully describe caller inputs.
+4. Trace meaningful locals through transformations, branches, captures, and return paths.
+5. Check accumulators, booleans, errors, callback parameters, and intermediate results at their actual scope.
+6. Rank a misleading callable name above cosmetic local improvements.
+7. Keep conventional short locals when their tiny scope removes ambiguity.
+
+Do not infer architectural permission from a name that reveals mixed responsibilities. Report the design signal separately unless extraction or signature redesign was requested.
+
 ## Evaluate a Rename Candidate
 
 For each candidate:
@@ -68,8 +84,9 @@ For each candidate:
 3. Generate one or two candidates using canonical vocabulary.
 4. Remove redundant type and scope words.
 5. Check related pairs, callers, collections, tests, and public surfaces.
-6. Compare semantic gain with diff size and contract risk.
-7. Preserve the current name if the gain is marginal.
+6. For callables, check declaration, parameters, locals, returned values, errors, and effects as one family.
+7. Compare semantic gain with diff size and contract risk.
+8. Preserve the current name if the gain is marginal.
 
 Example:
 
