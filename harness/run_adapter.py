@@ -39,7 +39,9 @@ def main() -> int:
         type=Path,
         help="required frozen runtime checkout for the previous-skill variant",
     )
-    parser.add_argument("--system-id", required=True, help="stable model-and-agent configuration name")
+    parser.add_argument(
+        "--system-id", required=True, help="stable model-and-agent configuration name"
+    )
     parser.add_argument("--replicate-id", default="r1")
     parser.add_argument("--attempt", type=int, default=1)
     parser.add_argument(
@@ -79,7 +81,9 @@ def main() -> int:
     declared_implementation = None
     if args.implementation_json:
         try:
-            declared_implementation = json.loads(args.implementation_json.read_text(encoding="utf-8"))
+            declared_implementation = json.loads(
+                args.implementation_json.read_text(encoding="utf-8")
+            )
         except (OSError, json.JSONDecodeError) as exc:
             parser.error(f"cannot read --implementation-json: {exc}")
         if not isinstance(declared_implementation, dict):
@@ -103,6 +107,7 @@ def main() -> int:
                 "system_id": args.system_id,
                 "replicate_id": args.replicate_id,
                 "attempt": args.attempt,
+                "declared_implementation": declared_implementation,
                 "case": case,
                 "skill_path": str(
                     args.baseline_skill_path.resolve()
@@ -213,7 +218,10 @@ def main() -> int:
         response.setdefault("dataset_version", case["dataset_version"])
         response.setdefault("variant", args.variant)
         if declared_implementation is not None:
-            if "implementation" in response and response["implementation"] != declared_implementation:
+            if (
+                "implementation" in response
+                and response["implementation"] != declared_implementation
+            ):
                 print(
                     f"adapter response {response['case_id']} implementation metadata differs from the declared configuration",
                     file=sys.stderr,

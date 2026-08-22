@@ -13,6 +13,15 @@ Each input line is one JSON object:
   "system_id": "codex-gpt-5.6-high",
   "replicate_id": "r1",
   "attempt": 1,
+  "declared_implementation": {
+    "adapter": "example-adapter",
+    "adapter_version": "1.0.0",
+    "agent": "example-agent",
+    "agent_version": "2026-08-21",
+    "model": "example-model",
+    "model_version": "2026-08-01",
+    "reasoning": "high"
+  },
   "case": {
     "id": "B04",
     "suite": "behavior",
@@ -23,7 +32,7 @@ Each input line is one JSON object:
 }
 ```
 
-`variant` is `with-skill`, `previous-skill`, or `without-skill`. The previous variant uses a frozen prior runtime while preserving every model and adapter setting. An adapter MUST isolate cases from one another unless a case explicitly declares conversation state.
+`variant` is `with-skill`, `previous-skill`, or `without-skill`. The previous variant uses a frozen prior runtime while preserving every model and adapter setting. `declared_implementation` is null for an ad hoc run or the exact preregistered configuration for a controlled experiment. When present, the adapter response MUST match it exactly. An adapter MUST isolate cases from one another unless a case explicitly declares conversation state.
 
 ## Response
 
@@ -75,7 +84,7 @@ The adapter writes one JSON object per request:
 
 `status` is `completed`, `failed`, or `skipped`. The adapter MUST preserve raw output and MUST NOT grade its own answer. `observed_decisions` and `invariant_grades` are reviewer outputs, not self-evaluation fields for the candidate agent.
 
-The harness owns dataset, run, system, replicate, attempt, case, and variant identity; an adapter MUST echo any supplied values unchanged. The runner computes `configuration_hash` from the canonical implementation metadata. Completed activation responses MUST contain a boolean `selected_skill`. Completed behavior responses MUST put the reviewable answer in `output_text`, a sanitized artifact descriptor in `artifact_bundle`, or both. Unknown result fields, identity mismatches, invalid types, out-of-order cases, and oversized output are rejected before results are written.
+The harness owns dataset, run, system, replicate, attempt, case, variant, and declared configuration identity; an adapter MUST echo any supplied values unchanged. The runner computes `configuration_hash` from the canonical implementation metadata. Completed activation responses MUST contain a boolean `selected_skill`. Completed behavior responses MUST put the reviewable answer in `output_text`, a sanitized artifact descriptor in `artifact_bundle`, or both. Unknown result fields, identity mismatches, invalid types, out-of-order cases, and oversized output are rejected before results are written.
 
 The reference runner applies explicit input, stdout, stderr, and time limits. Adapter streams are
 spooled to temporary files instead of unbounded in-memory buffers, and stdout must be valid UTF-8.

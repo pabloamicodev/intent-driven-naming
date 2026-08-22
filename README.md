@@ -180,7 +180,43 @@ python scripts/export_evals.py --write
 
 ## Provider-Neutral Evaluation
 
-Candidate and grader integrations communicate through JSONL instead of a vendor SDK. Run an adapter without shell interpolation:
+Candidate and grader integrations communicate through JSONL instead of a vendor SDK. For a controlled study, first freeze the estimand, dataset and runtime hashes, systems, variants, repetitions, retries, exclusions, and policy:
+
+```text
+python harness/freeze_experiment.py \
+  --draft path/to/experiment-draft.json \
+  --runner-config path/to/local-runner-config.json \
+  --output path/to/experiment-manifest.json
+```
+
+Then validate all identities and print the complete matrix without making an external call:
+
+```text
+python harness/run_experiment.py \
+  --manifest examples/experiment-manifest.json \
+  --runner-config examples/runner-config.json
+```
+
+The checked-in example is deliberately `development-only`. Organization evidence requires a separate `release-candidate` manifest with at least three distinct pinned systems, three repetitions, and public plus private held-out datasets. Execution is explicit because it may incur provider cost:
+
+```text
+python harness/run_experiment.py \
+  --manifest path/to/release-experiment.json \
+  --runner-config path/to/local-runner-config.json \
+  --execute
+```
+
+The runner creates one immutable output per dataset, suite, system, variant, and replicate. `--resume` reuses a file only after validating it against the frozen experiment. Retrying a failed job requires a preregistered `--retry-reason`, preserves the failed attempt in the ledger, and increments the result attempt. Verify the completed ledger independently before review or scoring:
+
+```text
+python harness/verify_experiment.py \
+  --manifest path/to/release-experiment.json \
+  --runner-config path/to/local-runner-config.json \
+  --experiment-root path/to/results/EXPERIMENT_ID \
+  --json-output path/to/experiment-verification.json
+```
+
+For an individual integration or exploratory run, invoke an adapter directly without shell interpolation:
 
 ```text
 python harness/run_adapter.py \
@@ -261,13 +297,14 @@ python harness/score_results.py \
   --policy specification/release-policy.json \
   --review-agreement eval-results/review-agreement.json \
   --pairwise-report eval-results/pairwise-report.json \
+  --experiment-verification eval-results/experiment-verification.json \
   --json-output benchmark-results/report.json \
   --markdown-output benchmark-results/report.md
 ```
 
-For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both. The policy requires three complete repetitions of current-skill, previous-skill, and no-skill cohorts; complete usage and loaded-resource telemetry; pinned implementation metadata; quality thresholds; calibrated reviewer agreement; and no ungraded invariants. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, incomplete repetitions, unresolved reviews, unknown or unnecessary resources, profile overloading, and efficiency regressions fail the gate.
+For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both plus a verified preregistered experiment. The policy requires at least three distinct systems; three complete repetitions of current-skill, previous-skill, and no-skill cohorts; identical pinned configurations across variants and repetitions; public and held-out data; two human reviews per candidate and pair; complete usage and loaded-resource telemetry; quality thresholds; calibrated agreement; and no ungraded invariants. Automated judges may assist but cannot satisfy the human minimum. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, configuration drift, incomplete repetitions, unresolved reviews, unknown or unnecessary resources, profile overloading, and efficiency regressions fail the gate.
 
-Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, resource loading, input/output usage, latency, turns, tool calls, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. A critical failure makes the hard gate fail regardless of aggregate quality. See the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
+Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, configuration integrity, resource loading, input/output usage, latency, turns, tool calls, human-review coverage, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. A critical failure makes the hard gate fail regardless of aggregate quality. See [external evaluation operations](docs/external-evaluation.md), the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
 
 The evaluation design follows the [official OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration of model graders.
 

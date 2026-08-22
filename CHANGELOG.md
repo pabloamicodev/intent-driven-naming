@@ -17,6 +17,8 @@ All notable changes are documented here. The project follows Semantic Versioning
 - Materiality, structural-coverage, collision, dynamic-surface, change-budget, and rollback invariants in portable rename plans.
 - Corpus regression policy, schema-to-runtime parity tests, clustered paired intervals, package manifests, and high-confidence secret scanning for review artifacts.
 - Bounded adapter input, stdout, and stderr handling with disk-backed streams instead of unbounded memory capture.
+- Preregistered experiment manifests, shell-free matrix execution, resumable evidence ledgers, independent evidence verification, and explicit generalized-performance estimands.
+- Organization gates for three distinct pinned systems, configuration stability across variants and repetitions, held-out evidence, and two human reviews per candidate and pair.
 
 ### Changed
 

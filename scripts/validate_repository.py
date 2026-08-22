@@ -434,6 +434,13 @@ def validate_governance(errors: list[str]) -> None:
         )
     if policy.get("gated_variant") != "with-skill":
         errors.append("release policy must gate the with-skill variant")
+    minimum_systems = policy.get("minimum_systems")
+    if (
+        isinstance(minimum_systems, bool)
+        or not isinstance(minimum_systems, int)
+        or minimum_systems < 3
+    ):
+        errors.append("release policy must require at least three systems")
     minimum_replicates = policy.get("minimum_replicates")
     if (
         isinstance(minimum_replicates, bool)
@@ -441,6 +448,13 @@ def validate_governance(errors: list[str]) -> None:
         or minimum_replicates < 3
     ):
         errors.append("release policy must require at least three replicates")
+    experiment_policy = policy.get("experiment")
+    if experiment_policy != {
+        "require_verified_preregistration": True,
+        "require_release_candidate": True,
+        "require_held_out_dataset": True,
+    }:
+        errors.append("release policy experiment evidence requirements are incomplete")
     activation = policy.get("activation")
     expected_activation_fields = {
         "minimum_precision",
@@ -490,6 +504,7 @@ def validate_governance(errors: list[str]) -> None:
         errors.append("release policy review thresholds are invalid")
     else:
         minimum_reviews = review.get("minimum_reviews_per_candidate")
+        minimum_human_reviews = review.get("minimum_human_reviews_per_candidate")
         agreement_fields = (
             "minimum_raw_grade_agreement",
             "minimum_chance_corrected_grade_agreement",
@@ -499,6 +514,10 @@ def validate_governance(errors: list[str]) -> None:
             isinstance(minimum_reviews, bool)
             or not isinstance(minimum_reviews, int)
             or minimum_reviews < 2
+            or isinstance(minimum_human_reviews, bool)
+            or not isinstance(minimum_human_reviews, int)
+            or minimum_human_reviews < 2
+            or minimum_human_reviews > minimum_reviews
             or any(
                 isinstance(review.get(field), bool)
                 or not isinstance(review.get(field), (int, float))
@@ -512,10 +531,21 @@ def validate_governance(errors: list[str]) -> None:
         "minimum_resolved_fraction",
         "minimum_with_skill_win_rate_excluding_ties",
         "minimum_raw_reviewer_agreement",
+        "minimum_human_reviews_per_pair",
     }
-    if not isinstance(pairwise, dict) or set(pairwise) != expected_pairwise_fields or any(
-        isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1
-        for value in pairwise.values()
+    pairwise_ratio_fields = expected_pairwise_fields - {"minimum_human_reviews_per_pair"}
+    if (
+        not isinstance(pairwise, dict)
+        or set(pairwise) != expected_pairwise_fields
+        or any(
+            isinstance(pairwise.get(field), bool)
+            or not isinstance(pairwise.get(field), (int, float))
+            or not 0 <= pairwise[field] <= 1
+            for field in pairwise_ratio_fields
+        )
+        or isinstance(pairwise.get("minimum_human_reviews_per_pair"), bool)
+        or not isinstance(pairwise.get("minimum_human_reviews_per_pair"), int)
+        or pairwise["minimum_human_reviews_per_pair"] < 2
     ):
         errors.append("release policy pairwise thresholds are invalid")
     comparison = policy.get("comparison")
@@ -663,6 +693,22 @@ def validate_repository() -> dict[str, Any]:
     metrics.update(validate_evaluations(errors))
     validate_governance(errors)
     validate_placeholders(errors)
+    try:
+        from harness.experiment_core import load_experiment, validate_experiment
+
+        manifest_path = ROOT / "examples" / "experiment-manifest.json"
+        runner_path = ROOT / "examples" / "runner-config.json"
+        manifest, runner = load_experiment(manifest_path, runner_path)
+        experiment_validation = validate_experiment(
+            manifest,
+            runner,
+            runner_config_path=runner_path,
+        )
+        errors.extend(
+            f"example experiment: {error}" for error in experiment_validation["errors"]
+        )
+    except (ImportError, ValueError) as exc:
+        errors.append(f"cannot validate example experiment: {exc}")
     return {
         "schema_version": "1.0",
         "valid": not errors,

@@ -33,11 +33,11 @@ Provide anchored examples for unacceptable, acceptable, and excellent outcomes. 
 
 ## Calibration
 
-At least two experienced reviewers should label every release candidate. Resolve calibration disagreements through evidence and record whether the rubric, case context, or reviewer interpretation caused the difference. Do not adjudicate held-out release labels until the independent agreement report has been frozen.
+At least two experienced human reviewers should label every release candidate and every pairwise comparison. Automated or model reviewers may add evidence but cannot satisfy the human minimum. Resolve calibration disagreements through evidence and record whether the rubric, case context, or reviewer interpretation caused the difference. Do not adjudicate held-out release labels until the independent agreement report has been frozen.
 
 Report raw grade agreement, chance-corrected grade agreement, decision-set agreement, and raw pairwise agreement. A semantic grader may scale only after its invariant and pairwise decisions agree sufficiently with expert labels on held-out cases.
 
-Use reviewer IDs that are stable within a study but do not expose unnecessary personal data. Every grade requires observable evidence, and every review records the decisions it observed without seeing the expected labels. `harness/merge_reviews.py` rejects duplicate labels from the same reviewer on the same candidate. It treats any critical failure as decisive, applies strict majority only to noncritical invariants, and leaves ties or insufficient labels ungraded so the hard gate cannot silently pass them.
+Use reviewer IDs that are stable within a study but do not expose unnecessary personal data, and record `reviewer_kind` honestly. Every grade requires observable evidence, and every review records the decisions it observed without seeing the expected labels. `harness/merge_reviews.py` rejects duplicate labels from the same reviewer on the same candidate. It reports both total and human coverage, treats any critical failure as decisive, applies strict majority only to noncritical invariants, and leaves ties or insufficient labels ungraded so the hard gate cannot silently pass them.
 
 ## Release Evidence
 

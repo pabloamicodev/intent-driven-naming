@@ -13,7 +13,7 @@ Only Markdown files routed for the current task become instructions. Specificati
 - `specification/` defines normative outcomes, schemas, routes, budgets, and adapter contracts.
 - `evals/cases/` contains generated machine-readable datasets.
 - `evals/fixtures/` contains executable contract examples.
-- `harness/` runs adapters, prepares blinded reviews, aggregates independent labels, verifies fixtures, and scores graded results.
+- `harness/` freezes and executes controlled experiment matrices, audits evidence ledgers, runs adapters, prepares blinded reviews, aggregates independent labels, verifies fixtures, and scores graded results.
 - `scripts/` validates and maintains the repository.
 - `tests/` verifies the harness and generation logic.
 
@@ -26,6 +26,8 @@ Non-trivial audits produce semantic records. Rename plans carry materiality, ana
 Structural discovery prefers symbol graphs, language servers, ASTs, compiler indexes, and reference search. Only the smallest evidence slice needed for a decision should enter model context. See the [data-handling policy](data-handling.md).
 
 Agent and grader adapters are external trust boundaries. They communicate through JSONL, run without shell interpolation, and must be isolated by their host. Reported resources are checked against case mode, features, and language profiles so irrelevant references cannot hide inside aggregate token totals.
+
+External studies have two additional trust boundaries. A shareable manifest freezes the estimand, datasets, runtimes, systems, repetitions, retry policy, and analysis before results exist. A local runner configuration maps those identities to paths and commands without entering public evidence. The resulting ledger records hashes rather than secrets or commands, and release scoring requires an independent verification report.
 
 ## Source of Truth
 

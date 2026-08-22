@@ -4,13 +4,18 @@
   "title": "Blinded Pairwise Comparison Report",
   "type": "object", "additionalProperties": false,
   "required": [
-    "schema_version", "pairs", "resolved_pairs", "resolved_fraction", "with_skill_wins",
+    "schema_version", "pairs", "review_records", "human_review_records", "agreement_population",
+    "minimum_human_reviews_per_pair", "resolved_pairs", "resolved_fraction", "with_skill_wins",
     "without_skill_wins", "ties", "unresolved", "with_skill_win_rate_excluding_ties",
     "raw_reviewer_agreement", "pair_results"
   ],
   "properties": {
-    "schema_version": { "const": "1.0" },
+    "schema_version": { "const": "1.1" },
     "pairs": { "type": "integer", "minimum": 0 },
+    "review_records": { "type": "integer", "minimum": 0 },
+    "human_review_records": { "type": "integer", "minimum": 0 },
+    "agreement_population": { "enum": ["human", "all-reviewers"] },
+    "minimum_human_reviews_per_pair": { "type": "integer", "minimum": 0 },
     "resolved_pairs": { "type": "integer", "minimum": 0 },
     "resolved_fraction": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
     "with_skill_wins": { "type": "integer", "minimum": 0 },
@@ -23,13 +28,17 @@
       "type": "array",
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["pair_id", "case_id", "system_id", "replicate_id", "review_count", "consensus"],
+        "required": [
+          "pair_id", "case_id", "system_id", "replicate_id", "review_count",
+          "human_review_count", "consensus"
+        ],
         "properties": {
           "pair_id": { "type": "string", "pattern": "^P-[a-f0-9]{20}$" },
           "case_id": { "type": "string", "pattern": "^B[0-9]{2}$" },
           "system_id": { "type": "string", "minLength": 1 },
           "replicate_id": { "type": "string", "minLength": 1 },
           "review_count": { "type": "integer", "minimum": 0 },
+          "human_review_count": { "type": "integer", "minimum": 0 },
           "consensus": { "enum": ["with-skill", "without-skill", "tie", "unresolved"] }
         }
       }

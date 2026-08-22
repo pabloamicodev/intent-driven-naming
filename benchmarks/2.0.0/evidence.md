@@ -37,12 +37,18 @@ runtime under the same cases and model configuration.
   provenance workflow.
 - Case-clustered paired intervals, corpus regression floors, exact resource-route gates, and
   high-confidence secret rejection for review artifacts.
+- Preregistered experiment freezing, shell-free matrix execution, resumable immutable outputs,
+  evidence-ledger verification, and cryptographic linkage from scored runs to the experiment.
+- Human-first consensus: automated graders can contribute evidence but cannot outvote experts or
+  satisfy the two-human minimum.
 
 ## Evidence still required before a release claim
 
-- Three complete current-skill, previous-skill, and no-skill repetitions for every declared system.
-- Independent blinded semantic review and pairwise comparison meeting the release policy.
-- A frozen private held-out suite validated outside the repository.
+- A preregistered release-candidate experiment with public and private held-out suites.
+- Three complete current-skill, previous-skill, and no-skill repetitions on at least three distinct
+  pinned agent/model identities, without configuration drift.
+- At least two independent human reviews for every semantic candidate and pairwise comparison,
+  meeting the agreement policy.
 - Published configuration hashes, raw-result custody, usage coverage, statistical intervals, and
   every gate violation.
 

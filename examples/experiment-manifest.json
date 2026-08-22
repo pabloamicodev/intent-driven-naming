@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "idn-public-development-2.0.0",
+  "purpose": "development",
+  "created_at": "2026-08-21T00:00:00Z",
+  "dataset_version": "2.0.0",
+  "estimand": {
+    "target": "generalized-task-performance",
+    "population_definition": "Software naming tasks similar to the declared multilingual activation and behavior case population.",
+    "unit": "evaluation-case",
+    "primary_metrics": ["activation_accuracy", "behavior_pass_rate"]
+  },
+  "datasets": [
+    {
+      "dataset_id": "public-development",
+      "visibility": "public",
+      "activation": {
+        "sha256": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa",
+        "records": 84
+      },
+      "behavior": {
+        "sha256": "336d5895e19929fd2b9508ab624fccdf783f2996918fa06303f892ddeb543459",
+        "records": 48
+      }
+    }
+  ],
+  "variants": ["with-skill", "previous-skill", "without-skill"],
+  "replicate_ids": ["r1"],
+  "systems": [
+    {
+      "system_id": "mock-development",
+      "implementation": {
+        "adapter": "mock-jsonl",
+        "adapter_version": "1.0.0",
+        "agent": "mock-agent",
+        "agent_version": "1.0.0",
+        "model": "deterministic-mock",
+        "model_version": "1.0.0",
+        "reasoning": "fixed"
+      }
+    }
+  ],
+  "skills": {
+    "with_skill": {
+      "version": "2.0.0",
+      "sha256": "84b52a0b328b9e2436efa7285c035da6030512bc828f89e86de71971e1f36f94"
+    },
+    "previous_skill": {
+      "version": "2.0.0",
+      "sha256": "84b52a0b328b9e2436efa7285c035da6030512bc828f89e86de71971e1f36f94"
+    }
+  },
+  "release_policy": {
+    "version": "2.0.0",
+    "sha256": "e62678d8d579d5b6be66b58f7103110b620a8350d3f2c68e0233077d82dbfa1d"
+  },
+  "analysis": {
+    "confidence_level": 0.95,
+    "bootstrap_seed": 20260821,
+    "retry_policy": {
+      "maximum_attempts": 2,
+      "allowed_reasons": ["transport-error", "provider-timeout", "provider-unavailable"],
+      "scored_attempt": "highest-declared-attempt"
+    },
+    "exclusions": []
+  },
+  "claim_scope": "development-only"
+}

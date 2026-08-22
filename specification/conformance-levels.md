@@ -39,9 +39,11 @@ Conformance is cumulative. A higher level includes every lower-level requirement
 ## Level 4 — Organization-Grade Evidence
 
 - A held-out dataset is maintained separately from development cases.
+- A preregistered experiment freezes the estimand, dataset and runtime hashes, systems, repetitions, retries, exclusions, and analysis before results are inspected.
 - Results are reported per language, mode, contract risk, and outcome rather than only as one average.
 - Blind pairwise comparisons and human review are repeated across releases.
-- Cross-model and cross-agent compatibility is measured with pinned configurations.
+- Cross-model and cross-agent compatibility is measured on at least three distinct pinned configurations with no drift between variants or repetitions.
+- At least two independent human experts review every semantic candidate and pairwise comparison; automated judges cannot satisfy this minimum.
 - CI blocks regressions, benchmark artifacts are reproducible, and limitations are public.
 
 The repository MUST NOT claim a level until its evidence artifact records the suite version, implementation version, environment, and results needed for that level.

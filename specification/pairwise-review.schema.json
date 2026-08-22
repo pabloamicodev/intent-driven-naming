@@ -3,11 +3,12 @@
   "$id": "https://intent-driven-naming.dev/schemas/pairwise-review.schema.json",
   "title": "Blinded Pairwise Review",
   "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "pair_id", "reviewer_id", "preference", "evidence"],
+  "required": ["schema_version", "pair_id", "reviewer_id", "reviewer_kind", "preference", "evidence"],
   "properties": {
-    "schema_version": { "const": "1.0" },
+    "schema_version": { "const": "1.1" },
     "pair_id": { "type": "string", "pattern": "^P-[a-f0-9]{20}$" },
     "reviewer_id": { "type": "string", "minLength": 1 },
+    "reviewer_kind": { "enum": ["human", "model", "automated"] },
     "preference": { "enum": ["A", "B", "tie"] },
     "evidence": { "type": "string", "minLength": 1 },
     "notes": { "type": ["string", "null"] }

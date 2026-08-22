@@ -5,7 +5,13 @@
   "dataset_version": "2.0.0",
   "required_variants": ["with-skill", "previous-skill", "without-skill"],
   "gated_variant": "with-skill",
+  "minimum_systems": 3,
   "minimum_replicates": 3,
+  "experiment": {
+    "require_verified_preregistration": true,
+    "require_release_candidate": true,
+    "require_held_out_dataset": true
+  },
   "activation": {
     "minimum_precision": 0.9,
     "minimum_recall": 0.9,
@@ -26,11 +32,13 @@
   },
   "review": {
     "minimum_reviews_per_candidate": 2,
+    "minimum_human_reviews_per_candidate": 2,
     "minimum_raw_grade_agreement": 0.8,
     "minimum_chance_corrected_grade_agreement": 0.6,
     "minimum_decision_set_agreement": 0.8
   },
   "pairwise": {
+    "minimum_human_reviews_per_pair": 2,
     "minimum_resolved_fraction": 0.95,
     "minimum_with_skill_win_rate_excluding_ties": 0.55,
     "minimum_raw_reviewer_agreement": 0.8

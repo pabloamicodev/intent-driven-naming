@@ -5,7 +5,7 @@
     "behavior_cases": 48,
     "description_length": 360,
     "fixture_cases": 15,
-    "markdown_files": 57,
+    "markdown_files": 58,
     "references": 17,
     "routes": {
       "always_loaded_words": 979,
@@ -47,6 +47,6 @@
   "schema_version": "1.0",
   "valid": true,
   "warnings": [
-    "large Markdown surface: 57 files"
+    "large Markdown surface: 58 files"
   ]
 }

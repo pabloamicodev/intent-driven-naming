@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/experiment-manifest.schema.json",
+  "title": "Preregistered External Evaluation Experiment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "experiment_id", "purpose", "created_at", "dataset_version",
+    "estimand", "datasets", "variants", "replicate_ids", "systems", "skills",
+    "release_policy", "analysis", "claim_scope"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "experiment_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{5,79}$" },
+    "purpose": { "enum": ["development", "release-candidate"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "dataset_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "estimand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "population_definition", "unit", "primary_metrics"],
+      "properties": {
+        "target": { "enum": ["fixed-benchmark-performance", "generalized-task-performance"] },
+        "population_definition": { "type": "string", "minLength": 40 },
+        "unit": { "const": "evaluation-case" },
+        "primary_metrics": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["activation_accuracy", "behavior_pass_rate"] }
+        }
+      }
+    },
+    "datasets": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["dataset_id", "visibility", "activation", "behavior"],
+        "properties": {
+          "dataset_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,39}$" },
+          "visibility": { "enum": ["public", "held-out"] },
+          "activation": { "$ref": "#/$defs/datasetPart" },
+          "behavior": { "$ref": "#/$defs/datasetPart" }
+        }
+      }
+    },
+    "variants": {
+      "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true,
+      "items": { "enum": ["with-skill", "previous-skill", "without-skill"] },
+      "allOf": [
+        { "contains": { "const": "with-skill" } },
+        { "contains": { "const": "previous-skill" } },
+        { "contains": { "const": "without-skill" } }
+      ]
+    },
+    "replicate_ids": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$" }
+    },
+    "systems": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["system_id", "implementation"],
+        "properties": {
+          "system_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$" },
+          "implementation": {
+            "type": "object",
+            "required": [
+              "adapter", "adapter_version", "agent", "agent_version",
+              "model", "model_version", "reasoning"
+            ],
+            "additionalProperties": { "type": ["string", "number", "boolean", "null"] },
+            "properties": {
+              "adapter": { "type": "string", "minLength": 1 },
+              "adapter_version": { "type": "string", "minLength": 1 },
+              "agent": { "type": "string", "minLength": 1 },
+              "agent_version": { "type": "string", "minLength": 1 },
+              "model": { "type": "string", "minLength": 1 },
+              "model_version": { "type": "string", "minLength": 1 },
+              "reasoning": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "object", "additionalProperties": false,
+      "required": ["with_skill", "previous_skill"],
+      "properties": {
+        "with_skill": { "$ref": "#/$defs/runtime" },
+        "previous_skill": { "$ref": "#/$defs/runtime" }
+      }
+    },
+    "release_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "sha256"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "analysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["confidence_level", "bootstrap_seed", "retry_policy", "exclusions"],
+      "properties": {
+        "confidence_level": { "const": 0.95 },
+        "bootstrap_seed": { "type": "integer", "minimum": 0 },
+        "retry_policy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["maximum_attempts", "allowed_reasons", "scored_attempt"],
+          "properties": {
+            "maximum_attempts": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "allowed_reasons": {
+              "type": "array", "minItems": 1, "uniqueItems": true,
+              "items": { "enum": ["transport-error", "provider-timeout", "provider-unavailable"] }
+            },
+            "scored_attempt": { "const": "highest-declared-attempt" }
+          }
+        },
+        "exclusions": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "claim_scope": { "enum": ["development-only", "organization-grade-candidate"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "purpose": { "const": "release-candidate" } }, "required": ["purpose"] },
+      "then": {
+        "properties": {
+          "claim_scope": { "const": "organization-grade-candidate" },
+          "estimand": {
+            "type": "object",
+            "properties": { "target": { "const": "generalized-task-performance" } },
+            "required": ["target"]
+          },
+          "replicate_ids": { "minItems": 3 },
+          "systems": { "minItems": 3 },
+          "datasets": {
+            "contains": {
+              "type": "object",
+              "properties": { "visibility": { "const": "held-out" } },
+              "required": ["visibility"]
+            }
+          }
+        }
+      },
+      "else": { "properties": { "claim_scope": { "const": "development-only" } } }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "datasetPart": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sha256", "records"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "records": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "sha256"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

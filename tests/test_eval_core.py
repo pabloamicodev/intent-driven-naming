@@ -63,16 +63,18 @@ def result(case_id, variant="with-skill", replicate="r1", attempt=1, **overrides
         "variant": variant,
         "status": "completed",
         "loaded_resources": (
-            ["SKILL.md", "references/naming-model.md"]
-            if variant != "without-skill"
-            else []
+            ["SKILL.md", "references/naming-model.md"] if variant != "without-skill" else []
         ),
         "usage": {
             "input_tokens": 90 if variant == "with-skill" else 100,
             "output_tokens": 10,
             "latency_ms": 10,
             "cost_usd": 0,
-            "skill_context_words": 50 if variant == "with-skill" else 100 if variant == "previous-skill" else 0,
+            "skill_context_words": 50
+            if variant == "with-skill"
+            else 100
+            if variant == "previous-skill"
+            else 0,
             "turns": 1,
             "tool_calls": 0,
         },
@@ -98,6 +100,7 @@ def policy(minimum_replicates=1):
         "version": "2.0.0",
         "required_variants": ["with-skill", "previous-skill", "without-skill"],
         "gated_variant": "with-skill",
+        "minimum_systems": 1,
         "minimum_replicates": minimum_replicates,
         "activation": {"minimum_accuracy": 1.0},
         "behavior": {"minimum_pass_rate": 1.0, "maximum_ungraded": 0},
@@ -109,7 +112,12 @@ def policy(minimum_replicates=1):
         "efficiency": {
             "comparison_variant": "previous-skill",
             "required_usage_fields": [
-                "input_tokens", "output_tokens", "latency_ms", "skill_context_words", "turns", "tool_calls"
+                "input_tokens",
+                "output_tokens",
+                "latency_ms",
+                "skill_context_words",
+                "turns",
+                "tool_calls",
             ],
             "minimum_resource_reporting_rate": 1.0,
             "minimum_core_resource_rate": 1.0,
@@ -122,7 +130,13 @@ def policy(minimum_replicates=1):
             "maximum_turn_ratio": 1.0,
         },
         "required_implementation_fields": [
-            "adapter", "adapter_version", "agent", "agent_version", "model", "model_version", "reasoning"
+            "adapter",
+            "adapter_version",
+            "agent",
+            "agent_version",
+            "model",
+            "model_version",
+            "reasoning",
         ],
     }
 
@@ -153,7 +167,9 @@ class EvalCoreTest(unittest.TestCase):
         )
         self.assertFalse(failed["hard_gate_passed"])
         self.assertEqual(failed["behavior"][COHORT]["critical_failures"], 1)
-        ungraded = score_results(cases, [result("B01", output_text="candidate", invariant_grades={})])
+        ungraded = score_results(
+            cases, [result("B01", output_text="candidate", invariant_grades={})]
+        )
         self.assertFalse(ungraded["hard_gate_passed"])
         self.assertEqual(ungraded["behavior"][COHORT]["critical_ungraded"], 1)
 
@@ -194,7 +210,14 @@ class EvalCoreTest(unittest.TestCase):
         cases = {"B01": behavior_case()}
         report = score_results(
             cases,
-            [result("B01", output_text="candidate", invariant_grades={"b01-01": "pass"}, observed_decisions=["map"])],
+            [
+                result(
+                    "B01",
+                    output_text="candidate",
+                    invariant_grades={"b01-01": "pass"},
+                    observed_decisions=["map"],
+                )
+            ],
         )
         self.assertEqual(report["decisions"][COHORT]["exact_match_rate"], 1.0)
 
@@ -206,6 +229,52 @@ class EvalCoreTest(unittest.TestCase):
         violations = "\n".join(evaluated["policy"]["violations"])
         self.assertIn("without-skill: required cohort is missing", violations)
         self.assertIn("replicates is below 2", violations)
+
+    def test_release_policy_rejects_configuration_drift_within_a_system(self):
+        cases = {"T01": activation_case()}
+        results = [
+            result("T01", variant="with-skill", selected_skill=True),
+            result(
+                "T01",
+                variant="previous-skill",
+                selected_skill=True,
+                configuration_hash="b" * 64,
+            ),
+            result("T01", variant="without-skill", selected_skill=True),
+        ]
+        evaluated = apply_release_policy(
+            score_results(cases, results, require_complete=True), policy()
+        )
+        self.assertIn(
+            "configuration changed across variants or replicates",
+            "\n".join(evaluated["policy"]["violations"]),
+        )
+
+    def test_release_policy_links_scored_runs_to_verified_experiment(self):
+        cases = {"T01": activation_case()}
+        results = [
+            result("T01", variant=variant, selected_skill=True)
+            for variant in ("with-skill", "previous-skill", "without-skill")
+        ]
+        raw = score_results(cases, results, require_complete=True)
+        raw["experiment_verification"] = {
+            "valid": True,
+            "experiment_id": "different-run",
+            "dataset_version": DATASET_VERSION,
+            "purpose": "release-candidate",
+            "held_out_dataset_present": True,
+        }
+        release_policy = policy()
+        release_policy["experiment"] = {
+            "require_verified_preregistration": True,
+            "require_release_candidate": True,
+            "require_held_out_dataset": True,
+        }
+        evaluated = apply_release_policy(raw, release_policy)
+        self.assertIn(
+            "scored run IDs do not match the verified experiment",
+            "\n".join(evaluated["policy"]["violations"]),
+        )
 
     def test_policy_gates_candidate_while_comparing_control(self):
         cases = {"T01": activation_case(), "B01": behavior_case()}
@@ -272,12 +341,8 @@ class EvalCoreTest(unittest.TestCase):
                 observed_decisions=["map"],
             )
             if variant == "with-skill":
-                behavior_result["loaded_resources"].append(
-                    "references/systems-languages.md"
-                )
-            results.extend(
-                [result("T01", variant=variant, selected_skill=True), behavior_result]
-            )
+                behavior_result["loaded_resources"].append("references/systems-languages.md")
+            results.extend([result("T01", variant=variant, selected_skill=True), behavior_result])
         evaluated = apply_release_policy(
             score_results(cases, results, require_complete=True), policy()
         )

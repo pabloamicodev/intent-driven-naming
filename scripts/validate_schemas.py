@@ -17,7 +17,7 @@ def main() -> int:
     parser.add_argument("--json-output", type=Path)
     args = parser.parse_args()
     try:
-        from jsonschema import Draft202012Validator
+        from jsonschema import Draft202012Validator, FormatChecker
         from jsonschema.exceptions import SchemaError, ValidationError
         from referencing import Registry, Resource
     except ImportError:
@@ -58,6 +58,17 @@ def main() -> int:
         Draft202012Validator(schemas["corpus-policy.schema.json"]).validate(
             json.loads((schema_dir / "corpus-policy.json").read_text(encoding="utf-8"))
         )
+        experiment_manifest = json.loads(
+            (ROOT / "examples" / "experiment-manifest.json").read_text(encoding="utf-8")
+        )
+        runner_config = json.loads(
+            (ROOT / "examples" / "runner-config.json").read_text(encoding="utf-8")
+        )
+        Draft202012Validator(
+            schemas["experiment-manifest.schema.json"],
+            format_checker=FormatChecker(),
+        ).validate(experiment_manifest)
+        Draft202012Validator(schemas["runner-config.schema.json"]).validate(runner_config)
         rename_validator = Draft202012Validator(
             schemas["rename-plan.schema.json"], registry=registry
         )

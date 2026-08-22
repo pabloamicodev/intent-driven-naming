@@ -21,8 +21,15 @@ VALID_DECISIONS = {"keep", "rename", "map", "migrate", "defer", "not-applicable"
 VALID_DIFFICULTIES = {"easy", "standard", "edge", "adversarial"}
 VALID_MODES = {"generation", "audit", "refactor"}
 VALID_RISKS = {
-    "internal", "cross-module", "external", "dynamic", "generated", "stateful", "unknown"
+    "internal",
+    "cross-module",
+    "external",
+    "dynamic",
+    "generated",
+    "stateful",
+    "unknown",
 }
+BOOTSTRAP_SEED = 20260821
 RESULT_FIELDS = {
     "schema_version",
     "protocol_version",
@@ -114,13 +121,17 @@ def validate_case(case: dict[str, Any]) -> list[str]:
         if case.get("contract_risk") not in VALID_RISKS:
             errors.append("behavior contract_risk is invalid")
         languages = case.get("languages")
-        if not isinstance(languages, list) or not languages or any(
-            not isinstance(language, str) or not language for language in languages
+        if (
+            not isinstance(languages, list)
+            or not languages
+            or any(not isinstance(language, str) or not language for language in languages)
         ):
             errors.append("behavior languages must be a non-empty string array")
         decisions = case.get("expected_decisions")
-        if not isinstance(decisions, list) or not decisions or any(
-            decision not in VALID_DECISIONS for decision in decisions
+        if (
+            not isinstance(decisions, list)
+            or not decisions
+            or any(decision not in VALID_DECISIONS for decision in decisions)
         ):
             errors.append("behavior expected_decisions are invalid")
         elif len(decisions) != len(set(decisions)):
@@ -144,7 +155,10 @@ def validate_case(case: dict[str, Any]) -> list[str]:
                     errors.append(f"{invariant_id}: invalid severity")
                 if invariant.get("grading") not in {"deterministic", "semantic", "human"}:
                     errors.append(f"{invariant_id}: invalid grading")
-                if not isinstance(invariant.get("description"), str) or not invariant["description"].strip():
+                if (
+                    not isinstance(invariant.get("description"), str)
+                    or not invariant["description"].strip()
+                ):
                     errors.append(f"{invariant_id}: description must be non-empty")
     return errors
 
@@ -194,7 +208,9 @@ def validate_result(result: dict[str, Any], cases: dict[str, dict[str, Any]]) ->
         not isinstance(result.get("error"), str) or not result["error"].strip()
     ):
         errors.append("failed result requires a non-empty error")
-    if result.get("selected_skill") is not None and not isinstance(result.get("selected_skill"), bool):
+    if result.get("selected_skill") is not None and not isinstance(
+        result.get("selected_skill"), bool
+    ):
         errors.append("selected_skill must be boolean or null")
     for field in ("output_text", "artifact_path", "grader_notes", "error"):
         if result.get(field) is not None and not isinstance(result.get(field), str):
@@ -242,7 +258,11 @@ def validate_result(result: dict[str, Any], cases: dict[str, dict[str, Any]]) ->
             errors.append("usage must be an object")
         else:
             integer_metrics = {
-                "input_tokens", "output_tokens", "skill_context_words", "turns", "tool_calls"
+                "input_tokens",
+                "output_tokens",
+                "skill_context_words",
+                "turns",
+                "tool_calls",
             }
             allowed_metrics = integer_metrics | {"latency_ms", "cost_usd"}
             unknown_usage = set(usage) - allowed_metrics
@@ -259,7 +279,10 @@ def validate_result(result: dict[str, Any], cases: dict[str, dict[str, Any]]) ->
     implementation = result.get("implementation")
     if implementation is not None and (
         not isinstance(implementation, dict)
-        or any(not isinstance(key, str) or not _valid_scalar(value) for key, value in implementation.items())
+        or any(
+            not isinstance(key, str) or not _valid_scalar(value)
+            for key, value in implementation.items()
+        )
     ):
         errors.append("implementation keys and values must be scalar")
     grades = result.get("invariant_grades", {})
@@ -312,7 +335,11 @@ def _wilson_interval(successes: int, total: int, z: float = 1.96) -> list[float]
     proportion = successes / total
     denominator = 1 + z * z / total
     center = (proportion + z * z / (2 * total)) / denominator
-    margin = z * math.sqrt(proportion * (1 - proportion) / total + z * z / (4 * total * total)) / denominator
+    margin = (
+        z
+        * math.sqrt(proportion * (1 - proportion) / total + z * z / (4 * total * total))
+        / denominator
+    )
     return [round(max(0.0, center - margin), 6), round(min(1.0, center + margin), 6)]
 
 
@@ -331,7 +358,7 @@ def _paired_difference(outcomes: dict[Any, dict[str, int]]) -> dict[str, Any] | 
         differences_by_case[case_id].append(difference)
     case_ids = sorted(differences_by_case, key=str)
     mean = sum(differences) / len(differences)
-    randomizer = random.Random(20260821)
+    randomizer = random.Random(BOOTSTRAP_SEED)
     bootstrap_means: list[float] = []
     for _ in range(10_000):
         sampled_differences = [
@@ -346,7 +373,7 @@ def _paired_difference(outcomes: dict[Any, dict[str, int]]) -> dict[str, Any] | 
     return {
         "method": "paired-case-cluster-percentile-bootstrap-95",
         "bootstrap_samples": 10_000,
-        "bootstrap_seed": 20260821,
+        "bootstrap_seed": BOOTSTRAP_SEED,
         "clusters": len(case_ids),
         "matched_pairs": len(differences),
         "candidate_better": sum(difference > 0 for difference in differences),
@@ -415,7 +442,9 @@ def score_results(
         attempts[key] = result
 
     final_results: list[dict[str, Any]] = []
-    attempt_groups: dict[tuple[str, str, str, str], list[tuple[int, dict[str, Any]]]] = defaultdict(list)
+    attempt_groups: dict[tuple[str, str, str, str], list[tuple[int, dict[str, Any]]]] = defaultdict(
+        list
+    )
     for (system_id, variant, replicate_id, case_id, attempt), result in attempts.items():
         attempt_groups[(system_id, variant, replicate_id, case_id)].append((attempt, result))
     for grouped_attempts in attempt_groups.values():
@@ -489,7 +518,10 @@ def score_results(
         }
     )
     implementation_fields: dict[str, Counter[str]] = defaultdict(Counter)
+    configuration_hashes_by_system: dict[str, set[str]] = defaultdict(set)
+    run_ids: set[str] = set()
     behavior_review_counts: dict[str, list[int]] = defaultdict(list)
+    behavior_human_review_counts: dict[str, list[int]] = defaultdict(list)
     completed_by_replicate: dict[tuple[str, str, str], set[str]] = defaultdict(set)
     paired_outcomes: dict[str, dict[str, dict[Any, dict[str, int]]]] = defaultdict(
         lambda: defaultdict(lambda: defaultdict(dict))
@@ -497,6 +529,8 @@ def score_results(
 
     for result in final_results:
         system_id, variant, replicate_id, _ = _identity(result)
+        run_ids.add(result["run_id"])
+        configuration_hashes_by_system[system_id].add(result["configuration_hash"])
         cohort = _cohort_key(system_id, variant)
         cohorts.setdefault(
             cohort,
@@ -519,8 +553,13 @@ def score_results(
         if all(field in result and result[field] not in {None, ""} for field in identity_fields):
             usage_values[cohort]["identity_complete"] += 1
         for metric in (
-            "input_tokens", "output_tokens", "latency_ms", "cost_usd",
-            "skill_context_words", "turns", "tool_calls",
+            "input_tokens",
+            "output_tokens",
+            "latency_ms",
+            "cost_usd",
+            "skill_context_words",
+            "turns",
+            "tool_calls",
         ):
             value = (result.get("usage") or {}).get(metric)
             if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -565,7 +604,15 @@ def score_results(
                 errors.append(f"{case['id']}: completed activation result requires selected_skill")
                 continue
             expected = case["expected_activation"]
-            bucket = "tp" if expected and selected else "tn" if not expected and not selected else "fp" if selected else "fn"
+            bucket = (
+                "tp"
+                if expected and selected
+                else "tn"
+                if not expected and not selected
+                else "fp"
+                if selected
+                else "fn"
+            )
             activation_counts[cohort][bucket] += 1
             paired_outcomes[system_id]["activation_accuracy"][(replicate_id, case["id"])][
                 variant
@@ -576,9 +623,19 @@ def score_results(
 
         grades = result.get("invariant_grades", {})
         review_count = (result.get("implementation") or {}).get("review_count", 0)
+        human_review_count = (result.get("implementation") or {}).get("human_review_count", 0)
         behavior_review_counts[cohort].append(
             review_count
-            if isinstance(review_count, int) and not isinstance(review_count, bool) and review_count >= 0
+            if isinstance(review_count, int)
+            and not isinstance(review_count, bool)
+            and review_count >= 0
+            else 0
+        )
+        behavior_human_review_counts[cohort].append(
+            human_review_count
+            if isinstance(human_review_count, int)
+            and not isinstance(human_review_count, bool)
+            and human_review_count >= 0
             else 0
         )
         case_has_fail = False
@@ -593,11 +650,13 @@ def score_results(
                 continue
             behavior_counts[cohort][grade] += 1
             if grade in {"pass", "fail"}:
-                paired_outcomes[system_id]["behavior_pass_rate"][(
-                    replicate_id,
-                    case["id"],
-                    invariant["id"],
-                )][variant] = int(grade == "pass")
+                paired_outcomes[system_id]["behavior_pass_rate"][
+                    (
+                        replicate_id,
+                        case["id"],
+                        invariant["id"],
+                    )
+                ][variant] = int(grade == "pass")
             if grade == "fail":
                 case_has_fail = True
                 if invariant["severity"] == "critical":
@@ -623,9 +682,13 @@ def score_results(
             decision_stats[cohort]["exact_matches"] += int(exact)
             for expected_decision in expected_set:
                 decision_stats[cohort]["by_expected"][expected_decision]["cases"] += 1
-                decision_stats[cohort]["by_expected"][expected_decision]["exact_matches"] += int(exact)
+                decision_stats[cohort]["by_expected"][expected_decision]["exact_matches"] += int(
+                    exact
+                )
             if len(expected_set) == 1 and len(observed_set) == 1:
-                decision_stats[cohort]["confusion"][next(iter(expected_set))][next(iter(observed_set))] += 1
+                decision_stats[cohort]["confusion"][next(iter(expected_set))][
+                    next(iter(observed_set))
+                ] += 1
 
     for metadata in cohorts.values():
         metadata["replicates"] = sorted(metadata["replicates"])
@@ -655,8 +718,7 @@ def score_results(
     }
     activation_slices = {
         cohort: {
-            slice_name: _confusion_metrics(counts)
-            for slice_name, counts in sorted(slices.items())
+            slice_name: _confusion_metrics(counts) for slice_name, counts in sorted(slices.items())
         }
         for cohort, slices in sorted(activation_slice_counts.items())
     }
@@ -702,8 +764,13 @@ def score_results(
             "identity_complete_results": values["identity_complete"],
         }
         for metric in (
-            "input_tokens", "output_tokens", "latency_ms", "cost_usd",
-            "skill_context_words", "turns", "tool_calls",
+            "input_tokens",
+            "output_tokens",
+            "latency_ms",
+            "cost_usd",
+            "skill_context_words",
+            "turns",
+            "tool_calls",
         ):
             samples = values[metric]
             usage_report[cohort][metric] = {
@@ -729,9 +796,7 @@ def score_results(
                 values["total_resource_loads"], values["reported_results"]
             ),
             "unknown_resources": dict(sorted(values["unknown_resources"].items())),
-            "unnecessary_resources": dict(
-                sorted(values["unnecessary_resources"].items())
-            ),
+            "unnecessary_resources": dict(sorted(values["unnecessary_resources"].items())),
             "overloaded_profile_results": values["overloaded_profile_results"],
         }
         for cohort, values in sorted(resource_values.items())
@@ -752,20 +817,35 @@ def score_results(
         cohort: {
             "behavior_results": len(counts),
             "minimum_review_count": min(counts, default=0),
+            "minimum_human_review_count": min(
+                behavior_human_review_counts.get(cohort, []), default=0
+            ),
             "fully_reviewed_results": sum(count > 0 for count in counts),
         }
         for cohort, counts in sorted(behavior_review_counts.items())
     }
     paired_comparisons = {
         system_id: {
-            metric: _paired_difference(outcomes)
-            for metric, outcomes in sorted(metrics.items())
+            metric: _paired_difference(outcomes) for metric, outcomes in sorted(metrics.items())
         }
         for system_id, metrics in sorted(paired_outcomes.items())
+    }
+    configuration_integrity = {
+        system_id: {
+            "configuration_hashes": sorted(hashes),
+            "configuration_count": len(hashes),
+            "consistent_across_variants_and_replicates": len(hashes) == 1,
+        }
+        for system_id, hashes in sorted(configuration_hashes_by_system.items())
     }
     return {
         "schema_version": "2.0",
         "dataset_version": next(iter({case["dataset_version"] for case in cases.values()}), None),
+        "estimand": {
+            "target": "generalized-task-performance",
+            "unit": "evaluation-case",
+            "uncertainty": "paired-case-cluster-percentile-bootstrap-95",
+        },
         "require_complete": require_complete,
         "errors": errors,
         "cohorts": dict(sorted(cohorts.items())),
@@ -778,6 +858,8 @@ def score_results(
         "usage": usage_report,
         "resource_loading": resource_report,
         "implementation_metadata": implementation_report,
+        "configuration_integrity": configuration_integrity,
+        "run_ids": sorted(run_ids),
         "review_coverage": review_coverage,
         "paired_comparisons": paired_comparisons,
         "retries": retry_report,
@@ -805,7 +887,9 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
         violations.append("release policy dataset_version does not match the results")
     required_variants = policy.get("required_variants", [])
     if not isinstance(required_variants, list) or set(required_variants) != VALID_VARIANTS:
-        violations.append("release policy must require with-skill, previous-skill, and without-skill")
+        violations.append(
+            "release policy must require with-skill, previous-skill, and without-skill"
+        )
         required_variants = []
     gated_variant = policy.get("gated_variant")
     if gated_variant not in VALID_VARIANTS:
@@ -813,26 +897,44 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
     systems = sorted({metadata["system_id"] for metadata in report.get("cohorts", {}).values()})
     if not systems:
         violations.append("release policy requires at least one system")
+    minimum_systems = policy.get("minimum_systems", 1)
+    if (
+        isinstance(minimum_systems, bool)
+        or not isinstance(minimum_systems, int)
+        or minimum_systems < 1
+    ):
+        violations.append("minimum_systems must be a positive integer")
+        minimum_systems = 1
+    if len(systems) < minimum_systems:
+        violations.append(f"{len(systems)} systems is below required minimum {minimum_systems}")
     minimum_replicates = policy.get("minimum_replicates", 1)
-    if isinstance(minimum_replicates, bool) or not isinstance(minimum_replicates, int) or minimum_replicates < 1:
+    if (
+        isinstance(minimum_replicates, bool)
+        or not isinstance(minimum_replicates, int)
+        or minimum_replicates < 1
+    ):
         violations.append("minimum_replicates must be a positive integer")
         minimum_replicates = 1
     activation_policy = policy.get("activation", {})
     behavior_policy = policy.get("behavior", {})
     comparison_policy = policy.get("comparison", {})
-    if not isinstance(comparison_policy, dict) or comparison_policy.get(
-        "baseline_variant"
-    ) != "without-skill":
+    if (
+        not isinstance(comparison_policy, dict)
+        or comparison_policy.get("baseline_variant") != "without-skill"
+    ):
         violations.append("comparison baseline_variant must be without-skill")
         comparison_policy = {}
     required_fields = policy.get("required_implementation_fields", [])
-    if not isinstance(required_fields, list) or any(not isinstance(field, str) for field in required_fields):
+    if not isinstance(required_fields, list) or any(
+        not isinstance(field, str) for field in required_fields
+    ):
         violations.append("required_implementation_fields must be a string array")
         required_fields = []
     efficiency_policy = policy.get("efficiency", {})
-    if not isinstance(efficiency_policy, dict) or efficiency_policy.get(
-        "comparison_variant"
-    ) != "previous-skill":
+    if (
+        not isinstance(efficiency_policy, dict)
+        or efficiency_policy.get("comparison_variant") != "previous-skill"
+    ):
         violations.append("efficiency comparison_variant must be previous-skill")
         efficiency_policy = {}
     required_usage_fields = efficiency_policy.get("required_usage_fields", [])
@@ -841,6 +943,31 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
     ):
         violations.append("efficiency required_usage_fields must be a string array")
         required_usage_fields = []
+
+    experiment_policy = policy.get("experiment")
+    if isinstance(experiment_policy, dict):
+        experiment = report.get("experiment_verification")
+        if not isinstance(experiment, dict):
+            violations.append("verified preregistered experiment report is required")
+        else:
+            if experiment_policy.get("require_verified_preregistration") and not experiment.get(
+                "valid", False
+            ):
+                violations.append("preregistered experiment verification did not pass")
+            if (
+                experiment_policy.get("require_release_candidate")
+                and experiment.get("purpose") != "release-candidate"
+            ):
+                violations.append("experiment purpose is not release-candidate")
+            if experiment_policy.get("require_held_out_dataset") and not experiment.get(
+                "held_out_dataset_present", False
+            ):
+                violations.append("experiment does not include a held-out dataset")
+            experiment_id = experiment.get("experiment_id")
+            if report.get("run_ids") != [experiment_id]:
+                violations.append("scored run IDs do not match the verified experiment")
+            if experiment.get("dataset_version") != report.get("dataset_version"):
+                violations.append("scored dataset version does not match the experiment")
 
     review_policy = policy.get("review")
     if isinstance(review_policy, dict):
@@ -870,6 +997,17 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 violations.append(
                     "review minimum_reviews_per_candidate "
                     f"{agreement.get('minimum_reviews_per_candidate')} is below {minimum_reviews}"
+                )
+            minimum_human_reviews = review_policy.get("minimum_human_reviews_per_candidate")
+            if (
+                isinstance(minimum_human_reviews, int)
+                and not isinstance(minimum_human_reviews, bool)
+                and agreement.get("minimum_human_reviews_per_candidate", 0) < minimum_human_reviews
+            ):
+                violations.append(
+                    "review minimum_human_reviews_per_candidate "
+                    f"{agreement.get('minimum_human_reviews_per_candidate')} is below "
+                    f"{minimum_human_reviews}"
                 )
             for policy_name, report_name in (
                 ("minimum_raw_grade_agreement", "raw_grade_agreement"),
@@ -912,8 +1050,22 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 observed = pairwise.get(report_name)
                 if minimum is not None and (observed is None or observed < minimum):
                     violations.append(f"pairwise {report_name} {observed} is below {minimum}")
+            minimum_human_pairwise = pairwise_policy.get("minimum_human_reviews_per_pair")
+            if (
+                isinstance(minimum_human_pairwise, int)
+                and not isinstance(minimum_human_pairwise, bool)
+                and pairwise.get("minimum_human_reviews_per_pair", 0) < minimum_human_pairwise
+            ):
+                violations.append(
+                    "pairwise minimum_human_reviews_per_pair "
+                    f"{pairwise.get('minimum_human_reviews_per_pair')} is below "
+                    f"{minimum_human_pairwise}"
+                )
 
     for system_id in systems:
+        integrity = report.get("configuration_integrity", {}).get(system_id, {})
+        if not integrity.get("consistent_across_variants_and_replicates", False):
+            violations.append(f"{system_id}: configuration changed across variants or replicates")
         for variant in required_variants:
             cohort = _cohort_key(system_id, variant)
             metadata = report.get("cohorts", {}).get(cohort)
@@ -938,10 +1090,14 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
             implementation = report.get("implementation_metadata", {}).get(cohort, {})
             completed = implementation.get("completed_results", 0)
             for field in required_fields:
-                if completed == 0 or implementation.get("field_presence", {}).get(field, 0) != completed:
+                if (
+                    completed == 0
+                    or implementation.get("field_presence", {}).get(field, 0) != completed
+                ):
                     violations.append(f"{cohort}: implementation field {field} is incomplete")
             if isinstance(review_policy, dict):
                 minimum_reviews = review_policy.get("minimum_reviews_per_candidate")
+                minimum_human_reviews = review_policy.get("minimum_human_reviews_per_candidate")
                 coverage = report.get("review_coverage", {}).get(cohort, {})
                 if (
                     isinstance(minimum_reviews, int)
@@ -950,6 +1106,15 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                     violations.append(
                         f"{cohort}: minimum behavior review count "
                         f"{coverage.get('minimum_review_count', 0)} is below {minimum_reviews}"
+                    )
+                if (
+                    isinstance(minimum_human_reviews, int)
+                    and coverage.get("minimum_human_review_count", 0) < minimum_human_reviews
+                ):
+                    violations.append(
+                        f"{cohort}: minimum human behavior review count "
+                        f"{coverage.get('minimum_human_review_count', 0)} is below "
+                        f"{minimum_human_reviews}"
                     )
 
         candidate_cohort = _cohort_key(system_id, gated_variant)
@@ -979,9 +1144,7 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 f"{candidate_cohort}: unknown loaded resources {unknown_count} exceeds {maximum_unknown}"
             )
         maximum_unnecessary = efficiency_policy.get("maximum_unnecessary_resources")
-        unnecessary_count = sum(
-            resource_loading.get("unnecessary_resources", {}).values()
-        )
+        unnecessary_count = sum(resource_loading.get("unnecessary_resources", {}).values())
         if maximum_unnecessary is not None and unnecessary_count > maximum_unnecessary:
             violations.append(
                 f"{candidate_cohort}: unnecessary loaded resources {unnecessary_count} "
@@ -994,12 +1157,8 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 f"{candidate_cohort}: overloaded profile results {overloaded_results} "
                 f"exceeds {maximum_overloaded}"
             )
-        maximum_unexpected = efficiency_policy.get(
-            "maximum_unexpected_activation_resource_results"
-        )
-        unexpected_resources = resource_loading.get(
-            "unexpected_activation_resource_results", 0
-        )
+        maximum_unexpected = efficiency_policy.get("maximum_unexpected_activation_resource_results")
+        unexpected_resources = resource_loading.get("unexpected_activation_resource_results", 0)
         if maximum_unexpected is not None and unexpected_resources > maximum_unexpected:
             violations.append(
                 f"{candidate_cohort}: unexpected activation resource results "
@@ -1036,7 +1195,9 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
         activation = report.get("activation", {}).get(candidate_cohort, {})
         for metric in ("precision", "recall", "specificity", "balanced_accuracy", "accuracy"):
             minimum = activation_policy.get(f"minimum_{metric}")
-            if minimum is not None and (activation.get(metric) is None or activation[metric] < minimum):
+            if minimum is not None and (
+                activation.get(metric) is None or activation[metric] < minimum
+            ):
                 violations.append(
                     f"{candidate_cohort}: activation {metric} {activation.get(metric)} is below {minimum}"
                 )
@@ -1048,9 +1209,9 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
             violations.append(
                 f"{candidate_cohort}: false_positive_rate {activation.get('false_positive_rate')} exceeds {maximum_fpr}"
             )
-        for slice_name, slice_metrics in report.get("activation_by_slice", {}).get(
-            candidate_cohort, {}
-        ).items():
+        for slice_name, slice_metrics in (
+            report.get("activation_by_slice", {}).get(candidate_cohort, {}).items()
+        ):
             minimum_slice_accuracy = activation_policy.get("minimum_slice_accuracy")
             if minimum_slice_accuracy is not None and (
                 slice_metrics.get("accuracy") is None
@@ -1098,12 +1259,9 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 if not slice_key.startswith(prefix):
                     continue
                 observations_count = slice_metrics.get("pass", 0) + slice_metrics.get("fail", 0)
-                if (
-                    observations_count >= minimum_slice_observations
-                    and (
-                        slice_metrics.get("pass_rate") is None
-                        or slice_metrics["pass_rate"] < minimum_slice_pass_rate
-                    )
+                if observations_count >= minimum_slice_observations and (
+                    slice_metrics.get("pass_rate") is None
+                    or slice_metrics["pass_rate"] < minimum_slice_pass_rate
                 ):
                     violations.append(
                         f"{slice_key}: behavior pass_rate {slice_metrics.get('pass_rate')} "
@@ -1112,8 +1270,7 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
 
         paired = report.get("paired_comparisons", {}).get(system_id, {})
         comparisons = {
-            metric: paired.get(metric)
-            for metric in ("activation_accuracy", "behavior_pass_rate")
+            metric: paired.get(metric) for metric in ("activation_accuracy", "behavior_pass_rate")
         }
         observations[system_id] = {
             "quality": comparisons,

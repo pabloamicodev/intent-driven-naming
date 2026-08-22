@@ -23,6 +23,8 @@ and contractual requirements, and whether code may be used for training. Local o
 execution is required when policy prohibits external processing. Provider credentials stay in the
 host environment and never enter datasets, result JSONL, review packets, logs, or commits.
 
+Experiment manifests contain hashes and public identities only. Runner configurations map those identities to local paths and command arrays; credentials still come only from the host environment. Evidence ledgers record the runner-configuration hash, not its command contents. Keep local runner configurations private when paths or operational metadata are sensitive.
+
 ## Retention and publication
 
 Retain the smallest evidence needed to reproduce a claim: configuration hashes, pinned versions,

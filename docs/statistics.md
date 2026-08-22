@@ -1,9 +1,11 @@
 # Statistical evaluation protocol
 
+The primary estimand is generalized performance over software naming tasks similar to the declared case population; the unit of analysis is the evaluation case. The observed corpus mean is fixed-benchmark performance and MUST be reported as such when representativeness assumptions are not defensible.
+
 Release conclusions use paired observations from identical cases, model configuration, and
 replicate IDs. Current-skill quality is compared with the no-skill control; efficiency is compared
 with a frozen previous-skill runtime. Mixing model versions, reasoning settings, adapter versions,
-or grader policies within a system invalidates the comparison.
+or grader policies within a system invalidates the comparison. The release gate requires at least three distinct pinned systems and rejects aliases that resolve to an identical configuration.
 
 Activation and invariant proportions include Wilson 95% intervals. Paired quality deltas use a
 deterministic 10,000-sample percentile bootstrap with a published seed. The bootstrap resamples
@@ -18,12 +20,12 @@ slice findings are hypotheses until reproduced on held-out data. Failed, skipped
 ungraded cases remain visible; only the highest declared retry attempt is scored, and completeness
 is checked per replicate.
 
-Human semantic grades require at least two independent blinded reviews, evidence for every label,
+Human semantic grades require at least two independent blinded human reviews, evidence for every label,
 raw agreement, chance-corrected agreement, and decision-set agreement. Pairwise preference uses a
 separate blinded orientation and private randomization salt. Critical contract or behavior failures
 cannot be compensated by aggregate improvements.
 
-External release evidence must publish the dataset version, case exclusions, preregistered policy,
+External release evidence must publish the verified preregistration hash, dataset version, case exclusions, preregistered policy,
 systems, configuration hashes, replicate count, usage coverage, intervals, reviewer agreement, and
 all gate violations. The offline suite alone cannot establish cross-model effectiveness.
 

@@ -126,14 +126,16 @@ def score_pairwise(
     by_pair: dict[str, list[dict[str, Any]]] = defaultdict(list)
     seen: set[tuple[str, str]] = set()
     for review in reviews:
-        if review.get("schema_version") != "1.0":
-            raise ReviewDataError("pairwise review schema_version must be 1.0")
+        if review.get("schema_version") != "1.1":
+            raise ReviewDataError("pairwise review schema_version must be 1.1")
         pair_id = review.get("pair_id")
         reviewer_id = review.get("reviewer_id")
         if pair_id not in key_map:
             raise ReviewDataError(f"unknown pair_id {pair_id}")
         if not isinstance(reviewer_id, str) or not reviewer_id.strip():
             raise ReviewDataError(f"{pair_id}: reviewer_id must be non-empty")
+        if review.get("reviewer_kind") not in {"human", "model", "automated"}:
+            raise ReviewDataError(f"{pair_id}: reviewer_kind is invalid")
         if review.get("preference") not in VALID_PREFERENCES:
             raise ReviewDataError(f"{pair_id}: invalid preference")
         if not isinstance(review.get("evidence"), str) or not review["evidence"].strip():
@@ -145,19 +147,28 @@ def score_pairwise(
 
     totals = Counter({"with-skill": 0, "without-skill": 0, "tie": 0, "unresolved": 0})
     pair_results: list[dict[str, Any]] = []
+    human_reviews = [review for review in reviews if review["reviewer_kind"] == "human"]
+    agreement_population = "human" if human_reviews else "all-reviewers"
     agreement_pairs = 0
     agreement_count = 0
     for pair_id, key in sorted(key_map.items()):
         candidate_reviews = by_pair.get(pair_id, [])
-        for left_index, left in enumerate(candidate_reviews):
-            for right in candidate_reviews[left_index + 1 :]:
+        human_candidate_reviews = [
+            review for review in candidate_reviews if review["reviewer_kind"] == "human"
+        ]
+        consensus_reviews = human_candidate_reviews or candidate_reviews
+        agreement_reviews = (
+            human_candidate_reviews if agreement_population == "human" else candidate_reviews
+        )
+        for left_index, left in enumerate(agreement_reviews):
+            for right in agreement_reviews[left_index + 1 :]:
                 agreement_pairs += 1
                 agreement_count += int(left["preference"] == right["preference"])
-        counts = Counter(review["preference"] for review in candidate_reviews)
+        counts = Counter(review["preference"] for review in consensus_reviews)
         consensus = "unresolved"
-        if len(candidate_reviews) >= minimum_reviews and counts:
+        if len(consensus_reviews) >= minimum_reviews and counts:
             label, count = counts.most_common(1)[0]
-            if count > len(candidate_reviews) / 2:
+            if count > len(consensus_reviews) / 2:
                 consensus = label if label == "tie" else key[f"{label}_variant"]
         totals[consensus] += 1
         pair_results.append(
@@ -167,13 +178,26 @@ def score_pairwise(
                 "system_id": key["system_id"],
                 "replicate_id": key["replicate_id"],
                 "review_count": len(candidate_reviews),
+                "human_review_count": sum(
+                    review["reviewer_kind"] == "human" for review in candidate_reviews
+                ),
                 "consensus": consensus,
             }
         )
     resolved = totals["with-skill"] + totals["without-skill"] + totals["tie"]
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "pairs": len(keys),
+        "review_records": len(reviews),
+        "human_review_records": sum(review["reviewer_kind"] == "human" for review in reviews),
+        "agreement_population": agreement_population,
+        "minimum_human_reviews_per_pair": min(
+            (
+                sum(review["reviewer_kind"] == "human" for review in by_pair.get(pair_id, []))
+                for pair_id in key_map
+            ),
+            default=0,
+        ),
         "resolved_pairs": resolved,
         "resolved_fraction": round(resolved / len(keys), 6) if keys else None,
         "with_skill_wins": totals["with-skill"],

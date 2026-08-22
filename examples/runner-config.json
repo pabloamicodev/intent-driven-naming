@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "output_root": "../eval-results",
+  "current_skill_path": "..",
+  "baseline_skill_path": "..",
+  "release_policy_path": "../specification/release-policy.json",
+  "datasets": [
+    {
+      "dataset_id": "public-development",
+      "activation_cases": "../evals/cases/activation.jsonl",
+      "behavior_cases": "../evals/cases/behavior.jsonl"
+    }
+  ],
+  "adapters": [
+    {
+      "system_id": "mock-development",
+      "command": ["${PYTHON}", "tests/fixtures/mock_adapter.py"]
+    }
+  ],
+  "limits": {
+    "max_workers": 1,
+    "timeout_seconds": 1800,
+    "max_input_bytes": 10000000,
+    "max_output_bytes": 10000000,
+    "max_stderr_bytes": 1000000
+  }
+}

@@ -20,7 +20,7 @@ for line in sys.stdin:
             "turns": 1,
             "tool_calls": 0,
         },
-        "implementation": {"adapter": "mock"},
+        "implementation": request.get("declared_implementation") or {"adapter": "mock"},
         "error": None,
     }
     print(json.dumps(response))

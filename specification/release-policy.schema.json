@@ -6,7 +6,8 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "name", "version", "dataset_version", "required_variants",
-    "gated_variant", "minimum_replicates", "activation", "behavior", "review", "pairwise",
+    "gated_variant", "minimum_systems", "minimum_replicates", "experiment",
+    "activation", "behavior", "review", "pairwise",
     "comparison", "efficiency", "required_implementation_fields"
   ],
   "$defs": {
@@ -23,7 +24,20 @@
       "items": { "enum": ["with-skill", "previous-skill", "without-skill"] }
     },
     "gated_variant": { "const": "with-skill" },
+    "minimum_systems": { "type": "integer", "minimum": 3 },
     "minimum_replicates": { "type": "integer", "minimum": 3 },
+    "experiment": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "require_verified_preregistration", "require_release_candidate",
+        "require_held_out_dataset"
+      ],
+      "properties": {
+        "require_verified_preregistration": { "const": true },
+        "require_release_candidate": { "const": true },
+        "require_held_out_dataset": { "const": true }
+      }
+    },
     "activation": {
       "type": "object", "additionalProperties": false,
       "required": [
@@ -60,11 +74,12 @@
     "review": {
       "type": "object", "additionalProperties": false,
       "required": [
-        "minimum_reviews_per_candidate", "minimum_raw_grade_agreement",
+        "minimum_reviews_per_candidate", "minimum_human_reviews_per_candidate", "minimum_raw_grade_agreement",
         "minimum_chance_corrected_grade_agreement", "minimum_decision_set_agreement"
       ],
       "properties": {
         "minimum_reviews_per_candidate": { "type": "integer", "minimum": 2 },
+        "minimum_human_reviews_per_candidate": { "type": "integer", "minimum": 2 },
         "minimum_raw_grade_agreement": { "$ref": "#/$defs/ratio" },
         "minimum_chance_corrected_grade_agreement": { "type": "number", "minimum": -1, "maximum": 1 },
         "minimum_decision_set_agreement": { "$ref": "#/$defs/ratio" }
@@ -74,12 +89,13 @@
       "type": "object", "additionalProperties": false,
       "required": [
         "minimum_resolved_fraction", "minimum_with_skill_win_rate_excluding_ties",
-        "minimum_raw_reviewer_agreement"
+        "minimum_raw_reviewer_agreement", "minimum_human_reviews_per_pair"
       ],
       "properties": {
         "minimum_resolved_fraction": { "$ref": "#/$defs/ratio" },
         "minimum_with_skill_win_rate_excluding_ties": { "$ref": "#/$defs/ratio" },
-        "minimum_raw_reviewer_agreement": { "$ref": "#/$defs/ratio" }
+        "minimum_raw_reviewer_agreement": { "$ref": "#/$defs/ratio" },
+        "minimum_human_reviews_per_pair": { "type": "integer", "minimum": 2 }
       }
     },
     "comparison": {
