@@ -17,6 +17,7 @@
   "features": {
     "callable": ["references/callable-naming.md"],
     "local-variable": ["references/local-variable-naming.md"],
+    "declaration": ["references/declaration-naming.md"],
     "high-risk": ["references/high-risk-semantics.md"]
   },
   "profiles": {

@@ -44,6 +44,7 @@ intent-driven-naming/
 │   ├── high-risk-semantics.md
 │   ├── callable-naming.md
 │   ├── local-variable-naming.md
+│   ├── declaration-naming.md
 │   ├── typescript-javascript.md
 │   ├── web-frameworks.md
 │   └── language-family profiles
@@ -170,7 +171,7 @@ SHA-256 checksums and an SPDX 2.3 inventory.
 
 Install `requirements-dev.lock` when running the same strict JSON Schema and lint checks enforced by CI. The skill runtime itself still has no Python dependency.
 
-The repository contains 84 balanced activation cases, 48 behavior cases with 185 explicit invariants, and 15 executable or contract-verifiable fixtures. Activation requests span seven locales; behavior cases include six locales and high-risk security, distributed-state, time, ML, observability, shell, generated-code, and stateful-migration scenarios.
+The repository contains 84 balanced activation cases, 52 behavior cases with 202 explicit invariants, and 16 executable or contract-verifiable fixtures. Activation requests span seven locales; behavior cases include six locales and high-risk security, distributed-state, time, ML, observability, declaration-family, data-minimization, generated-code, and stateful-migration scenarios.
 
 Generated JSONL remains synchronized with the reviewed Markdown source:
 
@@ -304,7 +305,7 @@ python harness/score_results.py \
 
 For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both plus a verified preregistered experiment. The policy requires at least three distinct systems; three complete repetitions of current-skill, previous-skill, and no-skill cohorts; identical pinned configurations across variants and repetitions; public and held-out data; two human reviews per candidate and pair; complete usage and loaded-resource telemetry; quality thresholds; calibrated agreement; and no ungraded invariants. Automated judges may assist but cannot satisfy the human minimum. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, configuration drift, incomplete repetitions, unresolved reviews, unknown or unnecessary resources, profile overloading, and efficiency regressions fail the gate.
 
-Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, configuration integrity, resource loading, input/output usage, latency, turns, tool calls, human-review coverage, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. A critical failure makes the hard gate fail regardless of aggregate quality. See [external evaluation operations](docs/external-evaluation.md), the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
+Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, configuration integrity, resource loading, input/output usage, latency, turns, tool calls, human-review coverage, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. Release gates compare input and output tokens, latency, turns, tool calls, and loaded context with the frozen previous skill. A critical failure fails the gate regardless of aggregate quality. See [external evaluation operations](docs/external-evaluation.md), the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
 
 The evaluation design follows the [official OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration of model graders.
 

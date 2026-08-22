@@ -34,7 +34,7 @@ LANGUAGE_PROFILES = {
     "kubernetes": "data-infrastructure",
     "protobuf": "data-infrastructure",
 }
-FEATURES = {"callable", "local-variable", "high-risk"}
+FEATURES = {"callable", "local-variable", "declaration", "high-risk"}
 BOUNDARY_TAGS = {"contract", "serialization", "schema", "protobuf"}
 BOUNDARY_RISKS = {"dynamic", "generated", "stateful"}
 
@@ -51,7 +51,9 @@ def allowed_behavior_resources(case: dict[str, Any], routes: dict[str, Any]) -> 
         allowed.update(routes.get("features", {}).get(feature, []))
 
     languages = set(case.get("languages", []))
-    profiles = {LANGUAGE_PROFILES[language] for language in languages if language in LANGUAGE_PROFILES}
+    profiles = {
+        LANGUAGE_PROFILES[language] for language in languages if language in LANGUAGE_PROFILES
+    }
     if "web-framework" in profiles:
         profiles.discard("typescript-javascript")
     for profile in profiles:
@@ -63,9 +65,7 @@ def allowed_behavior_resources(case: dict[str, Any], routes: dict[str, Any]) -> 
         or bool(tags & BOUNDARY_TAGS)
     ):
         allowed.update(routes.get("conditional_core", {}).get("polyglot-boundary", []))
-    if "generic" in languages or any(
-        language not in LANGUAGE_PROFILES for language in languages
-    ):
+    if "generic" in languages or any(language not in LANGUAGE_PROFILES for language in languages):
         allowed.update(routes.get("conditional_core", {}).get("uncertain-conventions", []))
     return allowed
 

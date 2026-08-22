@@ -1,17 +1,17 @@
 {
   "counts": {
     "activation": 84,
-    "behavior": 48,
-    "invariants": 185
+    "behavior": 52,
+    "invariants": 202
   },
   "dataset_version": "2.0.0",
   "output_sha256": {
     "cases/activation.jsonl": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa",
-    "cases/behavior.jsonl": "336d5895e19929fd2b9508ab624fccdf783f2996918fa06303f892ddeb543459"
+    "cases/behavior.jsonl": "e6b85f58626785912ab729bbae90049dba8d117d99ef861d9cfc3dde9f83a140"
   },
   "schema_version": "1.0",
   "source_sha256": {
-    "behavior-cases.md": "167e2e2c49655888fbb6bede64283aed461b32633e7b23e32ec8649975d33425",
+    "behavior-cases.md": "4b66a5045690f922cbbfaa9a074f418fa468823127531bc686e3434dbba4e9e2",
     "trigger-cases.md": "cb1aa65b4a157978d1f086b646696c1463a443af2e574b4ada2a458fc0a82674"
   },
   "strata": {
@@ -35,61 +35,64 @@
       "pt": 4
     },
     "behavior_contract_risk": {
-      "cross-module": 2,
+      "cross-module": 3,
       "dynamic": 3,
       "external": 17,
       "generated": 1,
-      "internal": 22,
+      "internal": 25,
       "stateful": 2,
       "unknown": 1
     },
     "behavior_decision": {
-      "defer": 8,
+      "defer": 10,
       "keep": 17,
       "map": 11,
       "migrate": 5,
-      "not-applicable": 7,
-      "rename": 20
+      "not-applicable": 8,
+      "rename": 23
     },
     "behavior_difficulty": {
-      "adversarial": 8,
-      "edge": 29,
-      "standard": 11
+      "adversarial": 10,
+      "edge": 30,
+      "standard": 12
     },
     "behavior_feature": {
-      "high-risk": 5
+      "callable": 1,
+      "declaration": 2,
+      "high-risk": 7,
+      "local-variable": 2
     },
     "behavior_language": {
       "csharp": 2,
       "elixir": 2,
-      "generic": 10,
-      "go": 4,
+      "generic": 11,
+      "go": 5,
       "java": 2,
       "javascript": 6,
       "kotlin": 1,
       "powershell": 1,
       "protobuf": 1,
-      "python": 7,
+      "python": 8,
       "react": 2,
       "rust": 2,
       "shell": 1,
       "sql": 2,
       "swift": 1,
       "terraform": 1,
-      "typescript": 10
+      "typescript": 11
     },
     "behavior_locale": {
       "de": 1,
-      "en": 41,
+      "en": 45,
       "es": 2,
       "fr": 1,
       "ja": 1,
       "pt": 2
     },
     "behavior_mode": {
-      "audit": 14,
-      "generation": 8,
-      "refactor": 26
+      "audit": 16,
+      "generation": 9,
+      "refactor": 27
     }
   }
 }

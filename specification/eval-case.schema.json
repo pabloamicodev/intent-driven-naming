@@ -23,7 +23,7 @@
     },
     "features": {
       "type": "array", "minItems": 1, "uniqueItems": true,
-      "items": { "enum": ["callable", "local-variable", "high-risk"] }
+      "items": { "enum": ["callable", "local-variable", "declaration", "high-risk"] }
     },
     "expected_activation": { "type": "boolean" },
     "rationale": { "type": "string", "minLength": 1 },

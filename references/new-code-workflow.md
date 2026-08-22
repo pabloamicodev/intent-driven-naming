@@ -1,22 +1,15 @@
 # New-Code Workflow
 
-Use naming as part of design, not as a report added after implementation.
+Apply naming during design; return the requested implementation without a naming report.
 
-1. Establish the domain vocabulary from the request, nearby code, contracts, and tests. Do not invent business distinctions.
-2. Inventory identifiers where a wrong reading matters: entities and IDs, collections and elements, lifecycle states, representations, units, effects, errors, events, captures, and cross-layer concepts.
-3. Apply the semantic record from `naming-model.md`, then render it using the repository's language and framework conventions.
-4. Keep related names as one semantic family across the declaration, parameters, local stages, errors, effects, and return value.
-5. Perform a silent final pass. Return the requested code, not a naming essay, unless rationale was requested.
+1. Establish domain vocabulary from the request, nearby code, contracts, and tests; do not invent business distinctions.
+2. Inventory material entities/IDs, collections/elements, lifecycle states, representations, units, effects, errors, events, captures, and cross-layer concepts.
+3. Apply `naming-model.md`, render using repository conventions, and keep declarations, parameters, local stages, errors, effects, and results as one semantic family.
+4. Map fixed boundary spellings into internal vocabulary explicitly.
+5. Apply the wrong-read and all-path guarantee tests, then remove words already supplied by types or scope.
 
-Name a transformed value by what it represents now, not by sequence words such as `processed`, `updated`, or `final`. Use plural collections and aligned singular elements. Name maps, sets, and aggregates by membership or indexing semantics when needed. Add units, trust states, or time bases only when confusion is plausible.
+Name a transformed value by its proven current meaning, not sequence words such as `processed` or `final`. Align collections and elements. Name maps, sets, and aggregates by membership or indexing when needed. Add units, trust, or time bases only when confusion is plausible.
 
 Do not bind every pipeline stage. Introduce a local when it clarifies a domain transition, supports reuse or diagnostics, or prevents confusion. Keep conventional short bindings in tiny scopes.
 
-Before completion verify:
-
-- callable names agree with observable results, effects, and failure behavior;
-- parameters describe caller inputs and public labels remain compatible;
-- meaningful local stages remain distinguishable without narration;
-- vocabulary stays continuous across related identifiers;
-- no type word, container word, or enclosing context is repeated unnecessarily;
-- no protected external spelling was changed for style.
+Before completion verify callable contracts, public labels, meaningful local stages, vocabulary continuity, protected spellings, and removal of redundant type or container words.

@@ -1203,6 +1203,110 @@ Audita `for i := 0; i < len(bytes); i++` dentro de una función de cinco líneas
 - [major][semantic] A no-op result is explicit and evidence-based.
 - [critical][semantic] No unrelated restructuring or behavior change is proposed.
 
+## B49 — Declaration Families Use Context Without Stutter
+
+### Case metadata
+
+- Mode: generation
+- Difficulty: standard
+- Locale: en
+- Languages: go
+- Contract risk: internal
+- Expected decisions: not-applicable
+- Features: declaration
+
+### Prompt
+
+```text
+Design Go types and fields for an invoice import batch containing invoices indexed by external invoice ID, the rejected invoice IDs, and the import status. Use clear names without repeating the containing type in every field.
+```
+
+### Required invariants
+
+- [major][semantic] The batch type names the invoice-import abstraction rather than a generic manager or data container.
+- [major][semantic] The index name exposes its external-ID-to-invoice relationship when the Go type alone is insufficient.
+- [major][semantic] Collection and element vocabulary stays aligned for rejected invoice identifiers.
+- [major][semantic] Field names use the containing type as context and avoid mechanical `InvoiceImportBatch...` stutter.
+- [critical][semantic] Status names do not claim completion or success unless the modeled lifecycle guarantees it.
+
+## B50 — Event Names Describe Facts, Not Attempts
+
+### Case metadata
+
+- Mode: audit
+- Difficulty: adversarial
+- Locale: en
+- Languages: typescript
+- Contract risk: cross-module
+- Expected decisions: rename, defer
+- Features: declaration, high-risk
+
+### Prompt
+
+```text
+Audit an event named `PaymentCompleted`. It is emitted after the gateway authorizes a charge but before the order transaction is persisted; persistence can still fail. Do not edit code.
+```
+
+### Required invariants
+
+- [critical][semantic] `PaymentCompleted` is rejected because completion is false on a reachable failure path.
+- [major][semantic] Any proposal describes only the proven gateway authorization or accepted stage.
+- [critical][semantic] The event spelling is treated as a cross-module contract rather than silently changed.
+- [major][semantic] The audit stays compact and does not invent capture, settlement, or persistence guarantees.
+
+## B51 — A Happy Path Does Not Prove Validation
+
+### Case metadata
+
+- Mode: refactor
+- Difficulty: adversarial
+- Locale: en
+- Languages: python
+- Contract risk: internal
+- Expected decisions: rename, defer
+- Features: local-variable, high-risk
+
+### Prompt
+
+```text
+Improve naming without changing behavior:
+
+validated_user = validate(raw_user) if should_validate else raw_user
+authorize(validated_user)
+```
+
+### Required invariants
+
+- [critical][semantic] The local is not called validated because the bypass path carries an unvalidated value.
+- [major][semantic] The proposal states only the weakest guarantee shared by both reaching paths or defers for missing domain meaning.
+- [critical][semantic] Validation or authorization behavior is not added, removed, or reordered.
+- [major][semantic] The result does not infer trust from the next operation's intent.
+
+## B52 — Evidence Collection Stops at the Smallest Sufficient Slice
+
+### Case metadata
+
+- Mode: audit
+- Difficulty: edge
+- Locale: en
+- Languages: generic
+- Contract risk: internal
+- Expected decisions: rename
+- Features: callable, local-variable
+
+### Prompt
+
+```text
+Audit only the local `state` in a very large proprietary repository. Its declaration assigns `order.status`, every read compares it with pending or paid order states, and the enclosing function also has a workflow state. Minimize source disclosure and do not edit files.
+```
+
+### Required invariants
+
+- [major][semantic] The evidence supports distinguishing `orderStatus` from the competing workflow state.
+- [major][semantic] The audit does not request or reproduce the entire repository after the declaration, reads, and competing value establish meaning.
+- [major][semantic] The finding is reported compactly rather than emitting a full formal plan.
+- [critical][semantic] Audit-only scope remains read-only and no unrelated identifiers are reviewed.
+
 ## Scoring
 
 Score each required invariant as:

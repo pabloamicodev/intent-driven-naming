@@ -9,11 +9,12 @@ class ExportEvalsTest(unittest.TestCase):
         outputs = build_outputs()
         by_name = {path.name: content for path, content in outputs.items()}
         self.assertEqual(len(by_name["activation.jsonl"].splitlines()), 84)
-        self.assertEqual(len(by_name["behavior.jsonl"].splitlines()), 48)
+        self.assertEqual(len(by_name["behavior.jsonl"].splitlines()), 52)
         manifest = json.loads(by_name["manifest.json"])
         self.assertEqual(manifest["dataset_version"], "2.0.0")
         self.assertEqual(manifest["counts"]["activation"], 84)
-        self.assertEqual(manifest["counts"]["behavior"], 48)
+        self.assertEqual(manifest["counts"]["behavior"], 52)
+        self.assertEqual(manifest["counts"]["invariants"], 202)
 
     def test_activation_parser_requires_explicit_strata(self):
         cases = parse_activation_cases(

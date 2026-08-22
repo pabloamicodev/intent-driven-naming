@@ -1,6 +1,15 @@
+import tempfile
 import unittest
+from pathlib import Path
 
-from harness.eval_core import _paired_difference, apply_release_policy, score_results, validate_case
+from harness.eval_core import (
+    EvaluationDataError,
+    _paired_difference,
+    apply_release_policy,
+    read_jsonl,
+    score_results,
+    validate_case,
+)
 
 DATASET_VERSION = "2.0.0"
 HASH = "a" * 64
@@ -126,8 +135,11 @@ def policy(minimum_replicates=1):
             "maximum_overloaded_profile_results": 0,
             "maximum_unexpected_activation_resource_results": 0,
             "maximum_input_token_ratio": 0.95,
+            "maximum_output_token_ratio": 1.05,
+            "maximum_latency_ratio": 1.2,
             "maximum_skill_context_word_ratio": 0.6,
             "maximum_turn_ratio": 1.0,
+            "maximum_tool_call_ratio": 1.0,
         },
         "required_implementation_fields": [
             "adapter",
@@ -142,6 +154,18 @@ def policy(minimum_replicates=1):
 
 
 class EvalCoreTest(unittest.TestCase):
+    def test_jsonl_reader_bounds_records_and_rejects_invalid_utf8(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "results.jsonl"
+            path.write_bytes(b'{"value":"too-large"}\n')
+            with self.assertRaisesRegex(EvaluationDataError, "exceeds 8 bytes"):
+                read_jsonl(path, max_record_bytes=8)
+            with self.assertRaisesRegex(EvaluationDataError, "input exceeds 16 bytes"):
+                read_jsonl(path, max_file_bytes=16)
+            path.write_bytes(b'{"value":"\xff"}\n')
+            with self.assertRaisesRegex(EvaluationDataError, "not valid UTF-8"):
+                read_jsonl(path)
+
     def test_paired_interval_resamples_case_clusters(self):
         outcomes = {
             ("r1", "case-a", "i1"): {"with-skill": 1, "without-skill": 0},
@@ -249,6 +273,32 @@ class EvalCoreTest(unittest.TestCase):
             "configuration changed across variants or replicates",
             "\n".join(evaluated["policy"]["violations"]),
         )
+
+    def test_release_policy_gates_output_latency_and_tool_call_regressions(self):
+        cases = {"T01": activation_case()}
+        candidate = result("T01", variant="with-skill", selected_skill=True)
+        candidate["usage"] = {
+            **candidate["usage"],
+            "output_tokens": 20,
+            "latency_ms": 13,
+            "tool_calls": 2,
+        }
+        previous = result("T01", variant="previous-skill", selected_skill=True)
+        previous["usage"] = {
+            **previous["usage"],
+            "output_tokens": 10,
+            "latency_ms": 10,
+            "tool_calls": 1,
+        }
+        raw = score_results(
+            cases,
+            [candidate, previous, result("T01", variant="without-skill", selected_skill=True)],
+            require_complete=True,
+        )
+        violations = "\n".join(apply_release_policy(raw, policy())["policy"]["violations"])
+        self.assertIn("output_tokens ratio 2.0 exceeds 1.05", violations)
+        self.assertIn("latency_ms ratio 1.3 exceeds 1.2", violations)
+        self.assertIn("tool_calls ratio 2.0 exceeds 1.0", violations)
 
     def test_release_policy_links_scored_runs_to_verified_experiment(self):
         cases = {"T01": activation_case()}

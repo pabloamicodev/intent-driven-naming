@@ -1,15 +1,24 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "measurement": "whitespace-delimited words",
+  "byte_measurement": "UTF-8 source bytes",
   "budgets": {
-    "entrypoint": 450,
-    "always-loaded": 1000,
-    "standard-route": 2900,
-    "extended-route": 3400,
-    "runtime-instructions": 4200,
-    "single-reference": 650
+    "entrypoint": 375,
+    "always-loaded": 850,
+    "standard-route": 2750,
+    "extended-route": 3200,
+    "runtime-instructions": 3900,
+    "single-reference": 500
+  },
+  "byte_budgets": {
+    "entrypoint": 3800,
+    "always-loaded": 7000,
+    "standard-route": 21000,
+    "extended-route": 24500,
+    "runtime-instructions": 30000,
+    "single-reference": 3200
   },
   "maximum_simultaneous_profiles": 2,
   "exceptions": {},
-  "policy": "Every ordinary route stays under 2900 words. Uncertain or polyglot work may load compact boundary guidance and at most two ecosystem cards while remaining under 3400 words. The entire runtime instruction surface stays under 4200 words. New detail must replace or route existing detail rather than silently raising a budget."
+  "policy": "Every ordinary route stays under 2750 words. Uncertain or polyglot work may load compact boundary guidance and at most two ecosystem cards while remaining under 3200 words. The entire runtime instruction surface stays under 3900 words. UTF-8 byte ceilings independently bound exact instruction data. New detail must replace or route existing detail rather than silently raising a budget."
 }

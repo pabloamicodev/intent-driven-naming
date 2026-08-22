@@ -9,36 +9,29 @@ metadata:
 
 # Intent-Driven Naming
 
-Make important identifiers express durable semantic intent. Prefer the shortest idiomatic name that prevents a plausible, material wrong reading. A clear existing name is a successful `keep` decision.
+Make important identifiers express durable intent. Prefer the shortest idiomatic name that prevents a plausible, material wrong reading. A clear name is a successful `keep` decision.
 
 ## Route Only What the Task Needs
 
 Read [references/naming-model.md](references/naming-model.md) for every task.
 
-- New code: read [references/new-code-workflow.md](references/new-code-workflow.md).
-- Audit only: read [references/audit-and-refactor.md](references/audit-and-refactor.md); do not edit.
-- Authorized rename: read [references/audit-and-refactor.md](references/audit-and-refactor.md), [references/refactor-safety.md](references/refactor-safety.md), and [references/structural-analysis.md](references/structural-analysis.md).
-- Callables or public parameters: read [references/callable-naming.md](references/callable-naming.md).
-- Locals, captures, callbacks, accumulators, or intermediate values: read [references/local-variable-naming.md](references/local-variable-naming.md).
-- Security, concurrency, distributed state, time, data/ML, observability, or resource ownership: read [references/high-risk-semantics.md](references/high-risk-semantics.md).
-- Uncertain project conventions or an unlisted language: read [references/language-conventions.md](references/language-conventions.md).
-- Multiple languages, schemas, generated clients, persisted state, or runtime names: read [references/polyglot-boundaries.md](references/polyglot-boundaries.md).
+- Workflow: new code → [new-code-workflow](references/new-code-workflow.md); audit → [audit-and-refactor](references/audit-and-refactor.md) without editing; authorized rename → [audit-and-refactor](references/audit-and-refactor.md), [refactor-safety](references/refactor-safety.md), and [structural-analysis](references/structural-analysis.md).
+- Declaration: callable/public parameter → [callable-naming](references/callable-naming.md); local/capture/callback/accumulator → [local-variable-naming](references/local-variable-naming.md); type/field/collection/enum/constant/error/event/message → [declaration-naming](references/declaration-naming.md).
+- Risk: security, concurrency, distributed state, time, data/ML, observability, or resources → [high-risk-semantics](references/high-risk-semantics.md); uncertain conventions or unlisted language → [language-conventions](references/language-conventions.md); polyglot, schema, generated, persisted, or runtime boundary → [polyglot-boundaries](references/polyglot-boundaries.md).
 
-Load an ecosystem profile only when its exceptions affect an actively changed declaration: [TypeScript/JavaScript](references/typescript-javascript.md), [web frameworks](references/web-frameworks.md), [dynamic languages](references/dynamic-languages.md), [systems languages](references/systems-languages.md), [managed/mobile](references/managed-mobile-languages.md), [functional/concurrent](references/functional-concurrent-languages.md), or [data/infrastructure](references/data-infrastructure.md). Never load more than two profiles; use repository evidence for additional ecosystems.
+Load a profile only when its exceptions affect an active declaration: [TypeScript/JavaScript](references/typescript-javascript.md), [web frameworks](references/web-frameworks.md), [dynamic](references/dynamic-languages.md), [systems](references/systems-languages.md), [managed/mobile](references/managed-mobile-languages.md), [functional/concurrent](references/functional-concurrent-languages.md), or [data/infrastructure](references/data-infrastructure.md). Load at most two; use repository evidence for the rest.
 
-## Work From Evidence
+## Decide From Evidence
 
-Determine meaning from declarations, types, assignments, data flow, callers, consumers, effects, failures, tests, domain vocabulary, and contracts. Generic spelling alone is not a defect. Use symbol-aware navigation when available and literal search only for strings and boundary spellings.
+Infer meaning from declarations, types, data flow, callers, consumers, effects, failures, tests, vocabulary, and contracts. Expand evidence only until a decision is supported; a change then requires complete coverage of its affected surface. Generic spelling alone is not a defect.
 
-For each material identifier choose exactly one action: `keep`, `rename`, `map`, `migrate`, or `defer`. Prefer `map` when an internal alias can improve while a boundary remains fixed. Use `defer` when meaning or safety cannot be established.
+Choose `keep`, `rename`, `map`, `migrate`, or `defer`. Map when a boundary remains fixed. Defer when meaning or safety is unresolved.
 
 ## Preserve Scope and Behavior
 
-- Do not turn naming work into architecture redesign, migration, dependency changes, or formatting churn.
-- Treat public parameters, serialized keys, schemas, routes, environment keys, events, reflection strings, framework hooks, generated surfaces, ABI names, CLI flags, and infrastructure addresses as contracts.
-- Do not assume a local is private when shorthand properties, named arguments, captures, macros, templates, or runtime lookup expose its spelling.
-- For new code, apply names silently and return the requested implementation.
-- For audits, rank only material findings by evidence, impact, confidence, and contract risk.
-- For refactors, use the smallest coherent rename set and run the strongest relevant checks.
+- Do not expand naming work into architecture, dependencies, control flow, migration, or formatting churn.
+- Treat public/named parameters, serialized keys, schemas, routes, environment keys, events, reflection, framework hooks, generated surfaces, ABI, CLI, and infrastructure identities as contracts.
+- A local may expose its spelling through shorthand properties, captures, macros, templates, or runtime lookup.
+- New code: apply names silently. Audit: report only material findings; omit full records unless requested or needed for a plan. Refactor: use the smallest coherent set and strongest relevant checks.
 
-Report limitations honestly. Never claim behavior preservation from textual replacement alone.
+Report limitations honestly. Textual replacement alone never proves behavior preservation.

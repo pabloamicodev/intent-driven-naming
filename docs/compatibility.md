@@ -19,6 +19,7 @@ Compatibility claims are evidence-scoped. Structural support means the skill can
 | Terraform stateful rename | Fixture verified | Explicit state move and stable remote name |
 | Generated TypeScript boundary | Fixture verified | Generator-source change, reproducible regeneration, wire-key preservation, and compilation |
 | Python security trust stages | Fixture verified | Untrusted token, verified claims, and principal behavior |
+| Python partial guarantees | Fixture verified | A validation bypass cannot retain a falsely validated local name |
 | Shell process contracts | Fixture verified when Bash is available | Local rename with exported environment key, quoting, arguments, and exit status preserved |
 | Protobuf to TypeScript mapping | Fixture verified when TypeScript is available | Generated snake-case fields mapped to idiomatic names with timestamp unit intact |
 | Telemetry contracts | Fixture verified | Stable metric and label spellings with bounded label vocabulary |

@@ -1,17 +1,16 @@
 # Structural Evidence and Rename Plans
 
-Use the strongest repository-native navigation available: code graph, language server, compiler index, AST query, or IDE symbol service. Use literal search separately for strings, configuration, templates, generated sources, and boundary spellings. Never substitute global text replacement for symbol analysis.
+Use the strongest repository-native navigation: code graph, language server, compiler index, AST query, or IDE symbol service. Literal search separately covers strings, configuration, templates, generated sources, and boundary spellings. Never substitute global text replacement for symbol analysis.
 
-Collect declaration, types, data flow, callers, consumers, tests, and boundary references only for affected symbols. Prefer symbol slices and compact facts; exclude secrets, environment contents, credentials, and unrelated code from evaluation artifacts.
+## Acquire Evidence Progressively
 
-For a non-trivial refactor, create a rename plan containing:
+1. Read the declaration, type/signature, enclosing scope, and local vocabulary.
+2. If meaning remains ambiguous, inspect assignments, branches, reads, sinks, and focused tests.
+3. If a change appears material, inspect callers, consumers, overrides, aliases, and its semantic family.
+4. Only for a changing, dynamic, generated, stateful, or external symbol, expand to complete affected-reference and boundary coverage.
 
-- semantic record, materiality, evidence, action, and confidence;
-- old and proposed spelling, symbol identity, and affected files;
-- analysis methods, achieved reference coverage, and dynamic surfaces checked;
-- protected spellings, mappings or migrations, and unresolved surfaces;
-- maximum authorized changes plus verification, collision, contract, and rollback checks.
+Stop when evidence supports `keep`, or uncertainty requires `defer`. Do not scan or transmit an entire repository for one name. Retain compact facts and locations, not code copies; exclude secrets, environment values, credentials, histories, and unrelated source.
 
-Validate machine-readable plans with `python scripts/runtime/validate_rename_plan.py PLAN.json` when the runtime script is available. The validator checks protocol consistency; it does not decide whether a name is good.
+For a non-trivial refactor, record semantic decisions, symbol identities and affected files, analysis methods and coverage, protected/unresolved surfaces, change budget, and verification, collision, contract, and rollback checks.
 
-Apply with symbol-aware tooling, then inspect literals and run contract checks before broad tests. Do not exceed the change budget. Non-internal changes require complete reference coverage, dynamic changes list checked runtime surfaces, and migrations provide executable rollback. Stop on unresolved meaning, dynamic references, generated ownership, or migration authority.
+Validate a machine-readable plan with `python scripts/runtime/validate_rename_plan.py PLAN.json` when available. The validator checks protocol consistency, not name quality. Apply with symbol-aware tooling, inspect literals, and stop when scope, ownership, or required coverage is unresolved.

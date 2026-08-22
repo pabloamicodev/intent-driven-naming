@@ -189,6 +189,18 @@
       "critical": true,
       "verify_command": ["{python}", "verify.py", "{candidate}"],
       "timeout_seconds": 30
+    },
+    {
+      "id": "FX16",
+      "language": "python-security",
+      "related_behavior_cases": ["B51"],
+      "expected_decisions": ["rename"],
+      "directory": "python/partial-guarantee",
+      "candidate_filename": "implementation.py",
+      "reference": "expected.py",
+      "critical": true,
+      "verify_command": ["{python}", "verify.py", "{candidate}"],
+      "timeout_seconds": 30
     }
   ]
 }

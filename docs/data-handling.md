@@ -10,11 +10,20 @@ meaning, plus strings or configuration needed to find dynamic contracts. Prefer 
 language-server references, AST queries, and bounded snippets over copying a repository. Do not send
 secrets, production records, credentials, unrelated files, or full histories to an external model.
 
+Acquire context in stages: declaration/type/scope first; assignments, branches, reads, and focused
+tests only if needed; callers and the semantic family only for a plausible material change; complete
+boundary coverage only before applying a changing decision. Stop at `keep` or `defer` as soon as the
+evidence supports it. This minimizes disclosure as well as tokens.
+
 `loaded_resources` records only repository-relative skill resource names. Evaluation artifacts use
 sanitized bundles and content hashes; sensitive filenames, binary content, and high-confidence token
 or private-key signatures are rejected without echoing the secret. They must not contain credentials or absolute developer paths.
 Private benchmark cases and raw external results belong in ignored directories or an access-
 controlled evidence store.
+
+JSONL evaluation records are streamed with hard per-record and 256 MiB cumulative byte ceilings
+before decoding, so an oversized or malformed artifact cannot force an unbounded read. Operators
+should impose a smaller runner limit when their data policy requires it.
 
 ## External processing
 

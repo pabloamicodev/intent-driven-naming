@@ -36,6 +36,19 @@ class RoutingTest(unittest.TestCase):
         }
         self.assertEqual(loaded_profile_count(resources, self.routes), 1)
 
+    def test_declaration_guidance_loads_only_when_declared(self):
+        case = {
+            "mode": "generation",
+            "languages": ["go"],
+            "contract_risk": "internal",
+            "features": ["declaration"],
+            "tags": [],
+        }
+        allowed = allowed_behavior_resources(case, self.routes)
+        self.assertIn("references/declaration-naming.md", allowed)
+        self.assertNotIn("references/callable-naming.md", allowed)
+        self.assertNotIn("references/local-variable-naming.md", allowed)
+
     def test_unlisted_language_routes_convention_discovery_without_a_fake_profile(self):
         case = {
             "mode": "audit",

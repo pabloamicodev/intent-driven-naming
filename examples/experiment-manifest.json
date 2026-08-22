@@ -1,34 +1,66 @@
 {
-  "schema_version": "1.0",
-  "experiment_id": "idn-public-development-2.0.0",
-  "purpose": "development",
+  "analysis": {
+    "bootstrap_seed": 20260821,
+    "confidence_level": 0.95,
+    "exclusions": [],
+    "retry_policy": {
+      "allowed_reasons": [
+        "transport-error",
+        "provider-timeout",
+        "provider-unavailable"
+      ],
+      "maximum_attempts": 2,
+      "scored_attempt": "highest-declared-attempt"
+    }
+  },
+  "claim_scope": "development-only",
   "created_at": "2026-08-21T00:00:00Z",
   "dataset_version": "2.0.0",
-  "estimand": {
-    "target": "generalized-task-performance",
-    "population_definition": "Software naming tasks similar to the declared multilingual activation and behavior case population.",
-    "unit": "evaluation-case",
-    "primary_metrics": ["activation_accuracy", "behavior_pass_rate"]
-  },
   "datasets": [
     {
-      "dataset_id": "public-development",
-      "visibility": "public",
       "activation": {
-        "sha256": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa",
-        "records": 84
+        "records": 84,
+        "sha256": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa"
       },
       "behavior": {
-        "sha256": "336d5895e19929fd2b9508ab624fccdf783f2996918fa06303f892ddeb543459",
-        "records": 48
-      }
+        "records": 52,
+        "sha256": "e6b85f58626785912ab729bbae90049dba8d117d99ef861d9cfc3dde9f83a140"
+      },
+      "dataset_id": "public-development",
+      "visibility": "public"
     }
   ],
-  "variants": ["with-skill", "previous-skill", "without-skill"],
-  "replicate_ids": ["r1"],
+  "estimand": {
+    "population_definition": "Software naming tasks similar to the declared multilingual activation and behavior case population.",
+    "primary_metrics": [
+      "activation_accuracy",
+      "behavior_pass_rate"
+    ],
+    "target": "generalized-task-performance",
+    "unit": "evaluation-case"
+  },
+  "experiment_id": "idn-public-development-2.0.0",
+  "purpose": "development",
+  "release_policy": {
+    "sha256": "4d55a7c1f44805992acdc703b231fe1e30b93e2029053ac518d22356d2921cae",
+    "version": "2.0.0"
+  },
+  "replicate_ids": [
+    "r1"
+  ],
+  "schema_version": "1.0",
+  "skills": {
+    "previous_skill": {
+      "sha256": "b7fac632f788a7978512999b8a186049f11aaae97935c6c55670ecb63e93fb00",
+      "version": "2.0.0"
+    },
+    "with_skill": {
+      "sha256": "b7fac632f788a7978512999b8a186049f11aaae97935c6c55670ecb63e93fb00",
+      "version": "2.0.0"
+    }
+  },
   "systems": [
     {
-      "system_id": "mock-development",
       "implementation": {
         "adapter": "mock-jsonl",
         "adapter_version": "1.0.0",
@@ -37,32 +69,13 @@
         "model": "deterministic-mock",
         "model_version": "1.0.0",
         "reasoning": "fixed"
-      }
+      },
+      "system_id": "mock-development"
     }
   ],
-  "skills": {
-    "with_skill": {
-      "version": "2.0.0",
-      "sha256": "8530ea19f1565711db6634b9eefb0f03a4367b0107360a63f10fe00c61ad49c9"
-    },
-    "previous_skill": {
-      "version": "2.0.0",
-      "sha256": "8530ea19f1565711db6634b9eefb0f03a4367b0107360a63f10fe00c61ad49c9"
-    }
-  },
-  "release_policy": {
-    "version": "2.0.0",
-    "sha256": "e62678d8d579d5b6be66b58f7103110b620a8350d3f2c68e0233077d82dbfa1d"
-  },
-  "analysis": {
-    "confidence_level": 0.95,
-    "bootstrap_seed": 20260821,
-    "retry_policy": {
-      "maximum_attempts": 2,
-      "allowed_reasons": ["transport-error", "provider-timeout", "provider-unavailable"],
-      "scored_attempt": "highest-declared-attempt"
-    },
-    "exclusions": []
-  },
-  "claim_scope": "development-only"
+  "variants": [
+    "with-skill",
+    "previous-skill",
+    "without-skill"
+  ]
 }

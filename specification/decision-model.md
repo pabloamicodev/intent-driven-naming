@@ -70,6 +70,11 @@ High-risk domains require special scrutiny:
 A name MUST NOT claim a stronger trust, consistency, normalization, safety, or validation property
 than the evidence proves.
 
+State, lifecycle, trust, and completion claims MUST hold on every reachable path that produces the
+named value or event. A successful branch, downstream intention, or eventual target state is not
+evidence for the current name. Enclosing types, namespaces, signatures, and short scopes SHOULD
+carry context instead of being repeated mechanically in members.
+
 ## Contract and authorization safety
 
 A behavior-preserving refactor MUST preserve runtime behavior, values, control flow, side effects,
@@ -82,6 +87,11 @@ architecture changes, dependency changes, broad formatting, or migration. Unreso
 generated surfaces require `defer`; they MUST NOT be hidden by a confidence claim.
 
 ## Rename plans and verification
+
+Evidence collection SHOULD begin with the declaration, type, scope, and local vocabulary; expand to
+data flow only when meaning remains ambiguous; and expand to callers, consumers, and complete
+boundaries only for a plausible changing decision. Audit output SHOULD omit non-material records and
+full source copies unless explicitly requested.
 
 Changes spanning more than a trivial local edit SHOULD be expressed as a
 `rename-plan.schema.json` document and checked with

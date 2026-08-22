@@ -88,6 +88,8 @@ The harness owns dataset, run, system, replicate, attempt, case, variant, and de
 
 The reference runner applies explicit input, stdout, stderr, and time limits. Adapter streams are
 spooled to temporary files instead of unbounded in-memory buffers, and stdout must be valid UTF-8.
+Repository readers additionally reject any individual JSONL record above 8 MiB or total JSONL input
+above 256 MiB before decoding; runner-specific limits may be smaller.
 
 ## Safety and Reproducibility
 

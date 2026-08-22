@@ -16,7 +16,7 @@ Conformance is cumulative. A higher level includes every lower-level requirement
 - The released policy's activation thresholds pass for the with-skill variant without regressing against an equivalent without-skill control.
 - Audit requests remain read-only.
 - Refactor requests do not imply contract migrations or unrelated redesign.
-- Context routes remain within their declared word budgets.
+- Context routes remain within independently declared word and UTF-8 byte budgets.
 - Current-skill context and end-to-end input usage meet the versioned efficiency gate against a frozen previous runtime.
 
 ## Level 2 — Semantic Decisions
@@ -25,6 +25,8 @@ Conformance is cumulative. A higher level includes every lower-level requirement
 - The released policy's behavior threshold passes with no ungraded invariants and no control regression.
 - The system distinguishes `keep`, `rename`, `map`, `migrate`, and `defer`.
 - Clear code and conventional short locals can produce a no-op.
+- Names claiming state, trust, lifecycle, or completion are true on every reaching execution path.
+- Types, fields, collections, enums, constants, errors, events, and messages use scope without losing material distinctions.
 - Language profiles render one semantic concept idiomatically rather than forcing uniform casing.
 - Automated or model grading is calibrated against expert human labels.
 

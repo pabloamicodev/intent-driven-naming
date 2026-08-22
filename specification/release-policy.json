@@ -62,11 +62,17 @@
     "maximum_overloaded_profile_results": 0,
     "maximum_unexpected_activation_resource_results": 0,
     "maximum_input_token_ratio": 0.95,
+    "maximum_output_token_ratio": 1.05,
+    "maximum_latency_ratio": 1.2,
     "maximum_skill_context_word_ratio": 0.6,
     "maximum_turn_ratio": 1.0,
-    "maximum_standard_route_words": 2900,
-    "maximum_extended_route_words": 3400,
-    "maximum_runtime_instruction_words": 4200
+    "maximum_tool_call_ratio": 1.0,
+    "maximum_standard_route_words": 2750,
+    "maximum_extended_route_words": 3200,
+    "maximum_runtime_instruction_words": 3900,
+    "maximum_standard_route_bytes": 21000,
+    "maximum_extended_route_bytes": 24500,
+    "maximum_runtime_instruction_bytes": 30000
   },
   "required_implementation_fields": [
     "adapter", "adapter_version", "agent", "agent_version", "model", "model_version", "reasoning"

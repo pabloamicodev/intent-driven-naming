@@ -3,9 +3,9 @@
   "dataset_version": "2.0.0",
   "minimum_counts": {
     "activation": 84,
-    "behavior": 48,
-    "invariants": 185,
-    "fixtures": 15
+    "behavior": 52,
+    "invariants": 202,
+    "fixtures": 16
   },
   "maximum_activation_expected_imbalance": 0,
   "minimum_unique_values": {
@@ -13,7 +13,7 @@
     "activation_locale": 7,
     "behavior_contract_risk": 7,
     "behavior_decision": 6,
-    "behavior_feature": 1,
+    "behavior_feature": 4,
     "behavior_language": 15,
     "behavior_locale": 6,
     "behavior_mode": 3
@@ -46,7 +46,10 @@
       "refactor": 20
     },
     "behavior_feature": {
-      "high-risk": 5
+      "callable": 1,
+      "declaration": 2,
+      "high-risk": 7,
+      "local-variable": 2
     }
   }
 }

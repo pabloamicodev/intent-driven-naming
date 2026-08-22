@@ -11,8 +11,8 @@ Use this evidence order:
 5. Framework, standard-library, and language conventions.
 6. The closest skill profile only when it genuinely applies.
 
-Discover casing, visibility, acronym handling, predicate forms, receivers, iterators, type parameters, async/effect conventions, public labels, framework magic, and serialization or interop constraints. Do not infer a repository-wide rule from one file.
+Discover casing, visibility, acronym handling, predicates, receivers, iterators, type parameters, async/effect conventions, public labels, framework magic, and interop constraints. Do not infer a repository-wide rule from one file.
 
 First describe the semantic payload without syntax; then render it for the concrete role. Cross-layer spellings may differ while their concept remains continuous. Treat wire, ABI, database, CLI, infrastructure, reflection, and generated spellings as contracts.
 
-Profiles are exception cards, not an allowlist. For an unlisted language, use local evidence, authoritative tooling, and a conservative no-op. Never import a convention solely because another language has similar syntax.
+Profiles are exception cards, not an allowlist. For an unlisted language, use local evidence, authoritative tooling, and a conservative no-op. Never import a convention because another language looks similar.

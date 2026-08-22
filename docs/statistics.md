@@ -7,6 +7,12 @@ replicate IDs. Current-skill quality is compared with the no-skill control; effi
 with a frozen previous-skill runtime. Mixing model versions, reasoning settings, adapter versions,
 or grader policies within a system invalidates the comparison. The release gate requires at least three distinct pinned systems and rejects aliases that resolve to an identical configuration.
 
+Efficiency gates use paired configurations and compare mean input tokens, output tokens, latency,
+loaded skill words, turns, and tool calls with the frozen previous skill. Zero-versus-zero usage is
+treated as no regression; positive usage against a zero baseline fails because no finite ratio can
+justify it. Ratios are operational release thresholds, not evidence of statistical significance, so
+reports retain raw coverage and distributions rather than presenting one composite score.
+
 Activation and invariant proportions include Wilson 95% intervals. Paired quality deltas use a
 deterministic 10,000-sample percentile bootstrap with a published seed. The bootstrap resamples
 case clusters and keeps all replicates and invariants from each sampled case together. This avoids

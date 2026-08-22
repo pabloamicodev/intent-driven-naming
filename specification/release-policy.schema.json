@@ -120,8 +120,11 @@
         "minimum_core_resource_rate", "maximum_unknown_resources",
         "maximum_unnecessary_resources", "maximum_overloaded_profile_results",
         "maximum_unexpected_activation_resource_results", "maximum_input_token_ratio",
-        "maximum_skill_context_word_ratio", "maximum_turn_ratio", "maximum_standard_route_words",
-        "maximum_extended_route_words", "maximum_runtime_instruction_words"
+        "maximum_output_token_ratio", "maximum_latency_ratio", "maximum_skill_context_word_ratio",
+        "maximum_turn_ratio", "maximum_tool_call_ratio", "maximum_standard_route_words",
+        "maximum_extended_route_words", "maximum_runtime_instruction_words",
+        "maximum_standard_route_bytes", "maximum_extended_route_bytes",
+        "maximum_runtime_instruction_bytes"
       ],
       "properties": {
         "comparison_variant": { "const": "previous-skill" },
@@ -140,11 +143,17 @@
         "maximum_overloaded_profile_results": { "type": "integer", "minimum": 0 },
         "maximum_unexpected_activation_resource_results": { "type": "integer", "minimum": 0 },
         "maximum_input_token_ratio": { "$ref": "#/$defs/positiveRatio" },
+        "maximum_output_token_ratio": { "$ref": "#/$defs/positiveRatio" },
+        "maximum_latency_ratio": { "$ref": "#/$defs/positiveRatio" },
         "maximum_skill_context_word_ratio": { "$ref": "#/$defs/positiveRatio" },
         "maximum_turn_ratio": { "$ref": "#/$defs/positiveRatio" },
+        "maximum_tool_call_ratio": { "$ref": "#/$defs/positiveRatio" },
         "maximum_standard_route_words": { "type": "integer", "minimum": 1 },
         "maximum_extended_route_words": { "type": "integer", "minimum": 1 },
-        "maximum_runtime_instruction_words": { "type": "integer", "minimum": 1 }
+        "maximum_runtime_instruction_words": { "type": "integer", "minimum": 1 },
+        "maximum_standard_route_bytes": { "type": "integer", "minimum": 1 },
+        "maximum_extended_route_bytes": { "type": "integer", "minimum": 1 },
+        "maximum_runtime_instruction_bytes": { "type": "integer", "minimum": 1 }
       }
     },
     "required_implementation_fields": {

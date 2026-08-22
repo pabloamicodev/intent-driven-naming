@@ -1,38 +1,66 @@
 {
   "baseline": {
+    "always_loaded_bytes": 16559,
     "always_loaded_words": 2195,
+    "entrypoint_bytes": 6930,
     "entrypoint_words": 836,
+    "maximum_extended_byte_route": {
+      "bytes": 66491,
+      "name": "refactor+callable+local-variable+web-framework+data-infrastructure"
+    },
     "maximum_extended_route": {
       "name": "refactor+callable+local-variable+web-framework+data-infrastructure",
       "words": 9035
+    },
+    "maximum_standard_byte_route": {
+      "bytes": 50437,
+      "name": "refactor+callable+local-variable+web-framework"
     },
     "maximum_standard_route": {
       "name": "refactor+callable+local-variable+web-framework",
       "words": 6850
     },
+    "runtime_instruction_bytes": 94950,
     "runtime_instruction_words": 12828
   },
   "baseline_ref": "44fe691f9cc7e3182df1cb0da947ea9ca206cf8e",
+  "byte_measurement": "UTF-8 source bytes",
   "current": {
-    "always_loaded_words": 979,
-    "entrypoint_words": 409,
+    "always_loaded_bytes": 6384,
+    "always_loaded_words": 782,
+    "entrypoint_bytes": 3551,
+    "entrypoint_words": 352,
+    "maximum_extended_byte_route": {
+      "bytes": 23573,
+      "name": "refactor+callable+local-variable+declaration+high-risk+web-framework+data-infrastructure"
+    },
     "maximum_extended_route": {
-      "name": "refactor+callable+local-variable+high-risk+web-framework+systems",
-      "words": 3286
+      "name": "refactor+callable+local-variable+declaration+high-risk+web-framework+systems",
+      "words": 3086
+    },
+    "maximum_standard_byte_route": {
+      "bytes": 20161,
+      "name": "refactor+callable+local-variable+declaration+high-risk+web-framework"
     },
     "maximum_standard_route": {
-      "name": "refactor+callable+local-variable+high-risk+web-framework",
-      "words": 2834
+      "name": "refactor+callable+local-variable+declaration+high-risk+web-framework",
+      "words": 2645
     },
-    "runtime_instruction_words": 4062
+    "runtime_instruction_bytes": 29114,
+    "runtime_instruction_words": 3799
   },
   "measurement": "whitespace-delimited words",
   "reductions": {
-    "always_loaded": 0.553986,
-    "entrypoint": 0.510766,
-    "maximum_extended_route": 0.636303,
-    "maximum_standard_route": 0.586277,
-    "runtime_instructions": 0.683349
+    "always_loaded": 0.643736,
+    "always_loaded_bytes": 0.614469,
+    "entrypoint": 0.578947,
+    "entrypoint_bytes": 0.48759,
+    "maximum_extended_route": 0.658439,
+    "maximum_extended_route_bytes": 0.645471,
+    "maximum_standard_route": 0.613869,
+    "maximum_standard_route_bytes": 0.600274,
+    "runtime_instruction_bytes": 0.693375,
+    "runtime_instructions": 0.703851
   },
-  "schema_version": "1.0"
+  "schema_version": "2.0"
 }

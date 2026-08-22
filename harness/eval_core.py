@@ -30,6 +30,8 @@ VALID_RISKS = {
     "unknown",
 }
 BOOTSTRAP_SEED = 20260821
+MAX_JSONL_RECORD_BYTES = 8 * 1024 * 1024
+MAX_JSONL_FILE_BYTES = 256 * 1024 * 1024
 RESULT_FIELDS = {
     "schema_version",
     "protocol_version",
@@ -60,18 +62,53 @@ class EvaluationDataError(ValueError):
     """Raised when an evaluation artifact violates the local protocol."""
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
+def read_jsonl(
+    path: Path,
+    *,
+    max_record_bytes: int = MAX_JSONL_RECORD_BYTES,
+    max_file_bytes: int = MAX_JSONL_FILE_BYTES,
+) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise EvaluationDataError(f"{path}:{line_number}: invalid JSON: {exc}") from exc
-        if not isinstance(record, dict):
-            raise EvaluationDataError(f"{path}:{line_number}: each line must be a JSON object")
-        records.append(record)
+    if isinstance(max_record_bytes, bool) or not isinstance(max_record_bytes, int):
+        raise ValueError("max_record_bytes must be a positive integer")
+    if max_record_bytes < 1:
+        raise ValueError("max_record_bytes must be a positive integer")
+    if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int):
+        raise ValueError("max_file_bytes must be a positive integer")
+    if max_file_bytes < 1:
+        raise ValueError("max_file_bytes must be a positive integer")
+    try:
+        stream = path.open("rb")
+    except OSError as exc:
+        raise EvaluationDataError(f"cannot read {path}: {exc}") from exc
+    with stream:
+        line_number = 0
+        total_bytes = 0
+        while raw_line := stream.readline(max_record_bytes + 3):
+            line_number += 1
+            total_bytes += len(raw_line)
+            if total_bytes > max_file_bytes:
+                raise EvaluationDataError(f"{path}: JSONL input exceeds {max_file_bytes} bytes")
+            record_bytes = raw_line.rstrip(b"\r\n")
+            if len(record_bytes) > max_record_bytes:
+                raise EvaluationDataError(
+                    f"{path}:{line_number}: JSONL record exceeds {max_record_bytes} bytes"
+                )
+            try:
+                line = record_bytes.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise EvaluationDataError(
+                    f"{path}:{line_number}: record is not valid UTF-8"
+                ) from exc
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise EvaluationDataError(f"{path}:{line_number}: invalid JSON: {exc}") from exc
+            if not isinstance(record, dict):
+                raise EvaluationDataError(f"{path}:{line_number}: each line must be a JSON object")
+            records.append(record)
     return records
 
 
@@ -1168,8 +1205,11 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
         efficiency_observations: dict[str, Any] = {}
         for metric, maximum_key in (
             ("input_tokens", "maximum_input_token_ratio"),
+            ("output_tokens", "maximum_output_token_ratio"),
+            ("latency_ms", "maximum_latency_ratio"),
             ("skill_context_words", "maximum_skill_context_word_ratio"),
             ("turns", "maximum_turn_ratio"),
+            ("tool_calls", "maximum_tool_call_ratio"),
         ):
             candidate_mean = (
                 report.get("usage", {}).get(candidate_cohort, {}).get(metric, {}).get("mean")
@@ -1177,13 +1217,12 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
             baseline_mean = (
                 report.get("usage", {}).get(baseline_cohort, {}).get(metric, {}).get("mean")
             )
-            ratio = (
-                round(candidate_mean / baseline_mean, 6)
-                if isinstance(candidate_mean, (int, float))
-                and isinstance(baseline_mean, (int, float))
-                and baseline_mean > 0
-                else None
-            )
+            ratio = None
+            if isinstance(candidate_mean, (int, float)) and isinstance(baseline_mean, (int, float)):
+                if baseline_mean > 0:
+                    ratio = round(candidate_mean / baseline_mean, 6)
+                elif baseline_mean == 0 and candidate_mean == 0:
+                    ratio = 1.0
             efficiency_observations[metric] = {
                 "candidate_mean": candidate_mean,
                 "previous_mean": baseline_mean,

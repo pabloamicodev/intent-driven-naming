@@ -26,16 +26,20 @@ TRIGGER_ROW = re.compile(
     r"(easy|standard|edge|adversarial) \| ([a-z]{2}(?:-[A-Z]{2})?) \| (.*?) \|$"
 )
 BEHAVIOR_HEADING = re.compile(r"^## (B\d{2}) — (.+)$")
-INVARIANT_ROW = re.compile(
-    r"^- \[(critical|major|minor)\]\[(deterministic|semantic|human)\] (.+)$"
-)
+INVARIANT_ROW = re.compile(r"^- \[(critical|major|minor)\]\[(deterministic|semantic|human)\] (.+)$")
 VALID_MODES = {"generation", "audit", "refactor"}
 VALID_DIFFICULTIES = {"easy", "standard", "edge", "adversarial"}
 VALID_RISKS = {
-    "internal", "cross-module", "external", "dynamic", "generated", "stateful", "unknown"
+    "internal",
+    "cross-module",
+    "external",
+    "dynamic",
+    "generated",
+    "stateful",
+    "unknown",
 }
 VALID_DECISIONS = {"keep", "rename", "map", "migrate", "defer", "not-applicable"}
-VALID_FEATURES = {"callable", "local-variable", "high-risk"}
+VALID_FEATURES = {"callable", "local-variable", "declaration", "high-risk"}
 
 
 def normalize_inline_markdown(value: str) -> str:
@@ -186,7 +190,9 @@ def parse_metadata(section: list[str], case_id: str) -> dict[str, Any]:
         raise ValueError(f"{case_id}: languages must be non-empty")
     if not decisions or any(value not in VALID_DECISIONS for value in decisions):
         raise ValueError(f"{case_id}: invalid expected decisions {decisions}")
-    if len(features) != len(set(features)) or any(value not in VALID_FEATURES for value in features):
+    if len(features) != len(set(features)) or any(
+        value not in VALID_FEATURES for value in features
+    ):
         raise ValueError(f"{case_id}: invalid features {features}")
     metadata: dict[str, Any] = {
         "mode": values["mode"],
@@ -276,7 +282,9 @@ def parse_behavior_cases(markdown: str, version: str | None = None) -> list[dict
 
 
 def serialize_jsonl(records: list[dict[str, Any]]) -> str:
-    return "".join(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n" for record in records)
+    return "".join(
+        json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n" for record in records
+    )
 
 
 def sha256_text(content: str) -> str:

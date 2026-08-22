@@ -15,21 +15,31 @@ composition algorithm enforced by the repository validator.
 
 | Measure | 1.1.0 baseline | 2.0.0 candidate | Reduction |
 |---|---:|---:|---:|
-| Entrypoint | 836 | 409 | 51.1% |
-| Always-loaded route | 2,195 | 979 | 55.4% |
-| All runtime instructions | 12,828 | 4,062 | 68.3% |
-| Maximum standard route | 6,850 | 2,834 | 58.6% |
-| Maximum extended route | 9,035 | 3,286 | 63.6% |
+| Entrypoint | 836 | 352 | 57.9% |
+| Always-loaded route | 2,195 | 782 | 64.4% |
+| All runtime instructions | 12,828 | 3,799 | 70.4% |
+| Maximum standard route | 6,850 | 2,645 | 61.4% |
+| Maximum extended route | 9,035 | 3,086 | 65.8% |
 
-These are deterministic context-size measures, not provider token counts. Release evaluation must
-also record provider-reported input tokens and compare the current skill against a frozen previous
-runtime under the same cases and model configuration.
+Exact instruction data is independently bounded in UTF-8 bytes:
+
+| Measure | 1.1.0 baseline bytes | 2.0.0 candidate bytes | Reduction |
+|---|---:|---:|---:|
+| Entrypoint | 6,930 | 3,551 | 48.8% |
+| Always-loaded route | 16,559 | 6,384 | 61.4% |
+| All runtime instructions | 94,950 | 29,114 | 69.3% |
+| Maximum standard route | 50,437 | 20,161 | 60.0% |
+| Maximum extended route | 66,491 | 23,573 | 64.5% |
+
+These are deterministic context-size and source-data measures, not provider token counts. Release
+evaluation must also record provider-reported input/output tokens and compare the current skill
+against a frozen previous runtime under the same cases and model configuration.
 
 ## Offline coverage
 
 - 84 activation cases, exactly 42 positive and 42 negative, across seven locales.
-- 48 behavior cases with 185 typed invariants across generation, audit, and refactor modes.
-- 15 fixtures covering runtime, compile-time, serialized, dynamic, generated, stateful, shell,
+- 52 behavior cases with 202 typed invariants across generation, audit, and refactor modes.
+- 16 fixtures covering runtime, compile-time, serialized, dynamic, generated, stateful, shell,
   security, Protobuf, and observability boundaries.
 - Portable semantic records and rename plans checked by JSON Schema and a dependency-free runtime
   validator, including materiality, collision, coverage, scope-budget, and rollback invariants.
