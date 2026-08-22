@@ -2,7 +2,6 @@ import re
 import sys
 from pathlib import Path
 
-
 configuration = Path(sys.argv[1]).read_text(encoding="utf-8")
 assert re.search(r"resource\s+\"aws_s3_bucket\"\s+\"customer_exports\"", configuration)
 assert re.search(r"moved\s*\{[^}]*from\s*=\s*aws_s3_bucket\.data", configuration, re.DOTALL)

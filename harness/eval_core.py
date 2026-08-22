@@ -5,18 +5,33 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import random
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from harness.routing import allowed_behavior_resources, loaded_profile_count
 
 VALID_GRADES = {"pass", "fail", "not-applicable"}
-VALID_VARIANTS = {"with-skill", "without-skill"}
+QUALITY_VARIANTS = {"with-skill", "without-skill"}
+VALID_VARIANTS = {*QUALITY_VARIANTS, "previous-skill"}
 VALID_DECISIONS = {"keep", "rename", "map", "migrate", "defer", "not-applicable"}
 VALID_DIFFICULTIES = {"easy", "standard", "edge", "adversarial"}
 VALID_MODES = {"generation", "audit", "refactor"}
-VALID_RISKS = {"internal", "cross-module", "external", "dynamic", "stateful", "unknown"}
+VALID_RISKS = {
+    "internal",
+    "cross-module",
+    "external",
+    "dynamic",
+    "generated",
+    "stateful",
+    "unknown",
+}
+BOOTSTRAP_SEED = 20260821
+MAX_JSONL_RECORD_BYTES = 8 * 1024 * 1024
+MAX_JSONL_FILE_BYTES = 256 * 1024 * 1024
 RESULT_FIELDS = {
     "schema_version",
     "protocol_version",
@@ -47,18 +62,53 @@ class EvaluationDataError(ValueError):
     """Raised when an evaluation artifact violates the local protocol."""
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
+def read_jsonl(
+    path: Path,
+    *,
+    max_record_bytes: int = MAX_JSONL_RECORD_BYTES,
+    max_file_bytes: int = MAX_JSONL_FILE_BYTES,
+) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        if not line.strip():
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise EvaluationDataError(f"{path}:{line_number}: invalid JSON: {exc}") from exc
-        if not isinstance(record, dict):
-            raise EvaluationDataError(f"{path}:{line_number}: each line must be a JSON object")
-        records.append(record)
+    if isinstance(max_record_bytes, bool) or not isinstance(max_record_bytes, int):
+        raise ValueError("max_record_bytes must be a positive integer")
+    if max_record_bytes < 1:
+        raise ValueError("max_record_bytes must be a positive integer")
+    if isinstance(max_file_bytes, bool) or not isinstance(max_file_bytes, int):
+        raise ValueError("max_file_bytes must be a positive integer")
+    if max_file_bytes < 1:
+        raise ValueError("max_file_bytes must be a positive integer")
+    try:
+        stream = path.open("rb")
+    except OSError as exc:
+        raise EvaluationDataError(f"cannot read {path}: {exc}") from exc
+    with stream:
+        line_number = 0
+        total_bytes = 0
+        while raw_line := stream.readline(max_record_bytes + 3):
+            line_number += 1
+            total_bytes += len(raw_line)
+            if total_bytes > max_file_bytes:
+                raise EvaluationDataError(f"{path}: JSONL input exceeds {max_file_bytes} bytes")
+            record_bytes = raw_line.rstrip(b"\r\n")
+            if len(record_bytes) > max_record_bytes:
+                raise EvaluationDataError(
+                    f"{path}:{line_number}: JSONL record exceeds {max_record_bytes} bytes"
+                )
+            try:
+                line = record_bytes.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise EvaluationDataError(
+                    f"{path}:{line_number}: record is not valid UTF-8"
+                ) from exc
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise EvaluationDataError(f"{path}:{line_number}: invalid JSON: {exc}") from exc
+            if not isinstance(record, dict):
+                raise EvaluationDataError(f"{path}:{line_number}: each line must be a JSON object")
+            records.append(record)
     return records
 
 
@@ -108,13 +158,17 @@ def validate_case(case: dict[str, Any]) -> list[str]:
         if case.get("contract_risk") not in VALID_RISKS:
             errors.append("behavior contract_risk is invalid")
         languages = case.get("languages")
-        if not isinstance(languages, list) or not languages or any(
-            not isinstance(language, str) or not language for language in languages
+        if (
+            not isinstance(languages, list)
+            or not languages
+            or any(not isinstance(language, str) or not language for language in languages)
         ):
             errors.append("behavior languages must be a non-empty string array")
         decisions = case.get("expected_decisions")
-        if not isinstance(decisions, list) or not decisions or any(
-            decision not in VALID_DECISIONS for decision in decisions
+        if (
+            not isinstance(decisions, list)
+            or not decisions
+            or any(decision not in VALID_DECISIONS for decision in decisions)
         ):
             errors.append("behavior expected_decisions are invalid")
         elif len(decisions) != len(set(decisions)):
@@ -138,7 +192,10 @@ def validate_case(case: dict[str, Any]) -> list[str]:
                     errors.append(f"{invariant_id}: invalid severity")
                 if invariant.get("grading") not in {"deterministic", "semantic", "human"}:
                     errors.append(f"{invariant_id}: invalid grading")
-                if not isinstance(invariant.get("description"), str) or not invariant["description"].strip():
+                if (
+                    not isinstance(invariant.get("description"), str)
+                    or not invariant["description"].strip()
+                ):
                     errors.append(f"{invariant_id}: description must be non-empty")
     return errors
 
@@ -181,14 +238,16 @@ def validate_result(result: dict[str, Any], cases: dict[str, dict[str, Any]]) ->
     ):
         errors.append("attempt must be an integer of at least 1")
     if result.get("variant") not in VALID_VARIANTS:
-        errors.append("variant must be with-skill or without-skill")
+        errors.append("variant must be with-skill, previous-skill, or without-skill")
     if result.get("status") not in {"completed", "failed", "skipped"}:
         errors.append("status must be completed, failed, or skipped")
     if result.get("status") == "failed" and (
         not isinstance(result.get("error"), str) or not result["error"].strip()
     ):
         errors.append("failed result requires a non-empty error")
-    if result.get("selected_skill") is not None and not isinstance(result.get("selected_skill"), bool):
+    if result.get("selected_skill") is not None and not isinstance(
+        result.get("selected_skill"), bool
+    ):
         errors.append("selected_skill must be boolean or null")
     for field in ("output_text", "artifact_path", "grader_notes", "error"):
         if result.get(field) is not None and not isinstance(result.get(field), str):
@@ -200,6 +259,10 @@ def validate_result(result: dict[str, Any], cases: dict[str, dict[str, Any]]) ->
         or len(resources) != len(set(resources))
     ):
         errors.append("loaded_resources must be a unique string array")
+    elif isinstance(resources, list) and any(
+        Path(resource).is_absolute() or ".." in Path(resource).parts for resource in resources
+    ):
+        errors.append("loaded_resources must use safe relative paths")
     decisions = result.get("observed_decisions")
     if decisions is not None and (
         not isinstance(decisions, list)
@@ -231,18 +294,32 @@ def validate_result(result: dict[str, Any], cases: dict[str, dict[str, Any]]) ->
         if not isinstance(usage, dict):
             errors.append("usage must be an object")
         else:
-            for key in ("input_tokens", "output_tokens", "latency_ms", "cost_usd"):
+            integer_metrics = {
+                "input_tokens",
+                "output_tokens",
+                "skill_context_words",
+                "turns",
+                "tool_calls",
+            }
+            allowed_metrics = integer_metrics | {"latency_ms", "cost_usd"}
+            unknown_usage = set(usage) - allowed_metrics
+            if unknown_usage:
+                errors.append(f"usage has unknown fields: {', '.join(sorted(unknown_usage))}")
+            for key in allowed_metrics:
                 value = usage.get(key)
-                expected_types = (int,) if key in {"input_tokens", "output_tokens"} else (int, float)
+                expected_types = (int,) if key in integer_metrics else (int, float)
                 if value is not None and (
                     isinstance(value, bool) or not isinstance(value, expected_types) or value < 0
                 ):
-                    expected = "integer" if key in {"input_tokens", "output_tokens"} else "number"
+                    expected = "integer" if key in integer_metrics else "number"
                     errors.append(f"usage.{key} must be a non-negative {expected} or null")
     implementation = result.get("implementation")
     if implementation is not None and (
         not isinstance(implementation, dict)
-        or any(not isinstance(key, str) or not _valid_scalar(value) for key, value in implementation.items())
+        or any(
+            not isinstance(key, str) or not _valid_scalar(value)
+            for key, value in implementation.items()
+        )
     ):
         errors.append("implementation keys and values must be scalar")
     grades = result.get("invariant_grades", {})
@@ -295,36 +372,54 @@ def _wilson_interval(successes: int, total: int, z: float = 1.96) -> list[float]
     proportion = successes / total
     denominator = 1 + z * z / total
     center = (proportion + z * z / (2 * total)) / denominator
-    margin = z * math.sqrt(proportion * (1 - proportion) / total + z * z / (4 * total * total)) / denominator
+    margin = (
+        z
+        * math.sqrt(proportion * (1 - proportion) / total + z * z / (4 * total * total))
+        / denominator
+    )
     return [round(max(0.0, center - margin), 6), round(min(1.0, center + margin), 6)]
 
 
 def _paired_difference(outcomes: dict[Any, dict[str, int]]) -> dict[str, Any] | None:
-    differences = [
-        variants["with-skill"] - variants["without-skill"]
-        for variants in outcomes.values()
-        if set(variants) == VALID_VARIANTS
+    paired = [
+        (key, variants["with-skill"] - variants["without-skill"])
+        for key, variants in outcomes.items()
+        if QUALITY_VARIANTS.issubset(variants)
     ]
+    differences = [difference for _, difference in paired]
     if not differences:
         return None
+    differences_by_case: dict[Any, list[int]] = defaultdict(list)
+    for key, difference in paired:
+        case_id = key[1] if isinstance(key, tuple) and len(key) > 1 else key
+        differences_by_case[case_id].append(difference)
+    case_ids = sorted(differences_by_case, key=str)
     mean = sum(differences) / len(differences)
-    if len(differences) > 1:
-        variance = sum((difference - mean) ** 2 for difference in differences) / (
-            len(differences) - 1
-        )
-        margin = 1.96 * math.sqrt(variance / len(differences))
-    else:
-        margin = 0.0
+    randomizer = random.Random(BOOTSTRAP_SEED)
+    bootstrap_means: list[float] = []
+    for _ in range(10_000):
+        sampled_differences = [
+            difference
+            for _ in case_ids
+            for difference in differences_by_case[randomizer.choice(case_ids)]
+        ]
+        bootstrap_means.append(sum(sampled_differences) / len(sampled_differences))
+    bootstrap_means.sort()
+    lower_index = int(0.025 * (len(bootstrap_means) - 1))
+    upper_index = int(0.975 * (len(bootstrap_means) - 1))
     return {
-        "method": "paired-mean-difference-normal-95",
+        "method": "paired-case-cluster-percentile-bootstrap-95",
+        "bootstrap_samples": 10_000,
+        "bootstrap_seed": BOOTSTRAP_SEED,
+        "clusters": len(case_ids),
         "matched_pairs": len(differences),
         "candidate_better": sum(difference > 0 for difference in differences),
         "baseline_better": sum(difference < 0 for difference in differences),
         "ties": sum(difference == 0 for difference in differences),
         "delta": round(mean, 6),
         "confidence_interval_95": [
-            round(max(-1.0, mean - margin), 6),
-            round(min(1.0, mean + margin), 6),
+            round(bootstrap_means[lower_index], 6),
+            round(bootstrap_means[upper_index], 6),
         ],
     }
 
@@ -384,7 +479,9 @@ def score_results(
         attempts[key] = result
 
     final_results: list[dict[str, Any]] = []
-    attempt_groups: dict[tuple[str, str, str, str], list[tuple[int, dict[str, Any]]]] = defaultdict(list)
+    attempt_groups: dict[tuple[str, str, str, str], list[tuple[int, dict[str, Any]]]] = defaultdict(
+        list
+    )
     for (system_id, variant, replicate_id, case_id, attempt), result in attempts.items():
         attempt_groups[(system_id, variant, replicate_id, case_id)].append((attempt, result))
     for grouped_attempts in attempt_groups.values():
@@ -428,11 +525,40 @@ def score_results(
             "output_tokens": [],
             "latency_ms": [],
             "cost_usd": [],
+            "skill_context_words": [],
+            "turns": [],
+            "tool_calls": [],
             "identity_complete": 0,
         }
     )
+    routed_resources = {"SKILL.md", "references/naming-model.md"}
+    routes_path = Path(__file__).resolve().parents[1] / "specification" / "routes.json"
+    try:
+        route_data = json.loads(routes_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        route_data = {}
+    routed_resources.update(route_data.get("always", []))
+    for group_name in ("conditional_core", "modes", "features", "profiles"):
+        for paths in route_data.get(group_name, {}).values():
+            routed_resources.update(paths)
+    resource_values: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "completed_results": 0,
+            "reported_results": 0,
+            "core_expected_results": 0,
+            "core_complete_results": 0,
+            "unexpected_activation_resource_results": 0,
+            "total_resource_loads": 0,
+            "unknown_resources": Counter(),
+            "unnecessary_resources": Counter(),
+            "overloaded_profile_results": 0,
+        }
+    )
     implementation_fields: dict[str, Counter[str]] = defaultdict(Counter)
+    configuration_hashes_by_system: dict[str, set[str]] = defaultdict(set)
+    run_ids: set[str] = set()
     behavior_review_counts: dict[str, list[int]] = defaultdict(list)
+    behavior_human_review_counts: dict[str, list[int]] = defaultdict(list)
     completed_by_replicate: dict[tuple[str, str, str], set[str]] = defaultdict(set)
     paired_outcomes: dict[str, dict[str, dict[Any, dict[str, int]]]] = defaultdict(
         lambda: defaultdict(lambda: defaultdict(dict))
@@ -440,6 +566,8 @@ def score_results(
 
     for result in final_results:
         system_id, variant, replicate_id, _ = _identity(result)
+        run_ids.add(result["run_id"])
+        configuration_hashes_by_system[system_id].add(result["configuration_hash"])
         cohort = _cohort_key(system_id, variant)
         cohorts.setdefault(
             cohort,
@@ -461,10 +589,48 @@ def score_results(
         )
         if all(field in result and result[field] not in {None, ""} for field in identity_fields):
             usage_values[cohort]["identity_complete"] += 1
-        for metric in ("input_tokens", "output_tokens", "latency_ms", "cost_usd"):
+        for metric in (
+            "input_tokens",
+            "output_tokens",
+            "latency_ms",
+            "cost_usd",
+            "skill_context_words",
+            "turns",
+            "tool_calls",
+        ):
             value = (result.get("usage") or {}).get(metric)
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 usage_values[cohort][metric].append(value)
+        resource_values[cohort]["completed_results"] += 1
+        resources = result.get("loaded_resources")
+        expects_core = variant != "without-skill" and (
+            case["suite"] == "behavior" or case.get("expected_activation") is True
+        )
+        if expects_core:
+            resource_values[cohort]["core_expected_results"] += 1
+        if isinstance(resources, list):
+            resource_values[cohort]["reported_results"] += 1
+            resource_values[cohort]["total_resource_loads"] += len(resources)
+            if expects_core and {"SKILL.md", "references/naming-model.md"}.issubset(resources):
+                resource_values[cohort]["core_complete_results"] += 1
+            if (
+                variant != "without-skill"
+                and case["suite"] == "activation"
+                and case.get("expected_activation") is False
+                and resources
+            ):
+                resource_values[cohort]["unexpected_activation_resource_results"] += 1
+            resource_values[cohort]["unknown_resources"].update(
+                resource for resource in resources if resource not in routed_resources
+            )
+            if variant != "without-skill" and case["suite"] == "behavior":
+                resource_set = set(resources)
+                allowed = allowed_behavior_resources(case, route_data)
+                resource_values[cohort]["unnecessary_resources"].update(
+                    resource for resource in resource_set if resource in routed_resources - allowed
+                )
+                if loaded_profile_count(resource_set, route_data) > 2:
+                    resource_values[cohort]["overloaded_profile_results"] += 1
         for field, value in (result.get("implementation") or {}).items():
             if value is not None and value != "":
                 implementation_fields[cohort][field] += 1
@@ -475,7 +641,15 @@ def score_results(
                 errors.append(f"{case['id']}: completed activation result requires selected_skill")
                 continue
             expected = case["expected_activation"]
-            bucket = "tp" if expected and selected else "tn" if not expected and not selected else "fp" if selected else "fn"
+            bucket = (
+                "tp"
+                if expected and selected
+                else "tn"
+                if not expected and not selected
+                else "fp"
+                if selected
+                else "fn"
+            )
             activation_counts[cohort][bucket] += 1
             paired_outcomes[system_id]["activation_accuracy"][(replicate_id, case["id"])][
                 variant
@@ -486,9 +660,19 @@ def score_results(
 
         grades = result.get("invariant_grades", {})
         review_count = (result.get("implementation") or {}).get("review_count", 0)
+        human_review_count = (result.get("implementation") or {}).get("human_review_count", 0)
         behavior_review_counts[cohort].append(
             review_count
-            if isinstance(review_count, int) and not isinstance(review_count, bool) and review_count >= 0
+            if isinstance(review_count, int)
+            and not isinstance(review_count, bool)
+            and review_count >= 0
+            else 0
+        )
+        behavior_human_review_counts[cohort].append(
+            human_review_count
+            if isinstance(human_review_count, int)
+            and not isinstance(human_review_count, bool)
+            and human_review_count >= 0
             else 0
         )
         case_has_fail = False
@@ -503,11 +687,13 @@ def score_results(
                 continue
             behavior_counts[cohort][grade] += 1
             if grade in {"pass", "fail"}:
-                paired_outcomes[system_id]["behavior_pass_rate"][(
-                    replicate_id,
-                    case["id"],
-                    invariant["id"],
-                )][variant] = int(grade == "pass")
+                paired_outcomes[system_id]["behavior_pass_rate"][
+                    (
+                        replicate_id,
+                        case["id"],
+                        invariant["id"],
+                    )
+                ][variant] = int(grade == "pass")
             if grade == "fail":
                 case_has_fail = True
                 if invariant["severity"] == "critical":
@@ -533,11 +719,15 @@ def score_results(
             decision_stats[cohort]["exact_matches"] += int(exact)
             for expected_decision in expected_set:
                 decision_stats[cohort]["by_expected"][expected_decision]["cases"] += 1
-                decision_stats[cohort]["by_expected"][expected_decision]["exact_matches"] += int(exact)
+                decision_stats[cohort]["by_expected"][expected_decision]["exact_matches"] += int(
+                    exact
+                )
             if len(expected_set) == 1 and len(observed_set) == 1:
-                decision_stats[cohort]["confusion"][next(iter(expected_set))][next(iter(observed_set))] += 1
+                decision_stats[cohort]["confusion"][next(iter(expected_set))][
+                    next(iter(observed_set))
+                ] += 1
 
-    for cohort, metadata in cohorts.items():
+    for metadata in cohorts.values():
         metadata["replicates"] = sorted(metadata["replicates"])
         metadata["replicate_count"] = len(metadata["replicates"])
     for cohort, metadata in cohorts.items():
@@ -565,8 +755,7 @@ def score_results(
     }
     activation_slices = {
         cohort: {
-            slice_name: _confusion_metrics(counts)
-            for slice_name, counts in sorted(slices.items())
+            slice_name: _confusion_metrics(counts) for slice_name, counts in sorted(slices.items())
         }
         for cohort, slices in sorted(activation_slice_counts.items())
     }
@@ -611,13 +800,44 @@ def score_results(
             "completed_results": values["completed_results"],
             "identity_complete_results": values["identity_complete"],
         }
-        for metric in ("input_tokens", "output_tokens", "latency_ms", "cost_usd"):
+        for metric in (
+            "input_tokens",
+            "output_tokens",
+            "latency_ms",
+            "cost_usd",
+            "skill_context_words",
+            "turns",
+            "tool_calls",
+        ):
             samples = values[metric]
             usage_report[cohort][metric] = {
                 "reported_results": len(samples),
                 "total": round(sum(samples), 6) if samples else None,
                 "mean": round(sum(samples) / len(samples), 6) if samples else None,
             }
+    resource_report = {
+        cohort: {
+            "completed_results": values["completed_results"],
+            "reported_results": values["reported_results"],
+            "reporting_rate": _safe_ratio(values["reported_results"], values["completed_results"]),
+            "core_expected_results": values["core_expected_results"],
+            "core_complete_results": values["core_complete_results"],
+            "core_complete_rate": _safe_ratio(
+                values["core_complete_results"], values["core_expected_results"]
+            ),
+            "unexpected_activation_resource_results": values[
+                "unexpected_activation_resource_results"
+            ],
+            "total_resource_loads": values["total_resource_loads"],
+            "mean_resources_per_result": _safe_ratio(
+                values["total_resource_loads"], values["reported_results"]
+            ),
+            "unknown_resources": dict(sorted(values["unknown_resources"].items())),
+            "unnecessary_resources": dict(sorted(values["unnecessary_resources"].items())),
+            "overloaded_profile_results": values["overloaded_profile_results"],
+        }
+        for cohort, values in sorted(resource_values.items())
+    }
     implementation_report = {
         cohort: {
             "completed_results": usage_report.get(cohort, {}).get("completed_results", 0),
@@ -634,20 +854,35 @@ def score_results(
         cohort: {
             "behavior_results": len(counts),
             "minimum_review_count": min(counts, default=0),
+            "minimum_human_review_count": min(
+                behavior_human_review_counts.get(cohort, []), default=0
+            ),
             "fully_reviewed_results": sum(count > 0 for count in counts),
         }
         for cohort, counts in sorted(behavior_review_counts.items())
     }
     paired_comparisons = {
         system_id: {
-            metric: _paired_difference(outcomes)
-            for metric, outcomes in sorted(metrics.items())
+            metric: _paired_difference(outcomes) for metric, outcomes in sorted(metrics.items())
         }
         for system_id, metrics in sorted(paired_outcomes.items())
     }
+    configuration_integrity = {
+        system_id: {
+            "configuration_hashes": sorted(hashes),
+            "configuration_count": len(hashes),
+            "consistent_across_variants_and_replicates": len(hashes) == 1,
+        }
+        for system_id, hashes in sorted(configuration_hashes_by_system.items())
+    }
     return {
-        "schema_version": "1.1",
+        "schema_version": "2.0",
         "dataset_version": next(iter({case["dataset_version"] for case in cases.values()}), None),
+        "estimand": {
+            "target": "generalized-task-performance",
+            "unit": "evaluation-case",
+            "uncertainty": "paired-case-cluster-percentile-bootstrap-95",
+        },
         "require_complete": require_complete,
         "errors": errors,
         "cohorts": dict(sorted(cohorts.items())),
@@ -658,7 +893,10 @@ def score_results(
         "decisions": decision_report,
         "by_tag": tag_report,
         "usage": usage_report,
+        "resource_loading": resource_report,
         "implementation_metadata": implementation_report,
+        "configuration_integrity": configuration_integrity,
+        "run_ids": sorted(run_ids),
         "review_coverage": review_coverage,
         "paired_comparisons": paired_comparisons,
         "retries": retry_report,
@@ -680,13 +918,15 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
         }
         evaluated["hard_gate_passed"] = False
         return evaluated
-    if policy.get("schema_version") != "1.1":
-        violations.append("release policy schema_version must be 1.1")
+    if policy.get("schema_version") != "2.0":
+        violations.append("release policy schema_version must be 2.0")
     if policy.get("dataset_version") != report.get("dataset_version"):
         violations.append("release policy dataset_version does not match the results")
     required_variants = policy.get("required_variants", [])
     if not isinstance(required_variants, list) or set(required_variants) != VALID_VARIANTS:
-        violations.append("release policy must require both variants")
+        violations.append(
+            "release policy must require with-skill, previous-skill, and without-skill"
+        )
         required_variants = []
     gated_variant = policy.get("gated_variant")
     if gated_variant not in VALID_VARIANTS:
@@ -694,22 +934,77 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
     systems = sorted({metadata["system_id"] for metadata in report.get("cohorts", {}).values()})
     if not systems:
         violations.append("release policy requires at least one system")
+    minimum_systems = policy.get("minimum_systems", 1)
+    if (
+        isinstance(minimum_systems, bool)
+        or not isinstance(minimum_systems, int)
+        or minimum_systems < 1
+    ):
+        violations.append("minimum_systems must be a positive integer")
+        minimum_systems = 1
+    if len(systems) < minimum_systems:
+        violations.append(f"{len(systems)} systems is below required minimum {minimum_systems}")
     minimum_replicates = policy.get("minimum_replicates", 1)
-    if isinstance(minimum_replicates, bool) or not isinstance(minimum_replicates, int) or minimum_replicates < 1:
+    if (
+        isinstance(minimum_replicates, bool)
+        or not isinstance(minimum_replicates, int)
+        or minimum_replicates < 1
+    ):
         violations.append("minimum_replicates must be a positive integer")
         minimum_replicates = 1
     activation_policy = policy.get("activation", {})
     behavior_policy = policy.get("behavior", {})
     comparison_policy = policy.get("comparison", {})
-    if not isinstance(comparison_policy, dict) or comparison_policy.get(
-        "baseline_variant"
-    ) != "without-skill":
+    if (
+        not isinstance(comparison_policy, dict)
+        or comparison_policy.get("baseline_variant") != "without-skill"
+    ):
         violations.append("comparison baseline_variant must be without-skill")
         comparison_policy = {}
     required_fields = policy.get("required_implementation_fields", [])
-    if not isinstance(required_fields, list) or any(not isinstance(field, str) for field in required_fields):
+    if not isinstance(required_fields, list) or any(
+        not isinstance(field, str) for field in required_fields
+    ):
         violations.append("required_implementation_fields must be a string array")
         required_fields = []
+    efficiency_policy = policy.get("efficiency", {})
+    if (
+        not isinstance(efficiency_policy, dict)
+        or efficiency_policy.get("comparison_variant") != "previous-skill"
+    ):
+        violations.append("efficiency comparison_variant must be previous-skill")
+        efficiency_policy = {}
+    required_usage_fields = efficiency_policy.get("required_usage_fields", [])
+    if not isinstance(required_usage_fields, list) or any(
+        not isinstance(field, str) for field in required_usage_fields
+    ):
+        violations.append("efficiency required_usage_fields must be a string array")
+        required_usage_fields = []
+
+    experiment_policy = policy.get("experiment")
+    if isinstance(experiment_policy, dict):
+        experiment = report.get("experiment_verification")
+        if not isinstance(experiment, dict):
+            violations.append("verified preregistered experiment report is required")
+        else:
+            if experiment_policy.get("require_verified_preregistration") and not experiment.get(
+                "valid", False
+            ):
+                violations.append("preregistered experiment verification did not pass")
+            if (
+                experiment_policy.get("require_release_candidate")
+                and experiment.get("purpose") != "release-candidate"
+            ):
+                violations.append("experiment purpose is not release-candidate")
+            if experiment_policy.get("require_held_out_dataset") and not experiment.get(
+                "held_out_dataset_present", False
+            ):
+                violations.append("experiment does not include a held-out dataset")
+            experiment_id = experiment.get("experiment_id")
+            if report.get("run_ids") != [experiment_id]:
+                violations.append("scored run IDs do not match the verified experiment")
+            if experiment.get("dataset_version") != report.get("dataset_version"):
+                violations.append("scored dataset version does not match the experiment")
 
     review_policy = policy.get("review")
     if isinstance(review_policy, dict):
@@ -739,6 +1034,17 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 violations.append(
                     "review minimum_reviews_per_candidate "
                     f"{agreement.get('minimum_reviews_per_candidate')} is below {minimum_reviews}"
+                )
+            minimum_human_reviews = review_policy.get("minimum_human_reviews_per_candidate")
+            if (
+                isinstance(minimum_human_reviews, int)
+                and not isinstance(minimum_human_reviews, bool)
+                and agreement.get("minimum_human_reviews_per_candidate", 0) < minimum_human_reviews
+            ):
+                violations.append(
+                    "review minimum_human_reviews_per_candidate "
+                    f"{agreement.get('minimum_human_reviews_per_candidate')} is below "
+                    f"{minimum_human_reviews}"
                 )
             for policy_name, report_name in (
                 ("minimum_raw_grade_agreement", "raw_grade_agreement"),
@@ -781,8 +1087,22 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 observed = pairwise.get(report_name)
                 if minimum is not None and (observed is None or observed < minimum):
                     violations.append(f"pairwise {report_name} {observed} is below {minimum}")
+            minimum_human_pairwise = pairwise_policy.get("minimum_human_reviews_per_pair")
+            if (
+                isinstance(minimum_human_pairwise, int)
+                and not isinstance(minimum_human_pairwise, bool)
+                and pairwise.get("minimum_human_reviews_per_pair", 0) < minimum_human_pairwise
+            ):
+                violations.append(
+                    "pairwise minimum_human_reviews_per_pair "
+                    f"{pairwise.get('minimum_human_reviews_per_pair')} is below "
+                    f"{minimum_human_pairwise}"
+                )
 
     for system_id in systems:
+        integrity = report.get("configuration_integrity", {}).get(system_id, {})
+        if not integrity.get("consistent_across_variants_and_replicates", False):
+            violations.append(f"{system_id}: configuration changed across variants or replicates")
         for variant in required_variants:
             cohort = _cohort_key(system_id, variant)
             metadata = report.get("cohorts", {}).get(cohort)
@@ -800,13 +1120,21 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
             usage = report.get("usage", {}).get(cohort, {})
             if usage.get("identity_complete_results", 0) != usage.get("completed_results", 0):
                 violations.append(f"{cohort}: protocol identity metadata is incomplete")
+            for field in required_usage_fields:
+                metric = usage.get(field, {})
+                if metric.get("reported_results", 0) != usage.get("completed_results", 0):
+                    violations.append(f"{cohort}: usage field {field} is incomplete")
             implementation = report.get("implementation_metadata", {}).get(cohort, {})
             completed = implementation.get("completed_results", 0)
             for field in required_fields:
-                if completed == 0 or implementation.get("field_presence", {}).get(field, 0) != completed:
+                if (
+                    completed == 0
+                    or implementation.get("field_presence", {}).get(field, 0) != completed
+                ):
                     violations.append(f"{cohort}: implementation field {field} is incomplete")
             if isinstance(review_policy, dict):
                 minimum_reviews = review_policy.get("minimum_reviews_per_candidate")
+                minimum_human_reviews = review_policy.get("minimum_human_reviews_per_candidate")
                 coverage = report.get("review_coverage", {}).get(cohort, {})
                 if (
                     isinstance(minimum_reviews, int)
@@ -816,12 +1144,99 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                         f"{cohort}: minimum behavior review count "
                         f"{coverage.get('minimum_review_count', 0)} is below {minimum_reviews}"
                     )
+                if (
+                    isinstance(minimum_human_reviews, int)
+                    and coverage.get("minimum_human_review_count", 0) < minimum_human_reviews
+                ):
+                    violations.append(
+                        f"{cohort}: minimum human behavior review count "
+                        f"{coverage.get('minimum_human_review_count', 0)} is below "
+                        f"{minimum_human_reviews}"
+                    )
 
         candidate_cohort = _cohort_key(system_id, gated_variant)
+        resource_loading = report.get("resource_loading", {}).get(candidate_cohort, {})
+        minimum_reporting = efficiency_policy.get("minimum_resource_reporting_rate")
+        if minimum_reporting is not None and (
+            resource_loading.get("reporting_rate") is None
+            or resource_loading["reporting_rate"] < minimum_reporting
+        ):
+            violations.append(
+                f"{candidate_cohort}: resource reporting rate "
+                f"{resource_loading.get('reporting_rate')} is below {minimum_reporting}"
+            )
+        minimum_core = efficiency_policy.get("minimum_core_resource_rate")
+        if minimum_core is not None and (
+            resource_loading.get("core_complete_rate") is None
+            or resource_loading["core_complete_rate"] < minimum_core
+        ):
+            violations.append(
+                f"{candidate_cohort}: core resource rate "
+                f"{resource_loading.get('core_complete_rate')} is below {minimum_core}"
+            )
+        maximum_unknown = efficiency_policy.get("maximum_unknown_resources")
+        unknown_count = sum(resource_loading.get("unknown_resources", {}).values())
+        if maximum_unknown is not None and unknown_count > maximum_unknown:
+            violations.append(
+                f"{candidate_cohort}: unknown loaded resources {unknown_count} exceeds {maximum_unknown}"
+            )
+        maximum_unnecessary = efficiency_policy.get("maximum_unnecessary_resources")
+        unnecessary_count = sum(resource_loading.get("unnecessary_resources", {}).values())
+        if maximum_unnecessary is not None and unnecessary_count > maximum_unnecessary:
+            violations.append(
+                f"{candidate_cohort}: unnecessary loaded resources {unnecessary_count} "
+                f"exceeds {maximum_unnecessary}"
+            )
+        maximum_overloaded = efficiency_policy.get("maximum_overloaded_profile_results")
+        overloaded_results = resource_loading.get("overloaded_profile_results", 0)
+        if maximum_overloaded is not None and overloaded_results > maximum_overloaded:
+            violations.append(
+                f"{candidate_cohort}: overloaded profile results {overloaded_results} "
+                f"exceeds {maximum_overloaded}"
+            )
+        maximum_unexpected = efficiency_policy.get("maximum_unexpected_activation_resource_results")
+        unexpected_resources = resource_loading.get("unexpected_activation_resource_results", 0)
+        if maximum_unexpected is not None and unexpected_resources > maximum_unexpected:
+            violations.append(
+                f"{candidate_cohort}: unexpected activation resource results "
+                f"{unexpected_resources} exceeds {maximum_unexpected}"
+            )
+        baseline_cohort = _cohort_key(system_id, "previous-skill")
+        efficiency_observations: dict[str, Any] = {}
+        for metric, maximum_key in (
+            ("input_tokens", "maximum_input_token_ratio"),
+            ("output_tokens", "maximum_output_token_ratio"),
+            ("latency_ms", "maximum_latency_ratio"),
+            ("skill_context_words", "maximum_skill_context_word_ratio"),
+            ("turns", "maximum_turn_ratio"),
+            ("tool_calls", "maximum_tool_call_ratio"),
+        ):
+            candidate_mean = (
+                report.get("usage", {}).get(candidate_cohort, {}).get(metric, {}).get("mean")
+            )
+            baseline_mean = (
+                report.get("usage", {}).get(baseline_cohort, {}).get(metric, {}).get("mean")
+            )
+            ratio = None
+            if isinstance(candidate_mean, (int, float)) and isinstance(baseline_mean, (int, float)):
+                if baseline_mean > 0:
+                    ratio = round(candidate_mean / baseline_mean, 6)
+                elif baseline_mean == 0 and candidate_mean == 0:
+                    ratio = 1.0
+            efficiency_observations[metric] = {
+                "candidate_mean": candidate_mean,
+                "previous_mean": baseline_mean,
+                "ratio": ratio,
+            }
+            maximum = efficiency_policy.get(maximum_key)
+            if maximum is not None and (ratio is None or ratio > maximum):
+                violations.append(f"{system_id}: {metric} ratio {ratio} exceeds {maximum}")
         activation = report.get("activation", {}).get(candidate_cohort, {})
         for metric in ("precision", "recall", "specificity", "balanced_accuracy", "accuracy"):
             minimum = activation_policy.get(f"minimum_{metric}")
-            if minimum is not None and (activation.get(metric) is None or activation[metric] < minimum):
+            if minimum is not None and (
+                activation.get(metric) is None or activation[metric] < minimum
+            ):
                 violations.append(
                     f"{candidate_cohort}: activation {metric} {activation.get(metric)} is below {minimum}"
                 )
@@ -833,9 +1248,9 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
             violations.append(
                 f"{candidate_cohort}: false_positive_rate {activation.get('false_positive_rate')} exceeds {maximum_fpr}"
             )
-        for slice_name, slice_metrics in report.get("activation_by_slice", {}).get(
-            candidate_cohort, {}
-        ).items():
+        for slice_name, slice_metrics in (
+            report.get("activation_by_slice", {}).get(candidate_cohort, {}).items()
+        ):
             minimum_slice_accuracy = activation_policy.get("minimum_slice_accuracy")
             if minimum_slice_accuracy is not None and (
                 slice_metrics.get("accuracy") is None
@@ -883,12 +1298,9 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
                 if not slice_key.startswith(prefix):
                     continue
                 observations_count = slice_metrics.get("pass", 0) + slice_metrics.get("fail", 0)
-                if (
-                    observations_count >= minimum_slice_observations
-                    and (
-                        slice_metrics.get("pass_rate") is None
-                        or slice_metrics["pass_rate"] < minimum_slice_pass_rate
-                    )
+                if observations_count >= minimum_slice_observations and (
+                    slice_metrics.get("pass_rate") is None
+                    or slice_metrics["pass_rate"] < minimum_slice_pass_rate
                 ):
                     violations.append(
                         f"{slice_key}: behavior pass_rate {slice_metrics.get('pass_rate')} "
@@ -897,10 +1309,12 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
 
         paired = report.get("paired_comparisons", {}).get(system_id, {})
         comparisons = {
-            metric: paired.get(metric)
-            for metric in ("activation_accuracy", "behavior_pass_rate")
+            metric: paired.get(metric) for metric in ("activation_accuracy", "behavior_pass_rate")
         }
-        observations[system_id] = comparisons
+        observations[system_id] = {
+            "quality": comparisons,
+            "efficiency": efficiency_observations,
+        }
         for metric, comparison in comparisons.items():
             if comparison is None:
                 violations.append(f"{system_id}: comparison {metric} cannot be computed")

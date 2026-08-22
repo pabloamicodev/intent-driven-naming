@@ -1,162 +1,20 @@
 # Behavior-Preserving Rename Safety
 
-Use this protocol after a naming audit identifies supported renames and the user has authorized edits.
+A naming refactor authorizes identifiers in scope, not architecture, dependencies, control flow, formatting churn, or an undeclared migration.
 
-## Preserve the Authorization Boundary
+## Inventory Before Editing
 
-A naming refactor authorizes identifier changes in the requested scope. It does not authorize architecture changes, data migrations, public API redesign, dependency upgrades, or unrelated cleanup.
+For each selected symbol find its definition, references, aliases, callers, implementations, overrides, semantic family, tests, strings, captures, generated owner, and protected spellings. Use structural navigation for symbols and literal search for runtime names.
 
-If the requested rename implies a contract migration, separate that work and obtain explicit direction before proceeding.
+Treat public/named parameters, exports, schemas, serialized or database fields, routes, configuration, environment keys, events, topics, metrics, reflection, registries, protocols, overrides, framework hooks, ABI/FFI, generated names, CLI names, infrastructure addresses, persisted state, and automation inputs as contracts. Map to an internal alias when the boundary stays fixed; edit generators rather than generated output.
 
-## Inventory the Rename Surface
+## Apply a Controlled Plan
 
-For every symbol selected for change, identify:
+1. Freeze the action, target, evidence, affected symbols, change budget, and protected boundaries.
+2. Rename definitions/references with native tooling and update the smallest coherent family.
+3. Inspect literals, shorthand output, destructuring, named calls, shadowing, captures, macros, and templates separately.
+4. Preserve output keys explicitly and format only touched code.
 
-- its definition;
-- direct and indirect references;
-- imports, exports, aliases, overrides, and implementations;
-- paired or derived identifiers that would become inconsistent;
-- tests, fixtures, snapshots, comments, and documentation that refer to the code concept;
-- string-based or runtime references;
-- lexical shadowing, nested scopes, closures, captures, patterns, and destructuring;
-- object or record shorthand where a binding name can become an output field;
-- boundaries where the old spelling must remain.
+Repository search cannot prove public consumers do not exist. Use compatibility or migration only when authorized.
 
-Prefer symbol-aware navigation and rename operations when the environment provides them. Literal search is still necessary for string references and serialized names, but do not use global text replacement as a substitute for semantic analysis.
-
-## Protected Contract Surfaces
-
-Preserve these names unless the user explicitly requests and scopes a migration:
-
-- external API fields and operation names;
-- database tables, columns, stored procedures, and migration identifiers;
-- serialized payload keys and persisted document fields;
-- environment variables and configuration keys;
-- URL parameters, query parameters, routes, and form field names;
-- public package exports and documented consumer APIs;
-- public parameter names or argument labels when callers can bind by name;
-- framework-required lifecycle methods, hooks, conventions, and magic names;
-- third-party integration fields;
-- event names, queue topics, telemetry dimensions, and metric names;
-- dependency-injection tokens and runtime registration keys;
-- reflection, decorators, annotations, and string-based property access;
-- CSS selectors, template bindings, snapshots, and fixtures when they form runtime or test contracts;
-- CLI commands and flags, infrastructure resource addresses, state identifiers, manifest keys, and automation inputs;
-- generated files whose source or generator should be changed instead.
-
-An unusual external name is not automatically a defect.
-
-## Translate at Boundaries
-
-Keep a fixed external spelling while exposing a semantic internal name:
-
-```ts
-const customerId = apiResponse.cust_id;
-```
-
-For larger payloads, use an explicit adapter rather than spreading external terminology through the domain layer:
-
-```ts
-function mapApiOrder(apiOrder: ApiOrder): Order {
-  return {
-    orderId: apiOrder.ord_id,
-    priceInCents: apiOrder.price,
-  };
-}
-```
-
-Do not silently change the serialized output while improving internal names.
-
-## Verify Intrafunction Renames Semantically
-
-A parameter or local binding can participate in behavior beyond its lexical identifier. Before renaming it:
-
-- distinguish the binding from destructured keys, record fields, pattern constructors, and named-argument labels;
-- inspect nested functions, callbacks, captures, macros, templates, reflection, and runtime lookup;
-- prevent new shadowing against parameters, receiver fields, imports, or bindings in nested scopes;
-- expand property or record shorthand explicitly when the output key must remain fixed;
-- preserve ownership, mutability, capture mode, and concurrency semantics in languages where rename tooling may rewrite more than spelling;
-- verify emitted objects, logs, snapshots, fixtures, and serialized output when they can expose the original name.
-
-Use symbol-aware tooling for the binding, then inspect protected literal keys separately. A successful compiler or type check does not prove that an emitted field name stayed compatible.
-
-## Apply Renames in a Controlled Order
-
-1. Confirm the final rename map and protected spellings.
-2. Rename definitions and traceable symbol references.
-3. Update paired identifiers and semantic families only where necessary.
-4. Update imports, exports, type relationships, overrides, and call sites.
-5. Inspect literal references separately; change only those proven to refer to the internal symbol rather than a protected contract.
-6. Review shadowing, captures, destructuring, shorthand output fields, and named-call compatibility.
-7. Update tests and documentation when they describe the internal identifier or behavior, not merely to hide a broken contract.
-8. Format only the touched code needed for the rename.
-
-Avoid combining the rename with extraction, reordering, control-flow changes, or formatting churn. A focused diff makes behavior preservation reviewable.
-
-## Dynamic and Weakly Typed Code
-
-Increase caution when references may not be statically discoverable:
-
-```ts
-handlerRegistry[handlerName]
-object[propertyName]
-container.resolve(serviceToken)
-```
-
-Search for relevant strings, registry construction, reflection, templates, configuration, and tests. If the dynamic surface cannot be traced confidently, keep the name or report the blocker rather than assuming the rename is safe.
-
-## Cross-Module and Public Symbols
-
-Before changing an exported symbol:
-
-- identify every in-repository consumer;
-- determine whether external consumers may exist;
-- check whether compatibility aliases or a deprecation path are required;
-- keep a contract change out of a behavior-preserving refactor unless explicitly authorized.
-
-Do not treat repository-local search as proof that a public API has no external users.
-
-## Verify Behavior
-
-Run the repository's existing relevant checks in proportion to the change:
-
-1. Targeted tests for the affected module or behavior.
-2. Type checking or compilation.
-3. Linting and static analysis.
-4. Broader tests, builds, schema checks, query checks, or infrastructure previews when the identifier crosses modules, packages, data, or operational state.
-5. A final diff review for accidental value, control-flow, serialization, or formatting changes.
-
-When a check is unavailable or already failing, report that limitation accurately. Do not claim behavior preservation solely because a textual rename completed.
-
-Useful invariants include:
-
-- runtime values and branches are unchanged;
-- inputs and outputs retain the same shapes and keys;
-- exported behavior and side effects are unchanged;
-- only identifier references and necessary explanatory text changed;
-- protected external spellings remain intact.
-
-## Stop Conditions
-
-Stop the rename and report what is unresolved when:
-
-- the domain meaning supports multiple incompatible names;
-- a dynamic reference cannot be traced safely;
-- the change would alter a public or persisted contract outside the authorized scope;
-- generated code would be overwritten by its generator;
-- the required rename expands far beyond the requested files or modules;
-- verification reveals a behavioral difference that cannot be explained as pre-existing.
-
-Do not keep expanding the refactor to work around one of these conditions.
-
-## Completion Report
-
-Report:
-
-- the meaningful rename groups applied;
-- protected external names intentionally preserved;
-- verification commands and their results;
-- any unverified dynamic or external surfaces;
-- any suggested follow-up that requires separate authorization.
-
-Keep the report proportional to the change.
+Verify contracts and dynamic lookup first, then targeted behavior, type/compile/static checks, broader integration checks, and a final diff review for value, control flow, output, and unrelated churn. Stop on ambiguous meaning, unresolved dynamic references, missing generated ownership, migration scope, or unexplained behavior differences. Report groups, protected spellings, checks, and unverified surfaces; textual replacement alone proves nothing.

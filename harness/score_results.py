@@ -19,12 +19,16 @@ from harness.eval_core import (
     score_results,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def markdown_report(report: dict) -> str:
-    lines = ["# Evaluation Report", "", f"Hard gate: {'PASS' if report['hard_gate_passed'] else 'FAIL'}", ""]
+    lines = [
+        "# Evaluation Report",
+        "",
+        f"Hard gate: {'PASS' if report['hard_gate_passed'] else 'FAIL'}",
+        "",
+    ]
     if report["errors"]:
         lines.extend(["## Data Errors", ""])
         lines.extend(f"- {error}" for error in report["errors"])
@@ -46,7 +50,14 @@ def markdown_report(report: dict) -> str:
         if policy["violations"]:
             lines.append("")
     if report["completion"]:
-        lines.extend(["## Completion", "", "| Cohort and replicate | Completed | Expected | Complete |", "|---|---:|---:|---|"])
+        lines.extend(
+            [
+                "## Completion",
+                "",
+                "| Cohort and replicate | Completed | Expected | Complete |",
+                "|---|---:|---:|---|",
+            ]
+        )
         for cohort_replicate, stats in report["completion"].items():
             lines.append(
                 f"| {cohort_replicate} | {stats['completed_cases']} | {stats['expected_cases']} | "
@@ -54,7 +65,14 @@ def markdown_report(report: dict) -> str:
             )
         lines.append("")
     if report["activation"]:
-        lines.extend(["## Activation", "", "| Cohort | Precision | Recall | Specificity | Balanced | Accuracy | 95% CI | FP rate |", "|---|---:|---:|---:|---:|---:|---|---:|"])
+        lines.extend(
+            [
+                "## Activation",
+                "",
+                "| Cohort | Precision | Recall | Specificity | Balanced | Accuracy | 95% CI | FP rate |",
+                "|---|---:|---:|---:|---:|---:|---|---:|",
+            ]
+        )
         for cohort, stats in report["activation"].items():
             lines.append(
                 f"| {cohort} | {stats['precision']} | {stats['recall']} | {stats['specificity']} | "
@@ -63,7 +81,14 @@ def markdown_report(report: dict) -> str:
             )
         lines.append("")
     if report["behavior"]:
-        lines.extend(["## Behavior", "", "| Cohort | Invariant pass | Case pass | Critical failures | Critical ungraded | Ungraded | Hard gate |", "|---|---:|---:|---:|---:|---:|---|"])
+        lines.extend(
+            [
+                "## Behavior",
+                "",
+                "| Cohort | Invariant pass | Case pass | Critical failures | Critical ungraded | Ungraded | Hard gate |",
+                "|---|---:|---:|---:|---:|---:|---|",
+            ]
+        )
         for cohort, stats in report["behavior"].items():
             lines.append(
                 f"| {cohort} | {stats['pass_rate']} | {stats['case_pass_rate']} | {stats['critical_failures']} | "
@@ -72,7 +97,14 @@ def markdown_report(report: dict) -> str:
             )
         lines.append("")
     if report.get("decisions"):
-        lines.extend(["## Decisions", "", "| Cohort | Exact match | Graded | Ungraded |", "|---|---:|---:|---:|"])
+        lines.extend(
+            [
+                "## Decisions",
+                "",
+                "| Cohort | Exact match | Graded | Ungraded |",
+                "|---|---:|---:|---:|",
+            ]
+        )
         for cohort, stats in report["decisions"].items():
             lines.append(
                 f"| {cohort} | {stats['exact_match_rate']} | {stats['graded_cases']} | "
@@ -86,26 +118,80 @@ def markdown_report(report: dict) -> str:
                 "## Review Agreement",
                 "",
                 f"- Minimum reviews per candidate: {agreement.get('minimum_reviews_per_candidate')}",
+                f"- Minimum human reviews per candidate: {agreement.get('minimum_human_reviews_per_candidate')}",
                 f"- Raw grade agreement: {agreement.get('raw_grade_agreement')}",
                 f"- Chance-corrected grade agreement: {agreement.get('chance_corrected_grade_agreement')}",
                 f"- Decision-set agreement: {agreement.get('decision_set_agreement')}",
                 "",
             ]
         )
+    if report.get("pairwise_report"):
+        pairwise = report["pairwise_report"]
+        lines.extend(
+            [
+                "## Pairwise Review",
+                "",
+                f"- Resolved fraction: {pairwise.get('resolved_fraction')}",
+                f"- With-skill win rate excluding ties: {pairwise.get('with_skill_win_rate_excluding_ties')}",
+                f"- Minimum human reviews per pair: {pairwise.get('minimum_human_reviews_per_pair')}",
+                "",
+            ]
+        )
+    if report.get("experiment_verification"):
+        experiment = report["experiment_verification"]
+        lines.extend(
+            [
+                "## Preregistered Experiment",
+                "",
+                f"- Experiment: {experiment.get('experiment_id')}",
+                f"- Verification: {'PASS' if experiment.get('valid') else 'FAIL'}",
+                f"- Purpose: {experiment.get('purpose')}",
+                f"- Held-out dataset: {experiment.get('held_out_dataset_present')}",
+                f"- Systems: {experiment.get('systems')}",
+                f"- Replicates: {experiment.get('replicates')}",
+                "",
+            ]
+        )
+    if report.get("configuration_integrity"):
+        lines.extend(["## Configuration Integrity", ""])
+        for system_id, integrity in report["configuration_integrity"].items():
+            lines.append(
+                f"- {system_id}: {'consistent' if integrity.get('consistent_across_variants_and_replicates') else 'DRIFT'}"
+            )
+        lines.append("")
     if report["usage"]:
         lines.extend(
             [
                 "## Usage",
                 "",
-                "| Variant | Results | Input tokens | Output tokens | Latency ms | Cost USD |",
-                "|---|---:|---:|---:|---:|---:|",
+                "| Cohort | Results | Input tokens | Output tokens | Context words | Turns | Tool calls | Latency ms | Cost USD |",
+                "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
             ]
         )
         for variant, stats in report["usage"].items():
             lines.append(
                 f"| {variant} | {stats['completed_results']} | {stats['input_tokens']['total']} | "
-                f"{stats['output_tokens']['total']} | {stats['latency_ms']['total']} | "
+                f"{stats['output_tokens']['total']} | {stats['skill_context_words']['total']} | "
+                f"{stats['turns']['total']} | {stats['tool_calls']['total']} | "
+                f"{stats['latency_ms']['total']} | "
                 f"{stats['cost_usd']['total']} |"
+            )
+        lines.append("")
+    if report.get("resource_loading"):
+        lines.extend(
+            [
+                "## Resource Loading",
+                "",
+                "| Cohort | Reporting rate | Core rate | Mean resources | Unknown loads | Unexpected activation loads |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for cohort, stats in report["resource_loading"].items():
+            unknown = sum(stats["unknown_resources"].values())
+            lines.append(
+                f"| {cohort} | {stats['reporting_rate']} | {stats['core_complete_rate']} | "
+                f"{stats['mean_resources_per_result']} | {unknown} | "
+                f"{stats['unexpected_activation_resource_results']} |"
             )
         lines.append("")
     if report["by_tag"]:
@@ -118,9 +204,7 @@ def markdown_report(report: dict) -> str:
             ]
         )
         for key, stats in report["by_tag"].items():
-            lines.append(
-                f"| {key} | {stats['pass']} | {stats['fail']} | {stats['pass_rate']} |"
-            )
+            lines.append(f"| {key} | {stats['pass']} | {stats['fail']} | {stats['pass_rate']} |")
         lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -128,7 +212,9 @@ def markdown_report(report: dict) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results", type=Path, nargs="+", required=True)
-    parser.add_argument("--activation-cases", type=Path, default=ROOT / "evals/cases/activation.jsonl")
+    parser.add_argument(
+        "--activation-cases", type=Path, default=ROOT / "evals/cases/activation.jsonl"
+    )
     parser.add_argument("--behavior-cases", type=Path, default=ROOT / "evals/cases/behavior.jsonl")
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--markdown-output", type=Path)
@@ -142,6 +228,11 @@ def main() -> int:
         "--pairwise-report",
         type=Path,
         help="pairwise JSON produced by score_pairwise.py",
+    )
+    parser.add_argument(
+        "--experiment-verification",
+        type=Path,
+        help="verification JSON produced by verify_experiment.py",
     )
     parser.add_argument(
         "--require-complete",
@@ -178,6 +269,18 @@ def main() -> int:
             print("pairwise report must be a JSON object", file=sys.stderr)
             return 2
         report["pairwise_report"] = pairwise
+    if args.experiment_verification:
+        try:
+            experiment_verification = json.loads(
+                args.experiment_verification.read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"cannot load experiment verification: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(experiment_verification, dict):
+            print("experiment verification must be a JSON object", file=sys.stderr)
+            return 2
+        report["experiment_verification"] = experiment_verification
     if args.policy:
         try:
             policy = json.loads(args.policy.read_text(encoding="utf-8"))

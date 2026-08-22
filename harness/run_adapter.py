@@ -7,6 +7,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -21,7 +22,6 @@ from harness.eval_core import (
     write_jsonl,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,8 +29,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, required=True, help="JSONL case dataset")
     parser.add_argument("--output", type=Path, required=True, help="raw result JSONL")
-    parser.add_argument("--variant", choices=("with-skill", "without-skill"), required=True)
-    parser.add_argument("--system-id", required=True, help="stable model-and-agent configuration name")
+    parser.add_argument(
+        "--variant",
+        choices=("with-skill", "previous-skill", "without-skill"),
+        required=True,
+    )
+    parser.add_argument(
+        "--baseline-skill-path",
+        type=Path,
+        help="required frozen runtime checkout for the previous-skill variant",
+    )
+    parser.add_argument(
+        "--system-id", required=True, help="stable model-and-agent configuration name"
+    )
     parser.add_argument("--replicate-id", default="r1")
     parser.add_argument("--attempt", type=int, default=1)
     parser.add_argument(
@@ -40,7 +51,9 @@ def main() -> int:
     )
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--timeout-seconds", type=int, default=1800)
-    parser.add_argument("--max-output-bytes", type=int, default=50_000_000)
+    parser.add_argument("--max-input-bytes", type=int, default=10_000_000)
+    parser.add_argument("--max-output-bytes", type=int, default=10_000_000)
+    parser.add_argument("--max-stderr-bytes", type=int, default=1_000_000)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("adapter", nargs=argparse.REMAINDER, help="adapter command after --")
     args = parser.parse_args()
@@ -52,19 +65,25 @@ def main() -> int:
         parser.error("an adapter command is required after --")
     if args.timeout_seconds < 1:
         parser.error("--timeout-seconds must be at least 1")
-    if args.max_output_bytes < 1:
-        parser.error("--max-output-bytes must be at least 1")
+    if min(args.max_input_bytes, args.max_output_bytes, args.max_stderr_bytes) < 1:
+        parser.error("adapter byte limits must be at least 1")
     if args.limit is not None and args.limit < 0:
         parser.error("--limit cannot be negative")
     if args.attempt < 1:
         parser.error("--attempt must be at least 1")
+    if args.variant == "previous-skill" and not args.baseline_skill_path:
+        parser.error("--baseline-skill-path is required for previous-skill")
+    if args.baseline_skill_path and not (args.baseline_skill_path / "SKILL.md").is_file():
+        parser.error("--baseline-skill-path must contain SKILL.md")
     if not args.replicate_id.strip() or not args.system_id.strip():
         parser.error("--system-id and --replicate-id must be non-empty")
 
     declared_implementation = None
     if args.implementation_json:
         try:
-            declared_implementation = json.loads(args.implementation_json.read_text(encoding="utf-8"))
+            declared_implementation = json.loads(
+                args.implementation_json.read_text(encoding="utf-8")
+            )
         except (OSError, json.JSONDecodeError) as exc:
             parser.error(f"cannot read --implementation-json: {exc}")
         if not isinstance(declared_implementation, dict):
@@ -88,41 +107,72 @@ def main() -> int:
                 "system_id": args.system_id,
                 "replicate_id": args.replicate_id,
                 "attempt": args.attempt,
+                "declared_implementation": declared_implementation,
                 "case": case,
-                "skill_path": str(ROOT.resolve()),
+                "skill_path": str(
+                    args.baseline_skill_path.resolve()
+                    if args.variant == "previous-skill"
+                    else ROOT.resolve()
+                ),
                 "variant": args.variant,
             }
         )
     payload = "".join(json.dumps(item, ensure_ascii=False) + "\n" for item in requests)
-
-    try:
-        completed = subprocess.run(
-            adapter,
-            input=payload,
-            text=True,
-            capture_output=True,
-            timeout=args.timeout_seconds,
-            cwd=ROOT,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        print(f"adapter execution failed: {exc}", file=sys.stderr)
-        return 2
-    if completed.stderr:
-        print(completed.stderr, file=sys.stderr, end="")
-    if completed.returncode != 0:
-        print(f"adapter exited with {completed.returncode}", file=sys.stderr)
-        return completed.returncode
-    stdout_size = len(completed.stdout.encode("utf-8"))
-    if stdout_size > args.max_output_bytes:
+    payload_bytes = payload.encode("utf-8")
+    if len(payload_bytes) > args.max_input_bytes:
         print(
-            f"adapter stdout exceeded --max-output-bytes: {stdout_size} > {args.max_output_bytes}",
+            f"adapter input exceeded --max-input-bytes: "
+            f"{len(payload_bytes)} > {args.max_input_bytes}",
             file=sys.stderr,
         )
         return 2
 
+    with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+        try:
+            completed = subprocess.run(
+                adapter,
+                input=payload_bytes,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                timeout=args.timeout_seconds,
+                cwd=ROOT,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(f"adapter execution failed: {exc}", file=sys.stderr)
+            return 2
+        stdout_size = stdout_file.tell()
+        stderr_size = stderr_file.tell()
+        if stderr_size > args.max_stderr_bytes:
+            print(
+                f"adapter stderr exceeded --max-stderr-bytes: "
+                f"{stderr_size} > {args.max_stderr_bytes}",
+                file=sys.stderr,
+            )
+            return 2
+        stderr_file.seek(0)
+        stderr_text = stderr_file.read().decode("utf-8", errors="replace")
+        if stderr_text:
+            print(stderr_text, file=sys.stderr, end="")
+        if completed.returncode != 0:
+            print(f"adapter exited with {completed.returncode}", file=sys.stderr)
+            return completed.returncode
+        if stdout_size > args.max_output_bytes:
+            print(
+                f"adapter stdout exceeded --max-output-bytes: "
+                f"{stdout_size} > {args.max_output_bytes}",
+                file=sys.stderr,
+            )
+            return 2
+        stdout_file.seek(0)
+        try:
+            stdout = stdout_file.read().decode("utf-8")
+        except UnicodeDecodeError as exc:
+            print(f"adapter stdout is not UTF-8: {exc}", file=sys.stderr)
+            return 2
+
     responses = []
-    for line_number, line in enumerate(completed.stdout.splitlines(), start=1):
+    for line_number, line in enumerate(stdout.splitlines(), start=1):
         if not line.strip():
             continue
         try:
@@ -168,7 +218,10 @@ def main() -> int:
         response.setdefault("dataset_version", case["dataset_version"])
         response.setdefault("variant", args.variant)
         if declared_implementation is not None:
-            if "implementation" in response and response["implementation"] != declared_implementation:
+            if (
+                "implementation" in response
+                and response["implementation"] != declared_implementation
+            ):
                 print(
                     f"adapter response {response['case_id']} implementation metadata differs from the declared configuration",
                     file=sys.stderr,

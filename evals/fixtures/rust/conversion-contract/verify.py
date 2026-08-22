@@ -3,7 +3,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 candidate = Path(sys.argv[1])
 source = candidate.read_text(encoding="utf-8")
 assert "fn into_order(self)" in source

@@ -1,0 +1,84 @@
+{
+  "errors": [],
+  "metrics": {
+    "activation_cases": 84,
+    "behavior_cases": 52,
+    "description_length": 360,
+    "fixture_cases": 16,
+    "markdown_files": 60,
+    "references": 18,
+    "routes": {
+      "always_loaded_bytes": 6384,
+      "always_loaded_words": 782,
+      "file_bytes": {
+        "SKILL.md": 3551,
+        "references/audit-and-refactor.md": 1784,
+        "references/callable-naming.md": 1785,
+        "references/data-infrastructure.md": 1109,
+        "references/declaration-naming.md": 1344,
+        "references/dynamic-languages.md": 1009,
+        "references/functional-concurrent-languages.md": 1007,
+        "references/high-risk-semantics.md": 1858,
+        "references/language-conventions.md": 1180,
+        "references/local-variable-naming.md": 1530,
+        "references/managed-mobile-languages.md": 1031,
+        "references/naming-model.md": 2833,
+        "references/new-code-workflow.md": 1389,
+        "references/polyglot-boundaries.md": 1123,
+        "references/refactor-safety.md": 1882,
+        "references/structural-analysis.md": 1584,
+        "references/systems-languages.md": 1105,
+        "references/typescript-javascript.md": 1049,
+        "references/web-frameworks.md": 961
+      },
+      "file_words": {
+        "SKILL.md": 352,
+        "references/audit-and-refactor.md": 266,
+        "references/callable-naming.md": 238,
+        "references/data-infrastructure.md": 136,
+        "references/declaration-naming.md": 196,
+        "references/dynamic-languages.md": 131,
+        "references/functional-concurrent-languages.md": 121,
+        "references/high-risk-semantics.md": 243,
+        "references/language-conventions.md": 156,
+        "references/local-variable-naming.md": 215,
+        "references/managed-mobile-languages.md": 136,
+        "references/naming-model.md": 430,
+        "references/new-code-workflow.md": 189,
+        "references/polyglot-boundaries.md": 147,
+        "references/refactor-safety.md": 237,
+        "references/structural-analysis.md": 201,
+        "references/systems-languages.md": 138,
+        "references/typescript-javascript.md": 144,
+        "references/web-frameworks.md": 123
+      },
+      "max_extended_byte_route": {
+        "bytes": 23573,
+        "name": "refactor+callable+local-variable+declaration+high-risk+web-framework+data-infrastructure"
+      },
+      "max_extended_route": {
+        "name": "refactor+callable+local-variable+declaration+high-risk+web-framework+systems",
+        "words": 3086
+      },
+      "max_extended_route_words": 3086,
+      "max_standard_byte_route": {
+        "bytes": 20161,
+        "name": "refactor+callable+local-variable+declaration+high-risk+web-framework"
+      },
+      "max_standard_route": {
+        "name": "refactor+callable+local-variable+declaration+high-risk+web-framework",
+        "words": 2645
+      },
+      "maximum_simultaneous_profiles": 2,
+      "runtime_instruction_bytes": 29114,
+      "runtime_instruction_words": 3799
+    },
+    "short_description_length": 50,
+    "skill_lines": 37
+  },
+  "schema_version": "1.0",
+  "valid": true,
+  "warnings": [
+    "large Markdown surface: 60 files"
+  ]
+}

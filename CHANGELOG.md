@@ -2,6 +2,36 @@
 
 All notable changes are documented here. The project follows Semantic Versioning.
 
+## 2.0.0 — 2026-08-21
+
+### Added
+
+- A compact semantic decision kernel with explicit wrong-read analysis and high-risk guidance for security, distributed systems, time, data/ML, observability, and resource semantics.
+- Portable semantic-record and rename-plan schemas plus a dependency-free runtime safety validator.
+- Structural-analysis guidance for symbol graphs, language servers, ASTs, compiler indexes, dynamic strings, and minimal evidence collection.
+- A three-cohort evaluation protocol: current skill versus no-skill for quality and frozen previous skill for efficiency.
+- Resource-loading telemetry, context-word, token, latency, turn, and tool-call coverage gates; deterministic paired bootstrap intervals; and a documented statistical protocol.
+- Sixteen behavior cases and twenty-four balanced activation cases across additional locales and high-risk domains, raising the corpus to 84 activation cases and 52 behavior cases with 202 invariants.
+- Security trust-stage, partial-guarantee, shell process-contract, generated Protobuf mapping, and telemetry fixtures, raising executable coverage to 16 fixtures.
+- Private held-out-suite validation, data-minimization guidance, deterministic release archives, checksums, SPDX inventory, and atomic installation replacement with backup.
+- Materiality, structural-coverage, collision, dynamic-surface, change-budget, and rollback invariants in portable rename plans.
+- Corpus regression policy, schema-to-runtime parity tests, clustered paired intervals, package manifests, and high-confidence secret scanning for review artifacts.
+- Bounded adapter input, stdout, and stderr handling with disk-backed streams instead of unbounded memory capture.
+- Preregistered experiment manifests, shell-free matrix execution, resumable evidence ledgers, independent evidence verification, and explicit generalized-performance estimands.
+- Organization gates for three distinct pinned systems, configuration stability across variants and repetitions, held-out evidence, and two human reviews per candidate and pair.
+- Progressive evidence acquisition with explicit stop conditions for lower token use and proprietary-source disclosure.
+- Declaration-family guidance for types, fields, collections, enums, constants, errors, events, messages, type parameters, modules, and namespaces.
+- All-path semantic guarantees, adversarial behavior cases, and an executable partial-validation fixture.
+- Exact UTF-8 instruction-data budgets and release gates for output-token, latency, and tool-call regressions.
+
+### Changed
+
+- Reduced entrypoint, reference, standard-route, and extended-route context budgets substantially.
+- Upgraded release, audit, semantic, and efficiency contracts to version 2.0.
+- Made generated-code risk explicit and required unresolved contract surfaces to block a changing plan.
+- Moved installation backups outside one-level skill discovery paths to prevent duplicate activation.
+- Lowered the entrypoint, always-loaded, route, and total runtime budgets while adding the declaration capability.
+
 ## 1.1.0 — 2026-08-21
 
 ### Added

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/evidence-ledger.schema.json",
+  "title": "External Experiment Evidence Ledger",
+  "type": "object", "additionalProperties": false,
+  "required": [
+    "schema_version", "experiment_id", "manifest_sha256", "runner_config_sha256",
+    "started_at", "finished_at", "complete", "jobs", "failures"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "experiment_id": { "type": "string", "minLength": 1 },
+    "manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "runner_config_sha256": { "$ref": "#/$defs/sha256" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "complete": { "type": "boolean" },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": [
+          "output", "sha256", "status", "execution_attempt", "retry_reason"
+        ],
+        "properties": {
+          "output": { "type": "string", "minLength": 1 },
+          "sha256": {
+            "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"
+          },
+          "status": { "enum": ["completed", "reused", "failed"] },
+          "execution_attempt": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "retry_reason": {
+            "enum": ["transport-error", "provider-timeout", "provider-unavailable", null]
+          }
+        }
+      }
+    },
+    "failures": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

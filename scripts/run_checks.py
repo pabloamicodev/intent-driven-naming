@@ -3,11 +3,10 @@
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
-import importlib.util
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,6 +24,10 @@ def main() -> int:
     else:
         print("\n[json schemas] skipped; install requirements-dev.txt for strict validation", flush=True)
     run("repository", [python, "scripts/validate_repository.py"])
+    run(
+        "rename plan",
+        [python, "scripts/runtime/validate_rename_plan.py", "examples/rename-plan.json"],
+    )
     run("unit tests", [python, "-m", "unittest", "discover", "-s", "tests", "-v"])
     run("fixtures", [python, "harness/verify_fixtures.py"])
     print("\nall offline checks passed")

@@ -1,244 +1,42 @@
-# Semantic Naming Model
+# Semantic Decision Kernel
 
-Use this language-independent model to decide what information an identifier must carry. It is a decision framework, not a formula for producing long names or a casing convention.
+An identifier is a compact claim about a program concept. Encode only distinctions needed to prevent a plausible, material wrong reading in its actual scope.
 
-## Core Principle
+## Build a Semantic Record
 
-An identifier should tell the truth about the concept it represents and preserve the distinctions that matter in its scope.
+For each important identifier determine only the applicable fields:
 
-Start with the domain concept, then add only the semantic dimensions needed to prevent a wrong inference or a collision with another value.
+| Field | Question |
+|---|---|
+| Concept and role | What domain entity, value, action, policy, or relation is this? |
+| State and representation | What lifecycle state or transformation is guaranteed now? |
+| Cardinality | Is it one value, a collection, IDs, an index, or an aggregate? |
+| Unit or basis | Could scale, grain, timezone, clock, or denominator be misread? |
+| Ownership or trust | Does ownership, mutability, authority, trust, or sensitivity matter? |
+| Effect | What result, I/O, mutation, publication, or failure occurs? |
+| Scope | Which nearby concepts compete, and how far does the name travel? |
+| Contract | Is spelling internal, external, dynamic, generated, stateful, or unknown? |
+| Materiality | What would a plausible wrong read cost? |
 
-```text
-identifier = concept + necessary distinctions
-```
+A state or guarantee must hold on every path reaching the named value; intent or a happy path is not evidence. Formal plans may use `specification/rename-plan.schema.json`; ordinary work keeps the record internal.
 
-The objective is durable meaning, not maximum description. Select the semantic payload here, then translate it into the target language's idiomatic spelling through `language-conventions.md`.
+## Evidence Order
 
-## Discover the Vocabulary First
+1. User and domain terminology.
+2. Public types, schemas, interfaces, and use cases.
+3. Data flow, callers, consumers, effects, failures, and tests.
+4. Stable vocabulary in the same module and adjacent layers.
+5. Operational artifacts that reveal domain meaning.
+6. A new term only when existing vocabulary is absent or false.
 
-Use this evidence order before inventing terminology:
+Frequency is evidence, not authority. Do not collapse `customer`, `account`, `user`, and `client` without proving equivalence.
 
-1. Terms explicitly supplied by the user or domain documentation.
-2. Public domain types, interfaces, entities, and use-case names.
-3. Consistent terminology in the surrounding module and adjacent modules.
-4. UI copy, API fields, database schemas, events, and tests that reveal business meaning.
-5. A new term only when existing vocabulary is absent, contradictory, or demonstrably misleading.
+## Decide and Select
 
-Treat external names as evidence, not automatic internal names. A fixed external field such as `cust_id` may map to the internal concept “customer identifier” without changing the boundary spelling.
+Ask: *What plausible wrong assumption could a competent reader make, and what would it cost?* Change only for a `material` or `critical` wrong read; critical crosses security, integrity, safety, or external contracts. Keep names whose alternatives merely restate types or scope, replace idiom, or lack stronger evidence.
 
-Do not alternate among `customer`, `client`, `user`, and `account` unless they represent different concepts.
+Choose `keep`, `rename`, `map`, `migrate`, or `defer`. Map fixed boundaries to clearer internal vocabulary. Migrate only with explicit authority. Defer when meaning or safety remains uncertain.
 
-## Semantic Dimensions
+Use types, namespaces, signatures, and scope as free context. Reject candidates that are false on a reachable path, hide an effect, conflict with domain vocabulary, or change a contract. Among survivors prefer semantic truth, removal of the wrong read, vocabulary consistency, ecosystem idiom/searchability, then brevity. Keep the current name when no candidate clearly dominates it.
 
-For each important identifier, determine whether these dimensions matter.
-
-### Concept
-
-What domain entity, value, action, or policy does it represent?
-
-```text
-customer
-order
-shipping address
-password reset token
-```
-
-### Role or Relationship
-
-How does it relate to another concept?
-
-```text
-billing contact
-orders indexed by customer identifier
-parent organization
-assigned reviewer
-```
-
-### State or Lifecycle
-
-What meaningful state does the value encode?
-
-```text
-pending orders
-authenticated user
-payment is authorized
-expired subscriptions
-```
-
-Do not add state that is already guaranteed by the type or scope.
-
-### Representation or Transformation
-
-Which representation coexists with this one, or what meaningful transformation produced it?
-
-```text
-raw phone number
-normalized phone number
-validated checkout request
-products sorted by price
-orders grouped by customer identifier
-```
-
-Avoid sequence-only words such as `new`, `updated`, `processed`, and `final` when the resulting state can be named directly.
-
-### Cardinality and Shape
-
-Is the value one entity, a collection, a set of identifiers, or an index?
-
-```text
-selected product
-selected products
-selected product identifiers
-products indexed by identifier
-```
-
-Collections are normally plural. Callback parameters preserve the singular entity name.
-
-### Unit or Basis
-
-Could another engineer reasonably assume the wrong unit, currency, time basis, or scale?
-
-```text
-request timeout in milliseconds
-price in cents
-maximum upload size in bytes
-discount percentage
-creation time in UTC
-```
-
-Add a unit only when the domain or type does not make it reliably obvious.
-
-### Scope
-
-Does the current scope contain competing values of the same concept?
-
-Use the local equivalent of `users` when only one user collection exists. Distinguish organization users from account users when both coexist. Do not repeat context already supplied by the module, class, namespace, package, receiver, or schema.
-
-## Decision Procedure
-
-For every important identifier:
-
-1. State in plain language what the value or callable actually represents.
-2. Identify nearby values that could be confused with it.
-3. Start with the canonical domain concept.
-4. Add only the dimensions needed to distinguish its meaning.
-5. Remove words that merely repeat type, container, or enclosing scope.
-6. Check the candidate against its uses, not only its declaration.
-7. Prefer the shortest candidate that remains truthful, consistent, and searchable.
-
-Example:
-
-```text
-Meaning: IDs of products currently selected for checkout
-Competing values: full selected products and all product IDs
-Candidate: selectedCheckoutProductIdentifiers
-Reduced: selectedProductIds
-```
-
-## Separate Semantics From Surface Form
-
-The same semantic payload can be rendered differently without losing continuity:
-
-```text
-JavaScript local: priceInCents
-Python local:     price_in_cents
-C# property:      PriceInCents
-SQL column:       price_in_cents
-Environment key: PRICE_IN_CENTS
-```
-
-Do not demand identical spelling across layers. Demand that each spelling refer to the same concept and that boundary mappings remain explicit.
-
-## Candidate Quality Test
-
-Compare candidate names using these questions:
-
-- **Truthfulness:** Does the name describe the actual value or effect?
-- **Disambiguation:** Does it prevent the likely wrong interpretation?
-- **Consistency:** Does it use the codebase's canonical vocabulary?
-- **Scope fit:** Is it sufficiently specific for this scope without repeating it?
-- **Searchability:** Can an engineer search for the domain concept reliably?
-- **Brevity:** Can any word be removed without losing important meaning?
-- **Idiomatic form:** Does its casing, affix, visibility, and role match the target ecosystem?
-- **Contract safety:** Is the identifier free to change, or is it externally constrained?
-
-Do not use a numeric score mechanically. Prefer a clearly superior candidate; preserve the existing name when tradeoffs are marginal.
-
-## Semantic Families
-
-Identifiers representing the same concept should share terminology. Render related concepts as an idiomatic family in the target ecosystem: customer orders, their error state, their loading state, and the operation that retrieves them should not switch arbitrarily to client purchases or generic data.
-
-Keep related state, mutation, message, and result concepts aligned. A language may express these relationships with setters, mutable references, records, reducers, variants, messages, or transformations; do not impose setter pairs where the language does not use them.
-
-## Booleans as Propositions
-
-Boolean or predicate names should read naturally in the target language and distinguish state, capability, policy, and history:
-
-```ts
-isAuthenticated
-hasActiveSubscription
-canEditProfile
-shouldRefetchOrders
-needsUserConfirmation
-supportsRecurringPayments
-requiresShippingAddress
-didCompleteCheckout
-```
-
-Avoid ambiguous bare nouns equivalent to `permission`, `loading`, and `validation` when the language offers a clearer predicate form. Avoid negative names that create double negatives when a positive proposition expresses the same concept clearly. Respect predicate suffixes or question-mark forms where supported.
-
-## Callables as Actions or Questions
-
-Callables that cause or compute something normally use a precise action plus its object, translated into the target convention. Derive that action from the observable contract across callers, inputs, outputs, side effects, and failure paths rather than from one implementation statement:
-
-```text
-calculateOrderTotal
-fetchCustomerOrders
-normalizePhoneNumber
-validateShippingAddress
-cancelPendingPayment
-```
-
-Predicates should read as questions or propositions according to the language convention:
-
-```text
-isEligibleForTrial
-hasShippingAddress
-canCancelOrder
-```
-
-When the codebase has no stronger convention, these verbs can clarify data access semantics:
-
-- `fetch`: obtain through remote or asynchronous I/O.
-- `read`: obtain from local storage or a stream.
-- `find`: search for something that may be absent.
-- `get`: retrieve an expected value without implying the transport.
-- `list`: return a collection.
-- `resolve`: choose or derive a value from multiple inputs or rules.
-
-Existing project and framework conventions take precedence.
-
-Keep the callable declaration and its body at compatible semantic levels. Parameters should describe what callers provide; meaningful local bindings should describe the value's current role or transformation; the returned value and effects should fulfill the declaration name. Use `callable-naming.md` for declarations and public parameters, and `local-variable-naming.md` for intrafunction data flow.
-
-## Contextual Exceptions
-
-Generic or short names are acceptable when their meaning is established by a tiny, conventional scope. Examples include `i` as a loop index, `x` in a short mathematical transform, `err` in a small Go error branch, and `self` or `this` where required by the language.
-
-Type or role affixes can be semantic when they distinguish real architectural roles or contracts, such as a DTO, event, options object, error type, protocol implementation, database row, or message type.
-
-Names such as `config`, `options`, `context`, `result`, or `data` are not forbidden. Improve them only when the scope contains a more useful domain distinction.
-
-## Final Semantic Review
-
-Before completing the selected workflow, ask:
-
-1. What domain concept does this identifier represent?
-2. Does the name match the value or effect at every important use?
-3. Are entity, ID, collection, state, representation, and unit distinctions preserved where needed?
-4. Is the terminology consistent with related identifiers?
-5. Does the name remain understandable away from its declaration?
-6. Is any word redundant in this scope?
-7. Would a rename improve meaning enough to justify its risk and diff size?
-8. For a callable, do its parameters, local data flow, returned value, and effects support the declaration name?
-
-If the existing name passes these checks, keep it.
+Semantic payload is portable while spelling is not: `customerId`, `customer_id`, and `CustomerID` can represent one concept. Preserve explicit mappings across boundaries.

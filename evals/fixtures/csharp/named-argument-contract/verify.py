@@ -3,7 +3,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 candidate = Path(sys.argv[1]).resolve()
 source = candidate.read_text(encoding="utf-8")
 assert "Process(string id)" in source

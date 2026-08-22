@@ -4,7 +4,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 candidate = Path(sys.argv[1])
 source = candidate.read_text(encoding="utf-8")
 assert "String get(String id)" in source

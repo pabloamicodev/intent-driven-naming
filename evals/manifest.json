@@ -1,83 +1,98 @@
 {
   "counts": {
-    "activation": 60,
-    "behavior": 36,
-    "invariants": 137
+    "activation": 84,
+    "behavior": 52,
+    "invariants": 202
   },
-  "dataset_version": "1.1.0",
+  "dataset_version": "2.0.0",
   "output_sha256": {
-    "cases/activation.jsonl": "e32f426b1d99ed221963da21fbb817ee4113feebc54da0aded20f868d5938f78",
-    "cases/behavior.jsonl": "5fcf3c2e62fdcb9c7273ed25f91ee6e356b669291b2d64d8914db062ed8313af"
+    "cases/activation.jsonl": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa",
+    "cases/behavior.jsonl": "e6b85f58626785912ab729bbae90049dba8d117d99ef861d9cfc3dde9f83a140"
   },
   "schema_version": "1.0",
   "source_sha256": {
-    "behavior-cases.md": "9370e195364f9f7189d3a8a465aea04bec32493f5d8f6e524a93294ff3b89f41",
-    "trigger-cases.md": "b6acee5bcaeef53bf7e3d5f2c668d1cb4ba4b84928073fbe7ce13b87d5f6639c"
+    "behavior-cases.md": "4b66a5045690f922cbbfaa9a074f418fa468823127531bc686e3434dbba4e9e2",
+    "trigger-cases.md": "cb1aa65b4a157978d1f086b646696c1463a443af2e574b4ada2a458fc0a82674"
   },
   "strata": {
     "activation_difficulty": {
-      "adversarial": 5,
-      "easy": 8,
-      "edge": 13,
-      "standard": 34
+      "adversarial": 10,
+      "easy": 9,
+      "edge": 26,
+      "standard": 39
     },
     "activation_expected": {
-      "false": 30,
-      "true": 30
+      "false": 42,
+      "true": 42
     },
     "activation_locale": {
-      "de": 1,
-      "en": 53,
-      "es": 3,
-      "fr": 1,
-      "pt": 2
+      "de": 3,
+      "en": 65,
+      "es": 5,
+      "fr": 3,
+      "it": 2,
+      "ja": 2,
+      "pt": 4
     },
     "behavior_contract_risk": {
-      "cross-module": 1,
+      "cross-module": 3,
       "dynamic": 3,
-      "external": 14,
-      "internal": 16,
-      "stateful": 1,
+      "external": 17,
+      "generated": 1,
+      "internal": 25,
+      "stateful": 2,
       "unknown": 1
     },
     "behavior_decision": {
-      "defer": 6,
-      "keep": 13,
-      "map": 8,
-      "migrate": 4,
-      "not-applicable": 3,
-      "rename": 16
+      "defer": 10,
+      "keep": 17,
+      "map": 11,
+      "migrate": 5,
+      "not-applicable": 8,
+      "rename": 23
     },
     "behavior_difficulty": {
-      "adversarial": 6,
-      "edge": 20,
-      "standard": 10
+      "adversarial": 10,
+      "edge": 30,
+      "standard": 12
+    },
+    "behavior_feature": {
+      "callable": 1,
+      "declaration": 2,
+      "high-risk": 7,
+      "local-variable": 2
     },
     "behavior_language": {
       "csharp": 2,
       "elixir": 2,
-      "generic": 9,
-      "go": 2,
-      "java": 1,
+      "generic": 11,
+      "go": 5,
+      "java": 2,
       "javascript": 6,
+      "kotlin": 1,
       "powershell": 1,
-      "python": 5,
+      "protobuf": 1,
+      "python": 8,
       "react": 2,
-      "rust": 1,
-      "sql": 1,
+      "rust": 2,
+      "shell": 1,
+      "sql": 2,
       "swift": 1,
       "terraform": 1,
-      "typescript": 8
+      "typescript": 11
     },
     "behavior_locale": {
-      "en": 34,
-      "es": 1,
-      "pt": 1
+      "de": 1,
+      "en": 45,
+      "es": 2,
+      "fr": 1,
+      "ja": 1,
+      "pt": 2
     },
     "behavior_mode": {
-      "audit": 11,
-      "generation": 3,
-      "refactor": 22
+      "audit": 16,
+      "generation": 9,
+      "refactor": 27
     }
   }
 }

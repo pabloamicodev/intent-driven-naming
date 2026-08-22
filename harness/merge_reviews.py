@@ -14,7 +14,6 @@ if __package__ in {None, ""}:
 from harness.eval_core import EvaluationDataError, load_case_map, read_jsonl, write_jsonl
 from harness.review_core import ReviewDataError, merge_reviews, review_agreement
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

@@ -7,6 +7,7 @@ Contributions should improve measured decisions, contract safety, language fidel
 - Python 3.11 or newer for the offline harness.
 - No runtime Python dependencies outside the standard library.
 - Optional language tools for strict fixtures: Node.js, Go, Rust, and Java.
+- A private, access-controlled evidence location for held-out release runs.
 
 Run the full offline suite:
 
@@ -73,3 +74,4 @@ Do not add forbidden-word linters that reject identifiers from spelling alone. D
 4. Run the held-out benchmark matrix for material instruction changes.
 5. Review critical failures and per-slice regressions.
 6. Tag the release only after required evidence is attached.
+7. Build the deterministic archive, checksum manifest, SPDX inventory, and provenance attestation from the tag workflow.

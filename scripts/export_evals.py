@@ -12,7 +12,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 TRIGGER_SOURCE = ROOT / "evals" / "trigger-cases.md"
 BEHAVIOR_SOURCE = ROOT / "evals" / "behavior-cases.md"
@@ -27,13 +26,20 @@ TRIGGER_ROW = re.compile(
     r"(easy|standard|edge|adversarial) \| ([a-z]{2}(?:-[A-Z]{2})?) \| (.*?) \|$"
 )
 BEHAVIOR_HEADING = re.compile(r"^## (B\d{2}) — (.+)$")
-INVARIANT_ROW = re.compile(
-    r"^- \[(critical|major|minor)\]\[(deterministic|semantic|human)\] (.+)$"
-)
+INVARIANT_ROW = re.compile(r"^- \[(critical|major|minor)\]\[(deterministic|semantic|human)\] (.+)$")
 VALID_MODES = {"generation", "audit", "refactor"}
 VALID_DIFFICULTIES = {"easy", "standard", "edge", "adversarial"}
-VALID_RISKS = {"internal", "cross-module", "external", "dynamic", "stateful", "unknown"}
+VALID_RISKS = {
+    "internal",
+    "cross-module",
+    "external",
+    "dynamic",
+    "generated",
+    "stateful",
+    "unknown",
+}
 VALID_DECISIONS = {"keep", "rename", "map", "migrate", "defer", "not-applicable"}
+VALID_FEATURES = {"callable", "local-variable", "declaration", "high-risk"}
 
 
 def normalize_inline_markdown(value: str) -> str:
@@ -173,6 +179,7 @@ def parse_metadata(section: list[str], case_id: str) -> dict[str, Any]:
         raise ValueError(f"{case_id}: missing metadata {sorted(missing)}")
     languages = [value.strip() for value in values["languages"].split(",")]
     decisions = [value.strip() for value in values["expected_decisions"].split(",")]
+    features = [value.strip() for value in values.get("features", "").split(",") if value.strip()]
     if values["mode"] not in VALID_MODES:
         raise ValueError(f"{case_id}: invalid mode {values['mode']}")
     if values["difficulty"] not in VALID_DIFFICULTIES:
@@ -183,7 +190,11 @@ def parse_metadata(section: list[str], case_id: str) -> dict[str, Any]:
         raise ValueError(f"{case_id}: languages must be non-empty")
     if not decisions or any(value not in VALID_DECISIONS for value in decisions):
         raise ValueError(f"{case_id}: invalid expected decisions {decisions}")
-    return {
+    if len(features) != len(set(features)) or any(
+        value not in VALID_FEATURES for value in features
+    ):
+        raise ValueError(f"{case_id}: invalid features {features}")
+    metadata: dict[str, Any] = {
         "mode": values["mode"],
         "difficulty": values["difficulty"],
         "locale": values["locale"],
@@ -191,6 +202,9 @@ def parse_metadata(section: list[str], case_id: str) -> dict[str, Any]:
         "contract_risk": values["contract_risk"],
         "expected_decisions": decisions,
     }
+    if features:
+        metadata["features"] = features
+    return metadata
 
 
 def parse_behavior_cases(markdown: str, version: str | None = None) -> list[dict[str, Any]]:
@@ -247,6 +261,7 @@ def parse_behavior_cases(markdown: str, version: str | None = None) -> list[dict
                 f"risk-{metadata['contract_risk']}",
                 *(f"decision-{decision}" for decision in metadata["expected_decisions"]),
                 *metadata["languages"],
+                *metadata.get("features", []),
             ],
         )
         cases.append(
@@ -267,7 +282,9 @@ def parse_behavior_cases(markdown: str, version: str | None = None) -> list[dict
 
 
 def serialize_jsonl(records: list[dict[str, Any]]) -> str:
-    return "".join(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n" for record in records)
+    return "".join(
+        json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n" for record in records
+    )
 
 
 def sha256_text(content: str) -> str:
@@ -282,6 +299,14 @@ def count_values(cases: list[dict[str, Any]], field: str) -> dict[str, int]:
             counts.update(value)
         else:
             counts[str(value)] += 1
+    return dict(sorted(counts.items()))
+
+
+def count_optional_values(cases: list[dict[str, Any]], field: str) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for case in cases:
+        value = case.get(field, [])
+        counts.update(value if isinstance(value, list) else [str(value)])
     return dict(sorted(counts.items()))
 
 
@@ -327,6 +352,7 @@ def build_outputs() -> dict[Path, str]:
             "behavior_language": count_values(behavior_cases, "languages"),
             "behavior_contract_risk": count_values(behavior_cases, "contract_risk"),
             "behavior_decision": count_values(behavior_cases, "expected_decisions"),
+            "behavior_feature": count_optional_values(behavior_cases, "features"),
         },
     }
     return {

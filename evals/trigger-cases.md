@@ -94,6 +94,35 @@ These cases evaluate routing only. They do not prescribe exact response wording.
 | T59 | Check whether our dependency licenses are compatible with Apache-2.0. | Do not trigger | standard | en | License analysis is unrelated to software identifier naming. |
 | T60 | Show me which Git branch is currently checked out. | Do not trigger | standard | en | Repository-state inspection is unrelated to identifier naming. |
 
+## Multilingual and High-Risk Cases
+
+| ID | Prompt | Expected | Difficulty | Locale | Why |
+|---|---|---|---|---|---|
+| T61 | Implementa en Go una función que calcule el total cobrado en centavos y nombra también parámetros, acumuladores y valores intermedios. | Trigger | standard | es | Spanish generation request covering callable and local data-flow semantics. |
+| T62 | Revise os nomes desta API Kotlin, mas preserve as chaves serializadas e os argumentos nomeados públicos. | Trigger | edge | pt | Portuguese audit with two source and wire contract surfaces. |
+| T63 | Prüfe diese Rust-Bezeichner: Eingaben wechseln von nicht vertrauenswürdig zu validiert und dürfen nicht verwechselt werden. | Trigger | edge | de | German security naming audit with trust-stage distinctions. |
+| T64 | Renomme les alias SQL internes sans modifier les noms de colonnes du schéma public. | Trigger | edge | fr | French mapping request across a database boundary. |
+| T65 | TypeScriptで関数名、引数、ローカル変数を目的が分かる名前にして、JSONキーは変更しないでください。 | Trigger | edge | ja | Japanese refactor request with callable, local, and serialization concerns. |
+| T66 | Migliora i nomi delle funzioni e delle variabili locali in questo parser C senza cambiare ABI. | Trigger | edge | it | Italian systems refactor with an ABI constraint. |
+| T67 | Name this Python tensor pipeline so batch, sequence, embedding axes, masks, and logits cannot be confused. | Trigger | edge | en | ML representation and axis semantics are correctness-critical. |
+| T68 | Refactor this authentication flow so raw, validated, and authorized identities are explicit in function and variable names. | Trigger | adversarial | en | Security trust transitions require naming-sensitive implementation. |
+| T69 | Audit this concurrent cache for names that confuse live state, snapshots, and stale replicas. | Trigger | edge | en | Distributed state and freshness are semantic naming dimensions. |
+| T70 | Implement timeout handling with names that distinguish wall-clock timestamps, monotonic elapsed time, durations, and deadlines. | Trigger | edge | en | Time basis and units materially affect correctness. |
+| T71 | Improve this shell function and its locals while preserving exported environment-variable spellings and CLI flags. | Trigger | edge | en | Shell locals can improve while external process contracts stay fixed. |
+| T72 | Map generated Protobuf field names to idiomatic application identifiers without editing generated files. | Trigger | edge | en | Generated and application naming need an explicit mapping boundary. |
+| T73 | Optimiza esta consulta SQL para reducir lecturas; conserva todos los alias y nombres. | Do not trigger | adversarial | es | Spanish performance request explicitly preserves identifiers. |
+| T74 | Corrija a falha deste teste sem alterar nenhum identificador existente. | Do not trigger | adversarial | pt | Portuguese bug fix explicitly excludes naming work. |
+| T75 | Überarbeite die Dokumentation dieses Moduls, aber ändere keinen Code. | Do not trigger | standard | de | German prose editing is outside the skill. |
+| T76 | Trouve un nom de marque pour notre nouvelle plateforme développeur. | Do not trigger | edge | fr | French product branding is outside software identifiers. |
+| T77 | このフォルダー内のファイル名を日付順になるよう変更してください。 | Do not trigger | edge | ja | Japanese file organization does not concern program symbols. |
+| T78 | Rinomina il branch Git per la nuova release. | Do not trigger | edge | it | Italian branch naming remains repository workflow work. |
+| T79 | Upgrade this dependency and resolve its API breakage; preserve our identifiers. | Do not trigger | adversarial | en | Dependency maintenance explicitly freezes names. |
+| T80 | Profile this service for memory leaks and report allocations only. | Do not trigger | standard | en | Runtime diagnosis without a naming request is outside scope. |
+| T81 | Rewrite these log messages so operators can understand them faster. | Do not trigger | standard | en | Log copy is prose, not identifier design. |
+| T82 | Translate the button labels and validation messages into Portuguese. | Do not trigger | standard | en | Localization of user-facing text is outside scope. |
+| T83 | Fix the race condition but keep every function, parameter, field, and local name unchanged. | Do not trigger | adversarial | en | Concurrency work explicitly excludes identifier changes. |
+| T84 | Run the customer-retention query and summarize its results. | Do not trigger | easy | en | Executing and interpreting a query is not naming-sensitive development. |
+
 ## Borderline Review
 
 When a result differs from `Expected`, inspect the description before adding more rules:

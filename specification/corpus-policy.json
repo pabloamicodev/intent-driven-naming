@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "dataset_version": "2.0.0",
+  "minimum_counts": {
+    "activation": 84,
+    "behavior": 52,
+    "invariants": 202,
+    "fixtures": 16
+  },
+  "maximum_activation_expected_imbalance": 0,
+  "minimum_unique_values": {
+    "activation_difficulty": 4,
+    "activation_locale": 7,
+    "behavior_contract_risk": 7,
+    "behavior_decision": 6,
+    "behavior_feature": 4,
+    "behavior_language": 15,
+    "behavior_locale": 6,
+    "behavior_mode": 3
+  },
+  "minimum_strata": {
+    "activation_expected": {
+      "false": 42,
+      "true": 42
+    },
+    "behavior_contract_risk": {
+      "cross-module": 1,
+      "dynamic": 1,
+      "external": 8,
+      "generated": 1,
+      "internal": 12,
+      "stateful": 1,
+      "unknown": 1
+    },
+    "behavior_decision": {
+      "defer": 5,
+      "keep": 12,
+      "map": 8,
+      "migrate": 3,
+      "not-applicable": 5,
+      "rename": 12
+    },
+    "behavior_mode": {
+      "audit": 10,
+      "generation": 8,
+      "refactor": 20
+    },
+    "behavior_feature": {
+      "callable": 1,
+      "declaration": 2,
+      "high-risk": 7,
+      "local-variable": 2
+    }
+  }
+}

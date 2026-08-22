@@ -43,7 +43,9 @@ def _load_artifact(result: dict[str, Any], artifact_root: Path | None) -> dict[s
     except ValueError as exc:
         raise ReviewDataError(f"{result['case_id']}: artifact path escapes artifact_root") from exc
     if not path.is_file():
-        raise ReviewDataError(f"{result['case_id']}: artifact bundle does not exist: {relative_path}")
+        raise ReviewDataError(
+            f"{result['case_id']}: artifact bundle does not exist: {relative_path}"
+        )
     payload = path.read_bytes()
     digest = hashlib.sha256(payload).hexdigest()
     if bundle.get("sha256") and bundle["sha256"] != digest:
@@ -167,8 +169,10 @@ def _validate_review(
     if missing_evidence:
         raise ReviewDataError(f"{review_id}: missing evidence for {sorted(missing_evidence)}")
     decisions = review.get("observed_decisions")
-    if not isinstance(decisions, list) or not decisions or any(
-        decision not in VALID_DECISIONS for decision in decisions
+    if (
+        not isinstance(decisions, list)
+        or not decisions
+        or any(decision not in VALID_DECISIONS for decision in decisions)
     ):
         raise ReviewDataError(f"{review_id}: observed_decisions are invalid")
     if len(decisions) != len(set(decisions)):
@@ -202,13 +206,18 @@ def review_agreement(
     by_review_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for review in reviews:
         by_review_id[review["review_id"]].append(review)
+    human_reviews = [review for review in reviews if review["reviewer_kind"] == "human"]
+    agreement_reviews = human_reviews or reviews
+    agreement_by_review_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for review in agreement_reviews:
+        agreement_by_review_id[review["review_id"]].append(review)
     agreement_pairs = 0
     grade_agreements = 0
     category_counts: Counter[str] = Counter()
     decision_pairs = 0
     decision_agreements = 0
     disagreement_records: list[dict[str, str]] = []
-    for review_id, candidate_reviews in by_review_id.items():
+    for review_id, candidate_reviews in agreement_by_review_id.items():
         for left, right in combinations(candidate_reviews, 2):
             shared = sorted(set(left["grades"]) & set(right["grades"]))
             for invariant_id in shared:
@@ -244,11 +253,21 @@ def review_agreement(
     else:
         kappa = None
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "reviewed_candidates": len(by_review_id),
         "review_records": len(reviews),
+        "human_review_records": sum(review["reviewer_kind"] == "human" for review in reviews),
+        "agreement_population": "human" if human_reviews else "all-reviewers",
+        "agreement_candidates": len(agreement_by_review_id),
         "minimum_reviews_per_candidate": min(
             (len(candidate_reviews) for candidate_reviews in by_review_id.values()),
+            default=0,
+        ),
+        "minimum_human_reviews_per_candidate": min(
+            (
+                sum(review["reviewer_kind"] == "human" for review in candidate_reviews)
+                for candidate_reviews in by_review_id.values()
+            ),
             default=0,
         ),
         "grade_pairs": agreement_pairs,
@@ -297,13 +316,17 @@ def merge_reviews(
         key_by_review_id[review_id] = key
         result_key_by_review_id[review_id] = result_key
 
-    reviews_by_result: dict[tuple[str, str, str, str, str, int], list[dict[str, Any]]] = defaultdict(list)
+    reviews_by_result: dict[tuple[str, str, str, str, str, int], list[dict[str, Any]]] = (
+        defaultdict(list)
+    )
     reviewers_seen: set[tuple[str, str]] = set()
     for review in reviews:
         _validate_review(review, key_by_review_id, cases)
         unique_reviewer = (review["review_id"], review["reviewer_id"])
         if unique_reviewer in reviewers_seen:
-            raise ReviewDataError(f"duplicate review from {review['reviewer_id']} for {review['review_id']}")
+            raise ReviewDataError(
+                f"duplicate review from {review['reviewer_id']} for {review['review_id']}"
+            )
         reviewers_seen.add(unique_reviewer)
         reviews_by_result[result_key_by_review_id[review["review_id"]]].append(review)
 
@@ -315,15 +338,19 @@ def merge_reviews(
             merged.append(result)
             continue
         candidate_reviews = reviews_by_result.get(_result_key(result), [])
+        human_candidate_reviews = [
+            review for review in candidate_reviews if review["reviewer_kind"] == "human"
+        ]
+        consensus_reviews = human_candidate_reviews or candidate_reviews
         consensus: dict[str, str] = {}
         unresolved: list[str] = []
         decision_consensus: list[str] = []
-        if len(candidate_reviews) >= minimum_reviews:
+        if len(consensus_reviews) >= minimum_reviews:
             for invariant in case["invariants"]:
                 invariant_id = invariant["id"]
                 grades = [
                     review["grades"][invariant_id]
-                    for review in candidate_reviews
+                    for review in consensus_reviews
                     if invariant_id in review["grades"]
                 ]
                 grade = _consensus_grade(invariant["severity"], grades)
@@ -333,13 +360,13 @@ def merge_reviews(
                     consensus[invariant_id] = grade
             decision_counts = Counter(
                 decision
-                for review in candidate_reviews
+                for review in consensus_reviews
                 for decision in review["observed_decisions"]
             )
             decision_consensus = sorted(
                 decision
                 for decision, count in decision_counts.items()
-                if count > len(candidate_reviews) / 2
+                if count > len(consensus_reviews) / 2
             )
         else:
             unresolved.extend(invariant["id"] for invariant in case["invariants"])
@@ -358,7 +385,10 @@ def merge_reviews(
         implementation.update(
             {
                 "review_count": len(candidate_reviews),
-                "review_policy": "critical-any-fail; noncritical-majority; decision-majority",
+                "human_review_count": sum(
+                    review["reviewer_kind"] == "human" for review in candidate_reviews
+                ),
+                "review_policy": "human-first; critical-any-fail; noncritical-majority; decision-majority",
             }
         )
         result["implementation"] = implementation

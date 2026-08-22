@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intent-driven-naming.dev/schemas/experiment-verification.schema.json",
+  "title": "Verified External Experiment Evidence",
+  "type": "object", "additionalProperties": false,
+  "required": [
+    "schema_version", "experiment_id", "dataset_version", "manifest_sha256", "purpose",
+    "claim_scope", "held_out_dataset_present", "systems", "replicates", "expected_jobs",
+    "verified_jobs", "valid", "errors"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "experiment_id": { "type": ["string", "null"] },
+    "dataset_version": { "type": ["string", "null"] },
+    "manifest_sha256": {
+      "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"
+    },
+    "purpose": { "enum": ["development", "release-candidate", null] },
+    "claim_scope": { "enum": ["development-only", "organization-grade-candidate", null] },
+    "held_out_dataset_present": { "type": "boolean" },
+    "systems": { "type": "integer", "minimum": 0 },
+    "replicates": { "type": "integer", "minimum": 0 },
+    "expected_jobs": { "type": "integer", "minimum": 0 },
+    "verified_jobs": { "type": "integer", "minimum": 0 },
+    "valid": { "type": "boolean" },
+    "errors": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

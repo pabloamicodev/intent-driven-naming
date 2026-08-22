@@ -1,0 +1,81 @@
+{
+  "analysis": {
+    "bootstrap_seed": 20260821,
+    "confidence_level": 0.95,
+    "exclusions": [],
+    "retry_policy": {
+      "allowed_reasons": [
+        "transport-error",
+        "provider-timeout",
+        "provider-unavailable"
+      ],
+      "maximum_attempts": 2,
+      "scored_attempt": "highest-declared-attempt"
+    }
+  },
+  "claim_scope": "development-only",
+  "created_at": "2026-08-21T00:00:00Z",
+  "dataset_version": "2.0.0",
+  "datasets": [
+    {
+      "activation": {
+        "records": 84,
+        "sha256": "b4b11b0af292bf1bffc1118c9bacefa8d8f41501e4035ed9b3e4205cbcb401aa"
+      },
+      "behavior": {
+        "records": 52,
+        "sha256": "e6b85f58626785912ab729bbae90049dba8d117d99ef861d9cfc3dde9f83a140"
+      },
+      "dataset_id": "public-development",
+      "visibility": "public"
+    }
+  ],
+  "estimand": {
+    "population_definition": "Software naming tasks similar to the declared multilingual activation and behavior case population.",
+    "primary_metrics": [
+      "activation_accuracy",
+      "behavior_pass_rate"
+    ],
+    "target": "generalized-task-performance",
+    "unit": "evaluation-case"
+  },
+  "experiment_id": "idn-public-development-2.0.0",
+  "purpose": "development",
+  "release_policy": {
+    "sha256": "4d55a7c1f44805992acdc703b231fe1e30b93e2029053ac518d22356d2921cae",
+    "version": "2.0.0"
+  },
+  "replicate_ids": [
+    "r1"
+  ],
+  "schema_version": "1.0",
+  "skills": {
+    "previous_skill": {
+      "sha256": "b7fac632f788a7978512999b8a186049f11aaae97935c6c55670ecb63e93fb00",
+      "version": "2.0.0"
+    },
+    "with_skill": {
+      "sha256": "b7fac632f788a7978512999b8a186049f11aaae97935c6c55670ecb63e93fb00",
+      "version": "2.0.0"
+    }
+  },
+  "systems": [
+    {
+      "implementation": {
+        "adapter": "mock-jsonl",
+        "adapter_version": "1.0.0",
+        "agent": "mock-agent",
+        "agent_version": "1.0.0",
+        "model": "deterministic-mock",
+        "model_version": "1.0.0",
+        "reasoning": "fixed"
+      },
+      "system_id": "mock-development"
+    }
+  ],
+  "variants": [
+    "with-skill",
+    "previous-skill",
+    "without-skill"
+  ]
+}

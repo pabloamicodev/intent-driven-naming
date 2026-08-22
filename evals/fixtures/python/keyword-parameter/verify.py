@@ -3,7 +3,6 @@ import inspect
 import sys
 from pathlib import Path
 
-
 candidate_path = Path(sys.argv[1])
 spec = importlib.util.spec_from_file_location("candidate", candidate_path)
 module = importlib.util.module_from_spec(spec)

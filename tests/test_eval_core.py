@@ -1,9 +1,17 @@
+import tempfile
 import unittest
+from pathlib import Path
 
-from harness.eval_core import apply_release_policy, score_results, validate_case
+from harness.eval_core import (
+    EvaluationDataError,
+    _paired_difference,
+    apply_release_policy,
+    read_jsonl,
+    score_results,
+    validate_case,
+)
 
-
-DATASET_VERSION = "1.1.0"
+DATASET_VERSION = "2.0.0"
 HASH = "a" * 64
 COHORT = "test-system::with-skill"
 
@@ -63,6 +71,22 @@ def result(case_id, variant="with-skill", replicate="r1", attempt=1, **overrides
         "case_id": case_id,
         "variant": variant,
         "status": "completed",
+        "loaded_resources": (
+            ["SKILL.md", "references/naming-model.md"] if variant != "without-skill" else []
+        ),
+        "usage": {
+            "input_tokens": 90 if variant == "with-skill" else 100,
+            "output_tokens": 10,
+            "latency_ms": 10,
+            "cost_usd": 0,
+            "skill_context_words": 50
+            if variant == "with-skill"
+            else 100
+            if variant == "previous-skill"
+            else 0,
+            "turns": 1,
+            "tool_calls": 0,
+        },
         "implementation": {
             "adapter": "test",
             "adapter_version": "1",
@@ -79,12 +103,13 @@ def result(case_id, variant="with-skill", replicate="r1", attempt=1, **overrides
 
 def policy(minimum_replicates=1):
     return {
-        "schema_version": "1.1",
+        "schema_version": "2.0",
         "dataset_version": DATASET_VERSION,
         "name": "test",
-        "version": "1.1.0",
-        "required_variants": ["with-skill", "without-skill"],
+        "version": "2.0.0",
+        "required_variants": ["with-skill", "previous-skill", "without-skill"],
         "gated_variant": "with-skill",
+        "minimum_systems": 1,
         "minimum_replicates": minimum_replicates,
         "activation": {"minimum_accuracy": 1.0},
         "behavior": {"minimum_pass_rate": 1.0, "maximum_ungraded": 0},
@@ -93,13 +118,68 @@ def policy(minimum_replicates=1):
             "minimum_activation_accuracy_delta": 0.0,
             "minimum_behavior_pass_rate_delta": 0.0,
         },
+        "efficiency": {
+            "comparison_variant": "previous-skill",
+            "required_usage_fields": [
+                "input_tokens",
+                "output_tokens",
+                "latency_ms",
+                "skill_context_words",
+                "turns",
+                "tool_calls",
+            ],
+            "minimum_resource_reporting_rate": 1.0,
+            "minimum_core_resource_rate": 1.0,
+            "maximum_unknown_resources": 0,
+            "maximum_unnecessary_resources": 0,
+            "maximum_overloaded_profile_results": 0,
+            "maximum_unexpected_activation_resource_results": 0,
+            "maximum_input_token_ratio": 0.95,
+            "maximum_output_token_ratio": 1.05,
+            "maximum_latency_ratio": 1.2,
+            "maximum_skill_context_word_ratio": 0.6,
+            "maximum_turn_ratio": 1.0,
+            "maximum_tool_call_ratio": 1.0,
+        },
         "required_implementation_fields": [
-            "adapter", "adapter_version", "agent", "agent_version", "model", "model_version", "reasoning"
+            "adapter",
+            "adapter_version",
+            "agent",
+            "agent_version",
+            "model",
+            "model_version",
+            "reasoning",
         ],
     }
 
 
 class EvalCoreTest(unittest.TestCase):
+    def test_jsonl_reader_bounds_records_and_rejects_invalid_utf8(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "results.jsonl"
+            path.write_bytes(b'{"value":"too-large"}\n')
+            with self.assertRaisesRegex(EvaluationDataError, "exceeds 8 bytes"):
+                read_jsonl(path, max_record_bytes=8)
+            with self.assertRaisesRegex(EvaluationDataError, "input exceeds 16 bytes"):
+                read_jsonl(path, max_file_bytes=16)
+            path.write_bytes(b'{"value":"\xff"}\n')
+            with self.assertRaisesRegex(EvaluationDataError, "not valid UTF-8"):
+                read_jsonl(path)
+
+    def test_paired_interval_resamples_case_clusters(self):
+        outcomes = {
+            ("r1", "case-a", "i1"): {"with-skill": 1, "without-skill": 0},
+            ("r1", "case-a", "i2"): {"with-skill": 1, "without-skill": 0},
+            ("r1", "case-b", "i1"): {"with-skill": 0, "without-skill": 1},
+        }
+        comparison = _paired_difference(outcomes)
+        self.assertEqual(comparison["clusters"], 2)
+        self.assertEqual(comparison["matched_pairs"], 3)
+        self.assertEqual(
+            comparison["method"],
+            "paired-case-cluster-percentile-bootstrap-95",
+        )
+
     def test_validates_activation_case(self):
         self.assertEqual(validate_case(activation_case()), [])
 
@@ -111,7 +191,9 @@ class EvalCoreTest(unittest.TestCase):
         )
         self.assertFalse(failed["hard_gate_passed"])
         self.assertEqual(failed["behavior"][COHORT]["critical_failures"], 1)
-        ungraded = score_results(cases, [result("B01", output_text="candidate", invariant_grades={})])
+        ungraded = score_results(
+            cases, [result("B01", output_text="candidate", invariant_grades={})]
+        )
         self.assertFalse(ungraded["hard_gate_passed"])
         self.assertEqual(ungraded["behavior"][COHORT]["critical_ungraded"], 1)
 
@@ -152,7 +234,14 @@ class EvalCoreTest(unittest.TestCase):
         cases = {"B01": behavior_case()}
         report = score_results(
             cases,
-            [result("B01", output_text="candidate", invariant_grades={"b01-01": "pass"}, observed_decisions=["map"])],
+            [
+                result(
+                    "B01",
+                    output_text="candidate",
+                    invariant_grades={"b01-01": "pass"},
+                    observed_decisions=["map"],
+                )
+            ],
         )
         self.assertEqual(report["decisions"][COHORT]["exact_match_rate"], 1.0)
 
@@ -165,10 +254,82 @@ class EvalCoreTest(unittest.TestCase):
         self.assertIn("without-skill: required cohort is missing", violations)
         self.assertIn("replicates is below 2", violations)
 
+    def test_release_policy_rejects_configuration_drift_within_a_system(self):
+        cases = {"T01": activation_case()}
+        results = [
+            result("T01", variant="with-skill", selected_skill=True),
+            result(
+                "T01",
+                variant="previous-skill",
+                selected_skill=True,
+                configuration_hash="b" * 64,
+            ),
+            result("T01", variant="without-skill", selected_skill=True),
+        ]
+        evaluated = apply_release_policy(
+            score_results(cases, results, require_complete=True), policy()
+        )
+        self.assertIn(
+            "configuration changed across variants or replicates",
+            "\n".join(evaluated["policy"]["violations"]),
+        )
+
+    def test_release_policy_gates_output_latency_and_tool_call_regressions(self):
+        cases = {"T01": activation_case()}
+        candidate = result("T01", variant="with-skill", selected_skill=True)
+        candidate["usage"] = {
+            **candidate["usage"],
+            "output_tokens": 20,
+            "latency_ms": 13,
+            "tool_calls": 2,
+        }
+        previous = result("T01", variant="previous-skill", selected_skill=True)
+        previous["usage"] = {
+            **previous["usage"],
+            "output_tokens": 10,
+            "latency_ms": 10,
+            "tool_calls": 1,
+        }
+        raw = score_results(
+            cases,
+            [candidate, previous, result("T01", variant="without-skill", selected_skill=True)],
+            require_complete=True,
+        )
+        violations = "\n".join(apply_release_policy(raw, policy())["policy"]["violations"])
+        self.assertIn("output_tokens ratio 2.0 exceeds 1.05", violations)
+        self.assertIn("latency_ms ratio 1.3 exceeds 1.2", violations)
+        self.assertIn("tool_calls ratio 2.0 exceeds 1.0", violations)
+
+    def test_release_policy_links_scored_runs_to_verified_experiment(self):
+        cases = {"T01": activation_case()}
+        results = [
+            result("T01", variant=variant, selected_skill=True)
+            for variant in ("with-skill", "previous-skill", "without-skill")
+        ]
+        raw = score_results(cases, results, require_complete=True)
+        raw["experiment_verification"] = {
+            "valid": True,
+            "experiment_id": "different-run",
+            "dataset_version": DATASET_VERSION,
+            "purpose": "release-candidate",
+            "held_out_dataset_present": True,
+        }
+        release_policy = policy()
+        release_policy["experiment"] = {
+            "require_verified_preregistration": True,
+            "require_release_candidate": True,
+            "require_held_out_dataset": True,
+        }
+        evaluated = apply_release_policy(raw, release_policy)
+        self.assertIn(
+            "scored run IDs do not match the verified experiment",
+            "\n".join(evaluated["policy"]["violations"]),
+        )
+
     def test_policy_gates_candidate_while_comparing_control(self):
         cases = {"T01": activation_case(), "B01": behavior_case()}
         results = []
-        for variant in ("with-skill", "without-skill"):
+        for variant in ("with-skill", "previous-skill", "without-skill"):
             results.extend(
                 [
                     result("T01", variant=variant, selected_skill=True),
@@ -192,6 +353,52 @@ class EvalCoreTest(unittest.TestCase):
         self.assertIn(
             "activation_accuracy delta 0.0 is below 0.01",
             "\n".join(tie_rejected["policy"]["violations"]),
+        )
+
+    def test_policy_rejects_skill_resources_on_negative_activation(self):
+        cases = {"T02": activation_case("T02", expected=False), "B01": behavior_case()}
+        results = []
+        for variant in ("with-skill", "previous-skill", "without-skill"):
+            results.extend(
+                [
+                    result("T02", variant=variant, selected_skill=False),
+                    result(
+                        "B01",
+                        variant=variant,
+                        output_text="candidate",
+                        invariant_grades={"b01-01": "pass"},
+                        observed_decisions=["map"],
+                    ),
+                ]
+            )
+        evaluated = apply_release_policy(
+            score_results(cases, results, require_complete=True), policy()
+        )
+        self.assertIn(
+            "unexpected activation resource results 1 exceeds 0",
+            "\n".join(evaluated["policy"]["violations"]),
+        )
+
+    def test_policy_rejects_known_but_unnecessary_behavior_resource(self):
+        cases = {"T01": activation_case(), "B01": behavior_case()}
+        results = []
+        for variant in ("with-skill", "previous-skill", "without-skill"):
+            behavior_result = result(
+                "B01",
+                variant=variant,
+                output_text="candidate",
+                invariant_grades={"b01-01": "pass"},
+                observed_decisions=["map"],
+            )
+            if variant == "with-skill":
+                behavior_result["loaded_resources"].append("references/systems-languages.md")
+            results.extend([result("T01", variant=variant, selected_skill=True), behavior_result])
+        evaluated = apply_release_policy(
+            score_results(cases, results, require_complete=True), policy()
+        )
+        self.assertIn(
+            "unnecessary loaded resources 1 exceeds 0",
+            "\n".join(evaluated["policy"]["violations"]),
         )
 
 

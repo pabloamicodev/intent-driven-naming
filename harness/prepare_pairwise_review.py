@@ -14,7 +14,6 @@ from harness.eval_core import EvaluationDataError, load_case_map, read_jsonl, wr
 from harness.pairwise_core import prepare_pairwise_packet
 from harness.review_core import ReviewDataError
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

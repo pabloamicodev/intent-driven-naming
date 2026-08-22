@@ -14,13 +14,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 RESPONSE_SCHEMA = ROOT / "adapters" / "codex-response.schema.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from harness.create_artifact_bundle import build_bundle  # noqa: E402
+from harness.create_artifact_bundle import build_bundle
 
 
 def codex_version(command: list[str]) -> str:
@@ -33,10 +32,26 @@ def codex_version(command: list[str]) -> str:
 def install_runtime_skill(source: Path, workspace: Path) -> None:
     target = workspace / ".agents" / "skills" / "intent-driven-naming"
     target.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source / "SKILL.md", target / "SKILL.md")
-    if (source / "agents").is_dir():
-        shutil.copytree(source / "agents", target / "agents")
-    shutil.copytree(source / "references", target / "references")
+    runtime_paths = (
+        Path("SKILL.md"),
+        Path("agents"),
+        Path("references"),
+        Path("scripts/runtime"),
+        Path("specification/semantic-record.schema.json"),
+        Path("specification/rename-plan.schema.json"),
+        Path("LICENSE"),
+        Path("VERSION"),
+    )
+    for relative in runtime_paths:
+        candidate = source / relative
+        if not candidate.exists():
+            continue
+        destination = target / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if candidate.is_dir():
+            shutil.copytree(candidate, destination)
+        else:
+            shutil.copy2(candidate, destination)
 
 
 def recursive_metric(payload: Any, key: str) -> list[float]:
@@ -53,14 +68,30 @@ def recursive_metric(payload: Any, key: str) -> list[float]:
     return values
 
 
-def parse_usage(stdout: str, latency_ms: float) -> dict[str, int | float | None]:
+def parse_usage(
+    stdout: str, latency_ms: float, skill_context_words: int = 0
+) -> dict[str, int | float | None]:
     events = []
     for line in stdout.splitlines():
         try:
             events.append(json.loads(line))
         except json.JSONDecodeError:
             continue
-    metrics: dict[str, int | float | None] = {"latency_ms": round(latency_ms, 3), "cost_usd": None}
+    metrics: dict[str, int | float | None] = {
+        "latency_ms": round(latency_ms, 3),
+        "cost_usd": None,
+        "skill_context_words": skill_context_words,
+        "turns": 1,
+        "tool_calls": sum(
+            1
+            for event in events
+            if isinstance(event, dict)
+            and any(
+                marker in str(event.get("type", "")).lower()
+                for marker in ("tool_call", "command_execution", "mcp_tool")
+            )
+        ),
+    }
     for key in ("input_tokens", "output_tokens"):
         values = recursive_metric(events, key)
         metrics[key] = int(max(values)) if values else None
@@ -105,7 +136,7 @@ def evaluate(request: dict[str, Any], args: argparse.Namespace, version: str) ->
     case = request["case"]
     implementation = {
         "adapter": "intent-driven-naming-codex-cli",
-        "adapter_version": "1.1.0",
+        "adapter_version": "2.0.0",
         "agent": "codex-cli",
         "agent_version": version,
         "model": args.model,
@@ -116,7 +147,7 @@ def evaluate(request: dict[str, Any], args: argparse.Namespace, version: str) ->
     with tempfile.TemporaryDirectory(prefix="intent-naming-codex-") as temporary_directory:
         workspace = Path(temporary_directory) / "workspace"
         workspace.mkdir()
-        if request["variant"] == "with-skill":
+        if request["variant"] in {"with-skill", "previous-skill"}:
             install_runtime_skill(Path(request["skill_path"]), workspace)
         output_path = Path(temporary_directory) / "last-message.json"
         prompt = (
@@ -199,6 +230,16 @@ def evaluate(request: dict[str, Any], args: argparse.Namespace, version: str) ->
                 "usage": parse_usage(completed.stdout, latency_ms),
                 "error": str(exc),
             }
+        skill_context_words = 0
+        source = Path(request["skill_path"]).resolve()
+        for relative in answer["loaded_resources"]:
+            resource = (source / relative).resolve()
+            try:
+                resource.relative_to(source)
+            except ValueError:
+                continue
+            if resource.is_file():
+                skill_context_words += len(resource.read_text(encoding="utf-8").split())
         return {
             "protocol_version": 1,
             "case_id": case["id"],
@@ -207,7 +248,7 @@ def evaluate(request: dict[str, Any], args: argparse.Namespace, version: str) ->
             "output_text": answer["answer"],
             "loaded_resources": answer["loaded_resources"],
             "artifact_bundle": artifact_bundle,
-            "usage": parse_usage(completed.stdout, latency_ms),
+            "usage": parse_usage(completed.stdout, latency_ms, skill_context_words),
             "implementation": implementation,
             "error": None,
         }

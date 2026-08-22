@@ -2,7 +2,6 @@ import sqlite3
 import sys
 from pathlib import Path
 
-
 query = Path(sys.argv[1]).read_text(encoding="utf-8")
 connection = sqlite3.connect(":memory:")
 connection.execute("CREATE TABLE orders (price INTEGER NOT NULL)")
