@@ -23,6 +23,12 @@ RUNTIME_PATHS = (
     Path("VERSION"),
 )
 
+RUNTIME_DIRECTORY_SUFFIXES = {
+    Path("agents"): frozenset({".yaml", ".yml"}),
+    Path("references"): frozenset({".md"}),
+    Path("scripts/runtime"): frozenset({".md", ".py"}),
+}
+
 
 def file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -33,7 +39,13 @@ def runtime_files(root: Path) -> dict[str, Path]:
     for relative in RUNTIME_PATHS:
         source = root / relative
         if source.is_dir():
-            candidates = source.rglob("*")
+            allowed_suffixes = RUNTIME_DIRECTORY_SUFFIXES[relative]
+            candidates = (
+                candidate
+                for candidate in source.rglob("*")
+                if candidate.suffix.lower() in allowed_suffixes
+                and "__pycache__" not in candidate.parts
+            )
         else:
             candidates = (source,)
         for candidate in candidates:
@@ -80,21 +92,18 @@ def verify_installation(destination: Path) -> list[str]:
 
 def _write_installation(destination: Path) -> None:
     destination.mkdir(parents=True)
-    for relative in RUNTIME_PATHS:
-        source = ROOT / relative
-        target = destination / relative
+    sources = runtime_files(ROOT)
+    for relative, source in sorted(sources.items()):
+        target = destination / Path(relative)
         target.parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
-            shutil.copytree(source, target)
-        else:
-            shutil.copy2(source, target)
+        shutil.copy2(source, target)
     manifest = {
         "schema_version": "2.0",
         "skill": "intent-driven-naming",
         "version": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
         "files": {
             relative: file_hash(path)
-            for relative, path in sorted(runtime_files(ROOT).items())
+            for relative, path in sorted(sources.items())
         },
     }
     (destination / "INSTALLATION.json").write_text(

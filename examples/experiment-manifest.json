@@ -43,11 +43,11 @@
   "skills": {
     "with_skill": {
       "version": "2.0.0",
-      "sha256": "84b52a0b328b9e2436efa7285c035da6030512bc828f89e86de71971e1f36f94"
+      "sha256": "8530ea19f1565711db6634b9eefb0f03a4367b0107360a63f10fe00c61ad49c9"
     },
     "previous_skill": {
       "version": "2.0.0",
-      "sha256": "84b52a0b328b9e2436efa7285c035da6030512bc828f89e86de71971e1f36f94"
+      "sha256": "8530ea19f1565711db6634b9eefb0f03a4367b0107360a63f10fe00c61ad49c9"
     }
   },
   "release_policy": {

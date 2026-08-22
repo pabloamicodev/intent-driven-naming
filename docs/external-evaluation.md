@@ -17,6 +17,8 @@ This staged design saves external tokens and reviewer time because an experiment
 
 Start from `examples/experiment-manifest.json` and `examples/runner-config.json`. The manifest is shareable evidence. It contains only identities, analysis choices, counts, and SHA-256 digests. The runner configuration is operator-local: it maps those frozen identities to dataset paths and shell-free adapter command arrays. After editing the study design and local mappings, calculate every dataset, runtime, and policy identity atomically:
 
+Runtime identities cover only the declared source formats in the installable surface. Generated caches, bytecode, logs, and unrelated working-tree files are excluded, so running validation cannot silently change the frozen identity or release archive.
+
 ```text
 python harness/freeze_experiment.py \
   --draft path/to/experiment-draft.json \

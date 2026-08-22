@@ -2,10 +2,34 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.install_local_skill import default_backup_directory, install, verify_installation
+from scripts.install_local_skill import (
+    default_backup_directory,
+    install,
+    runtime_files,
+    verify_installation,
+)
 
 
 class InstallLocalSkillTest(unittest.TestCase):
+    def test_runtime_inventory_excludes_generated_and_unknown_files(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            runtime = root / "scripts" / "runtime"
+            cache = runtime / "__pycache__"
+            cache.mkdir(parents=True)
+            (runtime / "validator.py").write_text("pass\n", encoding="utf-8")
+            (runtime / "README.md").write_text("runtime\n", encoding="utf-8")
+            (runtime / "debug.log").write_text("generated\n", encoding="utf-8")
+            (cache / "validator.cpython-311.pyc").write_bytes(b"generated")
+
+            self.assertEqual(
+                set(runtime_files(root)),
+                {
+                    "scripts/runtime/README.md",
+                    "scripts/runtime/validator.py",
+                },
+            )
+
     def test_installs_only_runtime_surface_and_verifies_hashes(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             destination = Path(temporary_directory) / "intent-driven-naming"

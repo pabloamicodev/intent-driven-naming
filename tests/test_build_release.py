@@ -23,6 +23,7 @@ class BuildReleaseTest(unittest.TestCase):
                 )
             self.assertIn("intent-driven-naming/SKILL.md", names)
             self.assertIn("intent-driven-naming/scripts/runtime/validate_rename_plan.py", names)
+            self.assertFalse(any("__pycache__" in name or name.endswith(".pyc") for name in names))
             self.assertEqual(manifest["skill"], "intent-driven-naming")
             self.assertIn("SKILL.md", manifest["files"])
             with zipfile.ZipFile(first_artifacts["archive"]) as archive:
