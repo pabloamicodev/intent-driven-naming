@@ -8,7 +8,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 PLAN_FIELDS = {
     "schema_version", "plan_id", "scope", "authorization", "analysis", "records", "verification",
@@ -42,11 +42,11 @@ UNSAFE_DIRECT_RENAME_RISKS = {"external", "dynamic", "generated", "stateful", "u
 CHANGING_DECISIONS = {"rename", "map", "migrate"}
 
 
-def _string(value: Any) -> bool:
+def _string(value: Any) -> TypeGuard[str]:
     return isinstance(value, str) and bool(value.strip())
 
 
-def _string_list(value: Any, *, nonempty: bool = False) -> bool:
+def _string_list(value: Any, *, nonempty: bool = False) -> TypeGuard[list[str]]:
     return (
         isinstance(value, list)
         and (not nonempty or bool(value))
@@ -76,14 +76,16 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
         errors.append("scope must be a non-empty unique string array")
 
     authorization = plan.get("authorization")
+    mode: Any = None
+    migration_authorized: bool = False
+    maximum_changed_symbols: int | None = None
     if not isinstance(authorization, dict) or set(authorization) != AUTHORIZATION_FIELDS:
         errors.append(
             "authorization must contain only mode, migration_authorized, and maximum_changed_symbols"
         )
-        mode, migration_authorized, maximum_changed_symbols = None, False, None
     else:
         mode = authorization.get("mode")
-        migration_authorized = authorization.get("migration_authorized")
+        migration_authorized = authorization.get("migration_authorized", False)
         maximum_changed_symbols = authorization.get("maximum_changed_symbols")
         if mode not in {"refactor", "migration"}:
             errors.append("authorization.mode must be refactor or migration")
@@ -101,15 +103,17 @@ def validate_plan(plan: Any) -> tuple[list[str], list[str]]:
             maximum_changed_symbols = None
 
     analysis = plan.get("analysis")
+    methods: list[Any] = []
+    reference_coverage: Any = None
+    dynamic_surfaces_checked: list[Any] = []
     if not isinstance(analysis, dict) or set(analysis) != ANALYSIS_FIELDS:
         errors.append(
             "analysis must contain only methods, reference_coverage, and dynamic_surfaces_checked"
         )
-        methods, reference_coverage, dynamic_surfaces_checked = [], None, []
     else:
-        methods = analysis.get("methods")
+        methods = analysis.get("methods", [])
         reference_coverage = analysis.get("reference_coverage")
-        dynamic_surfaces_checked = analysis.get("dynamic_surfaces_checked")
+        dynamic_surfaces_checked = analysis.get("dynamic_surfaces_checked", [])
         if (
             not isinstance(methods, list)
             or not methods
@@ -278,7 +282,8 @@ def main() -> int:
     try:
         plan = json.loads(args.plan.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        errors, warnings = [f"cannot read plan: {exc}"], []
+        errors: list[str] = [f"cannot read plan: {exc}"]
+        warnings: list[str] = []
     else:
         errors, warnings = validate_plan(plan)
     if args.json_output:

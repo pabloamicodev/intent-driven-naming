@@ -57,9 +57,9 @@ def main() -> int:
     if ledger.get("manifest_sha256") != validation.get("manifest_sha256"):
         errors.append("ledger manifest hash mismatch")
     ledger_jobs = {
-        item.get("output"): item
+        output: item
         for item in ledger.get("jobs", [])
-        if isinstance(item, dict) and isinstance(item.get("output"), str)
+        if isinstance(item, dict) and isinstance(output := item.get("output"), str)
     }
     for job in jobs:
         relative = job_relative_output(job).as_posix()

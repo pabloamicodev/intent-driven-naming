@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: test "${GITHUB_REF_NAME}" = "v$(tr -d '\r\n' < VERSION)"
       - name: Install validation dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-dev.lock
+        run: python -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
       - name: Run release checks
         run: python scripts/run_checks.py
       - name: Build deterministic runtime artifacts

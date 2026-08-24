@@ -23,6 +23,10 @@ def main() -> int:
         run("json schemas", [python, "scripts/validate_schemas.py"])
     else:
         print("\n[json schemas] skipped; install requirements-dev.txt for strict validation", flush=True)
+    if importlib.util.find_spec("mypy") is not None:
+        run("type check", [python, "-m", "mypy"])
+    else:
+        print("\n[type check] skipped; install requirements-dev.txt for strict type checking", flush=True)
     run("repository", [python, "scripts/validate_repository.py"])
     run(
         "rename plan",

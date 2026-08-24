@@ -10,6 +10,7 @@ import sys
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -33,11 +34,11 @@ def _resolve(config_path: Path, value: str) -> Path:
 
 
 def freeze_manifest(
-    draft: dict,
-    runner_config: dict,
+    draft: dict[str, Any],
+    runner_config: dict[str, Any],
     *,
     runner_config_path: Path,
-) -> dict:
+) -> dict[str, Any]:
     manifest = copy.deepcopy(draft)
     manifest.setdefault("schema_version", "1.0")
     manifest.setdefault("created_at", datetime.now(UTC).isoformat())

@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -22,7 +23,21 @@ from harness.eval_core import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def markdown_report(report: dict) -> str:
+class ReportInputError(ValueError):
+    """Raised when an optional report attachment file cannot be loaded."""
+
+
+def _load_report_attachment(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ReportInputError(f"cannot load {label}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ReportInputError(f"{label} must be a JSON object")
+    return value
+
+
+def markdown_report(report: dict[str, Any]) -> str:
     lines = [
         "# Evaluation Report",
         "",
@@ -249,38 +264,22 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 2
     report = score_results(cases, results, require_complete=args.require_complete)
-    if args.review_agreement:
-        try:
-            agreement = json.loads(args.review_agreement.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            print(f"cannot load review agreement: {exc}", file=sys.stderr)
-            return 2
-        if not isinstance(agreement, dict):
-            print("review agreement must be a JSON object", file=sys.stderr)
-            return 2
-        report["review_agreement"] = agreement
-    if args.pairwise_report:
-        try:
-            pairwise = json.loads(args.pairwise_report.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            print(f"cannot load pairwise report: {exc}", file=sys.stderr)
-            return 2
-        if not isinstance(pairwise, dict):
-            print("pairwise report must be a JSON object", file=sys.stderr)
-            return 2
-        report["pairwise_report"] = pairwise
-    if args.experiment_verification:
-        try:
-            experiment_verification = json.loads(
-                args.experiment_verification.read_text(encoding="utf-8")
+    try:
+        if args.review_agreement:
+            report["review_agreement"] = _load_report_attachment(
+                args.review_agreement, "review agreement"
             )
-        except (OSError, json.JSONDecodeError) as exc:
-            print(f"cannot load experiment verification: {exc}", file=sys.stderr)
-            return 2
-        if not isinstance(experiment_verification, dict):
-            print("experiment verification must be a JSON object", file=sys.stderr)
-            return 2
-        report["experiment_verification"] = experiment_verification
+        if args.pairwise_report:
+            report["pairwise_report"] = _load_report_attachment(
+                args.pairwise_report, "pairwise report"
+            )
+        if args.experiment_verification:
+            report["experiment_verification"] = _load_report_attachment(
+                args.experiment_verification, "experiment verification"
+            )
+    except ReportInputError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if args.policy:
         try:
             policy = json.loads(args.policy.read_text(encoding="utf-8"))

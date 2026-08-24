@@ -10,37 +10,107 @@ import re
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
+from typing import TypedDict
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class _RouteWordLabel(TypedDict):
+    name: str
+    words: int
+
+
+class _RouteByteLabel(TypedDict):
+    name: str
+    bytes: int
+
+
+class RouteMeasurement(TypedDict):
+    entrypoint_words: int
+    entrypoint_bytes: int
+    always_loaded_words: int
+    always_loaded_bytes: int
+    runtime_instruction_words: int
+    runtime_instruction_bytes: int
+    maximum_standard_route: _RouteWordLabel
+    maximum_standard_byte_route: _RouteByteLabel
+    maximum_extended_route: _RouteWordLabel
+    maximum_extended_byte_route: _RouteByteLabel
+
+
+class ComparisonReductions(TypedDict):
+    entrypoint: float
+    always_loaded: float
+    runtime_instructions: float
+    maximum_standard_route: float
+    maximum_extended_route: float
+    entrypoint_bytes: float
+    always_loaded_bytes: float
+    runtime_instruction_bytes: float
+    maximum_standard_route_bytes: float
+    maximum_extended_route_bytes: float
+
+
+class ComparisonReport(TypedDict):
+    schema_version: str
+    measurement: str
+    byte_measurement: str
+    baseline_ref: str
+    current: RouteMeasurement
+    baseline: RouteMeasurement
+    reductions: ComparisonReductions
 
 
 def _words(text: str) -> int:
     return len(re.findall(r"\S+", text))
 
 
-def _git_content(revision: str, relative: str) -> bytes:
+def _git_content_batch(revision: str, relatives: list[str]) -> dict[str, bytes]:
+    """Read many blobs from one revision with a single `git cat-file --batch` call.
+
+    Spawning one `git show` subprocess per routed file is correct but costly
+    (process-spawn overhead, especially on Windows) once the route table has
+    dozens of entries; `--batch` resolves and streams every blob over one
+    pipe instead.
+    """
+    if not relatives:
+        return {}
+    requests = [f"{revision}:{relative}" for relative in relatives]
     completed = subprocess.run(
-        ["git", "show", f"{revision}:{relative}"],
+        ["git", "cat-file", "--batch"],
         cwd=ROOT,
+        input=("\n".join(requests) + "\n").encode("utf-8"),
         capture_output=True,
         check=False,
     )
     if completed.returncode != 0:
         detail = completed.stderr.decode("utf-8", errors="replace").strip()
-        raise ValueError(detail or f"cannot read {revision}:{relative}")
-    return completed.stdout
+        raise ValueError(detail or f"cannot read batch content at {revision}")
+    contents: dict[str, bytes] = {}
+    stream = completed.stdout
+    offset = 0
+    for relative in relatives:
+        newline = stream.index(b"\n", offset)
+        header = stream[offset:newline].decode("utf-8", errors="replace")
+        offset = newline + 1
+        if header.endswith(" missing"):
+            raise ValueError(f"cannot read {revision}:{relative}: not found")
+        size = int(header.rsplit(" ", 2)[-1])
+        contents[relative] = stream[offset : offset + size]
+        offset += size + 1  # skip the blob's trailing newline
+    return contents
 
 
-def _measure(read_content: Callable[[str], bytes]) -> dict[str, object]:
+def _measure(read_many: Callable[[list[str]], dict[str, bytes]]) -> RouteMeasurement:
     def decoded(relative: str) -> str:
-        return read_content(relative).decode("utf-8")
+        return read_many([relative])[relative].decode("utf-8")
 
     routes = json.loads(decoded("specification/routes.json"))
     all_paths = set(routes["always"])
     for group_name in ("conditional_core", "modes", "features", "profiles"):
         for paths in routes[group_name].values():
             all_paths.update(paths)
-    contents = {path: read_content(path) for path in sorted(all_paths)}
+    contents = read_many(sorted(all_paths))
     counts = {path: _words(content.decode("utf-8")) for path, content in contents.items()}
     byte_counts = {path: len(content) for path, content in contents.items()}
     modes = list(routes["modes"].items())
@@ -122,9 +192,11 @@ def _reduction(current: int, baseline: int) -> float:
     return round(1 - current / baseline, 6)
 
 
-def compare(baseline_ref: str) -> dict[str, object]:
-    current = _measure(lambda relative: (ROOT / relative).read_bytes())
-    baseline = _measure(lambda relative: _git_content(baseline_ref, relative))
+def compare(baseline_ref: str) -> ComparisonReport:
+    current = _measure(
+        lambda relatives: {relative: (ROOT / relative).read_bytes() for relative in relatives}
+    )
+    baseline = _measure(lambda relatives: _git_content_batch(baseline_ref, relatives))
     return {
         "schema_version": "2.0",
         "measurement": "whitespace-delimited words",

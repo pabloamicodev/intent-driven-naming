@@ -1,112 +1,94 @@
 # Intent-Driven Naming
 
-Version 2.0.0 is an Agent Skill and conformance project for generating, auditing, and safely refactoring software identifiers according to semantic intent across languages and development stacks.
+<p align="center">
+  <img src=".github/social-preview.png" alt="Intent-Driven Naming: names that encode truth" width="100%">
+</p>
 
-The core skill remains instruction-only. Deterministic tooling surrounds it to validate the package, route context efficiently, execute contract fixtures, run provider-neutral evaluations, and block safety regressions. No script rejects an identifier merely because it is called `data`, `result`, `item`, `i`, or another generic or short name.
+<p align="center">
+  A portable Agent Skill that helps AI coding agents name software from evidence while preserving behavior and contracts.
+</p>
 
-## What It Covers
+<p align="center">
+  <a href="https://github.com/pabloamicodev/intent-driven-naming/actions/workflows/ci.yml"><img src="https://github.com/pabloamicodev/intent-driven-naming/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-5B8DEF" alt="Apache License 2.0"></a>
+  <a href="https://agentskills.io/specification"><img src="https://img.shields.io/badge/Agent%20Skills-compatible-6EE7B7" alt="Agent Skills compatible"></a>
+</p>
 
-- Functions, methods, constructors, commands, queries, predicates, handlers, and callbacks.
-- Parameters, argument labels, local variables, captures, accumulators, errors, and intermediate results.
-- Types, interfaces, schemas, queries, scripts, configuration, and infrastructure identifiers.
-- New-code generation, read-only audit, targeted refactor, and protected-boundary mapping.
-- Language idiom without forcing one ecosystem's casing or programming model onto another.
+`intent-driven-naming` generates, audits, and safely refactors functions, parameters, local variables, types, fields, schemas, messages, queries, and infrastructure identifiers across languages and development stacks.
 
-## Decision Outcomes
+It is semantic guidance, not a blacklist. A script never rejects a name merely because it is called `data`, `result`, `item`, or `i`. A short or generic name is a successful `keep` decision when its meaning is already clear in context.
 
-The normative model defines five outcomes:
+> **Project status:** the `2.0.0` package passes the checked-in offline validation suite. External cross-agent, held-out, human-reviewed evaluation is still required before claiming organization-grade effectiveness. See [Conformance and evidence](#conformance-and-evidence).
 
-| Outcome | Use |
-|---|---|
-| `keep` | The current name is clear, conventional, contract-bound, or not worth the churn. |
-| `rename` | A supported internal rename creates material semantic gain. |
-| `map` | Preserve an external spelling and expose a clearer internal alias. |
-| `migrate` | Treat a public, persisted, dynamic, or stateful change as a coordinated migration. |
-| `defer` | Available evidence cannot establish meaning or safety. |
+## The Problem It Solves
 
-Behavior regressions, silent contract changes, invented domain meaning, unauthorized audit mutations, and migrations disguised as refactors are non-compensable failures.
+An identifier can compile, follow a style guide, and still mislead a maintainer about trust, state, units, ownership, side effects, or an external contract.
 
-## Architecture
+For example, assume repository evidence shows that the function receives a raw token, `parse_and_verify` returns verified claims, and `save` persists them:
 
-```text
-intent-driven-naming/
-├── SKILL.md
-├── agents/
-│   └── openai.yaml
-├── references/
-│   ├── naming-model.md
-│   ├── language-conventions.md
-│   ├── polyglot-boundaries.md
-│   ├── new-code-workflow.md
-│   ├── audit-and-refactor.md
-│   ├── refactor-safety.md
-│   ├── structural-analysis.md
-│   ├── high-risk-semantics.md
-│   ├── callable-naming.md
-│   ├── local-variable-naming.md
-│   ├── declaration-naming.md
-│   ├── typescript-javascript.md
-│   ├── web-frameworks.md
-│   └── language-family profiles
-├── specification/
-│   ├── decision-model.md
-│   ├── conformance-levels.md
-│   ├── adapter-protocol.md
-│   ├── routes.json
-│   └── JSON schemas and context budgets
-├── evals/
-│   ├── trigger-cases.md
-│   ├── behavior-cases.md
-│   ├── cases/
-│   │   ├── activation.jsonl
-│   │   └── behavior.jsonl
-│   └── fixtures/
-├── harness/
-├── scripts/
-├── tests/
-├── docs/
-└── .github/workflows/ci.yml
+**Before — every important role is hidden:**
+
+```python
+def process(data):
+    result = parse_and_verify(data)
+    return save(result)
 ```
 
-`SKILL.md` remains the small router. The semantic core is always loaded; workflows, callable guidance, local-variable guidance, convention discovery, and language profiles are conditional. Specifications, datasets, fixtures, and maintenance scripts stay outside normal task context.
+**After — names expose the input, guarantee, and effect:**
 
-This follows the portable [Agent Skills specification](https://agentskills.io/specification) and
-the progressive-disclosure model documented by both
-[OpenAI](https://developers.openai.com/codex/use-cases) and
-[Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview).
-
-## Install as a Skill
-
-Install the runtime-only surface from this checkout:
-
-```powershell
-python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming"
-python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --check
+```python
+def persist_verified_claims(raw_token):
+    verified_claims = parse_and_verify(raw_token)
+    return save(verified_claims)
 ```
 
-The installer refuses to overwrite an existing destination unless `--replace` is explicit.
-Replacement is atomic and retains a versioned backup outside the one-level discovery directory, so
-the previous copy cannot activate as a duplicate skill:
+These are not universal word substitutions. The skill proposes a name only when declarations, types, data flow, callers, consumers, tests, vocabulary, and contracts support that meaning.
 
-```powershell
-python scripts/install_local_skill.py --destination "$HOME/.codex/skills/intent-driven-naming" --replace
+## Why It Is Different
+
+- **Evidence before wording:** repository meaning outranks generic naming advice.
+- **Contract-aware decisions:** public, serialized, generated, dynamic, persisted, and stateful names are treated as compatibility surfaces.
+- **More than renaming:** the model can `keep`, `rename`, `map`, `migrate`, or `defer`.
+- **Language-neutral core:** ecosystem profiles refine idiom without imposing one language's casing or programming model on another.
+- **Context-efficient routing:** the agent loads the semantic core first and reads only the workflow, declaration, risk, and language guidance needed for the task.
+- **Instruction-only runtime:** deterministic tools validate plans and evidence; they do not pretend to infer semantics from forbidden-word matching.
+
+## Quick Start
+
+Clone the repository and install only the runtime surface:
+
+```shell
+git clone https://github.com/pabloamicodev/intent-driven-naming.git
+cd intent-driven-naming
+python scripts/install_local_skill.py --destination "$HOME/.agents/skills/intent-driven-naming"
+python scripts/install_local_skill.py --destination "$HOME/.agents/skills/intent-driven-naming" --check
 ```
 
-For a repository-scoped installation, place the runtime surface so the entrypoint is available at one of these locations:
+The skill instructions have no runtime dependency. Python is required by the installer and by the optional dependency-free rename-plan validator. The installed surface contains only the skill instructions, routed references, portable schemas, and that validator.
 
-```text
-$HOME/.agents/skills/intent-driven-naming/SKILL.md
-$HOME/.codex/skills/intent-driven-naming/SKILL.md
-$HOME/.claude/skills/intent-driven-naming/SKILL.md
-$REPOSITORY_ROOT/.agents/skills/intent-driven-naming/SKILL.md
-$REPOSITORY_ROOT/.claude/skills/intent-driven-naming/SKILL.md
+### Installation Locations
+
+Choose the path recognized by your host and desired scope:
+
+| Scope | Host | Skill entrypoint |
+|---|---|---|
+| User | Agent Skills hosts and current Codex | `$HOME/.agents/skills/intent-driven-naming/SKILL.md` |
+| User | Codex-specific installation | `$HOME/.codex/skills/intent-driven-naming/SKILL.md` |
+| User | Claude | `$HOME/.claude/skills/intent-driven-naming/SKILL.md` |
+| Repository | Agent Skills hosts and current Codex | `$REPOSITORY_ROOT/.agents/skills/intent-driven-naming/SKILL.md` |
+| Repository | Claude | `$REPOSITORY_ROOT/.claude/skills/intent-driven-naming/SKILL.md` |
+
+The installer refuses to overwrite an existing destination unless `--replace` is explicit. Replacement is atomic and retains a versioned backup outside the one-level discovery directory:
+
+```shell
+python scripts/install_local_skill.py --destination "$HOME/.agents/skills/intent-driven-naming" --replace
 ```
 
-The skill itself has no runtime dependency. Python is required only for repository validation and evaluation tooling.
+The package follows the portable [Agent Skills specification](https://agentskills.io/specification) and the progressive-disclosure models documented by [OpenAI](https://learn.chatgpt.com/docs/build-skills) and [Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview).
 
 ## Use
 
-Generate new code:
+Generate new code with intent-revealing identifiers:
 
 ```text
 $intent-driven-naming Implement a checkout service with clear names for requests, totals, payment state, and errors.
@@ -124,15 +106,27 @@ Apply a safe refactor:
 $intent-driven-naming Rename dangerous or misleading identifiers without changing behavior or external contracts.
 ```
 
-For non-trivial changes, emit and validate the portable semantic plan before editing:
+For a non-trivial change, ask the agent to emit a portable rename plan and validate it before editing:
 
-```text
-python scripts/runtime/validate_rename_plan.py rename-plan.json
+```shell
+python scripts/runtime/validate_rename_plan.py examples/rename-plan.json
 ```
 
-See the [complete rename-plan example](examples/rename-plan.json).
+Replace `examples/rename-plan.json` with the plan your agent emitted. See the [complete rename-plan example](examples/rename-plan.json) for the expected shape.
 
-## Language and Development Coverage
+## Decision Model
+
+| Outcome | Use |
+|---|---|
+| `keep` | The current name is clear, conventional, contract-bound, or not worth the churn. |
+| `rename` | A supported internal rename creates material semantic gain. |
+| `map` | Preserve an external spelling and expose a clearer internal alias. |
+| `migrate` | Treat a public, persisted, dynamic, or stateful change as a coordinated migration. |
+| `defer` | Available evidence cannot establish meaning or safety. |
+
+Behavior regressions, silent contract changes, invented domain meaning, unauthorized audit mutations, and migrations disguised as refactors are non-compensable failures.
+
+## Coverage
 
 | Profile | Representative coverage |
 |---|---|
@@ -144,188 +138,98 @@ See the [complete rename-plan example](examples/rename-plan.json).
 | Functional and concurrent | Haskell, OCaml, F#, Scala, Clojure, Erlang, Elixir |
 | Data and infrastructure | SQL, schemas, pipelines, shell, PowerShell, Terraform, Kubernetes |
 
-Profiles are refinements, not an allowlist. Unlisted languages use the semantic model, repository evidence, compiler or analyzer feedback, and conservative contract safety.
+Profiles are refinements, not an allowlist. Unlisted languages use the semantic model, repository evidence, compiler or analyzer feedback, and conservative contract safety. See [compatibility](docs/compatibility.md) for evidence-scoped support and [limitations](docs/limitations.md) for what is not yet proven.
 
-See [compatibility](docs/compatibility.md) for evidence-scoped support claims and [limitations](docs/limitations.md) for what is not yet proven.
+## Progressive-Disclosure Architecture
+
+```text
+intent-driven-naming/
+├── SKILL.md              small task and resource router
+├── agents/               host-facing metadata
+├── references/           conditional semantic and language guidance
+├── scripts/runtime/      optional dependency-free plan validation
+├── specification/        decisions, schemas, routes, and evidence policy
+├── evals/                activation, behavior, and contract fixtures
+├── harness/              provider-neutral experiment and review tooling
+├── tests/                deterministic regression coverage
+└── docs/                 operations, limitations, and governance
+```
+
+`SKILL.md` loads a small universal semantic core. Workflow, callable, local-variable, declaration, high-risk, boundary, and language guidance is conditional. Specifications, datasets, fixtures, and maintenance tooling remain outside normal task context.
+
+The checked-in `2.0.0` static comparison reports a 61.4% reduction in maximum standard-route words and a 70.4% reduction in total runtime-instruction words relative to `1.1.0`. These are deterministic context-size measures, not provider token measurements. See the [versioned evidence](benchmarks/2.0.0/evidence.md).
 
 ## Offline Validation
 
-Run every repository, unit, dataset, and fixture check:
+Install the pinned development dependencies and run every repository, schema, unit, dataset, plan, and fixture check:
 
-```text
+```shell
+python -m pip install -r requirements-dev.lock
 python scripts/run_checks.py
 ```
 
-Individual commands:
+The current offline suite contains:
 
-```text
-python scripts/export_evals.py --check
-python scripts/validate_repository.py
-python -m unittest discover -s tests -v
-python harness/verify_fixtures.py
-python scripts/build_release.py --clean
-```
+- 84 balanced activation cases across seven locales.
+- 52 behavior cases with 202 explicit invariants across six locales.
+- 16 executable or contract-verifiable fixtures.
+- Contract coverage for serialization, named arguments, dynamic lookup, generated sources, stateful resources, security trust stages, partial guarantees, shell behavior, Protobuf mapping, and telemetry.
+- Deterministic runtime archives with a per-file manifest, SHA-256 checksums, and an SPDX 2.3 inventory.
 
-The deterministic archive includes a per-file `PACKAGE-MANIFEST.json`; release output also includes
-SHA-256 checksums and an SPDX 2.3 inventory.
-
-Install `requirements-dev.lock` when running the same strict JSON Schema and lint checks enforced by CI. The skill runtime itself still has no Python dependency.
-
-The repository contains 84 balanced activation cases, 52 behavior cases with 202 explicit invariants, and 16 executable or contract-verifiable fixtures. Activation requests span seven locales; behavior cases include six locales and high-risk security, distributed-state, time, ML, observability, declaration-family, data-minimization, generated-code, and stateful-migration scenarios.
-
-Generated JSONL remains synchronized with the reviewed Markdown source:
-
-```text
-python scripts/export_evals.py --write
-```
+Offline checks establish package, routing, schema, harness, and representative fixture integrity. They do not establish universal naming quality.
 
 ## Provider-Neutral Evaluation
 
-Candidate and grader integrations communicate through JSONL instead of a vendor SDK. For a controlled study, first freeze the estimand, dataset and runtime hashes, systems, variants, repetitions, retries, exclusions, and policy:
+Candidate and grader integrations communicate through JSONL rather than a vendor SDK. The evaluation system supports frozen experiment manifests, current-skill/no-skill/previous-skill cohorts, repeated pinned configurations, immutable results, blinded human review, pairwise comparison, uncertainty estimates, usage telemetry, and hard safety gates.
 
-```text
-python harness/freeze_experiment.py \
-  --draft path/to/experiment-draft.json \
-  --runner-config path/to/local-runner-config.json \
-  --output path/to/experiment-manifest.json
-```
+A development manifest can be validated without making an external model call:
 
-Then validate all identities and print the complete matrix without making an external call:
-
-```text
+```shell
 python harness/run_experiment.py \
   --manifest examples/experiment-manifest.json \
   --runner-config examples/runner-config.json
 ```
 
-The checked-in example is deliberately `development-only`. Organization evidence requires a separate `release-candidate` manifest with at least three distinct pinned systems, three repetitions, and public plus private held-out datasets. Execution is explicit because it may incur provider cost:
+External execution is always explicit because it may incur provider cost. Follow the [external evaluation operations](docs/external-evaluation.md), [benchmarking contract](benchmarks/README.md), [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
 
-```text
-python harness/run_experiment.py \
-  --manifest path/to/release-experiment.json \
-  --runner-config path/to/local-runner-config.json \
-  --execute
-```
-
-The runner creates one immutable output per dataset, suite, system, variant, and replicate. `--resume` reuses a file only after validating it against the frozen experiment. Retrying a failed job requires a preregistered `--retry-reason`, preserves the failed attempt in the ledger, and increments the result attempt. Verify the completed ledger independently before review or scoring:
-
-```text
-python harness/verify_experiment.py \
-  --manifest path/to/release-experiment.json \
-  --runner-config path/to/local-runner-config.json \
-  --experiment-root path/to/results/EXPERIMENT_ID \
-  --json-output path/to/experiment-verification.json
-```
-
-For an individual integration or exploratory run, invoke an adapter directly without shell interpolation:
-
-```text
-python harness/run_adapter.py \
-  --cases evals/cases/activation.jsonl \
-  --output eval-results/activation.jsonl \
-  --variant with-skill \
-  --system-id your-agent-model-config \
-  --replicate-id r1 \
-  -- your-adapter-command
-```
-
-The included Codex CLI adapter can be used as the adapter command. Pin the model version in the benchmark record rather than inferring it later:
-
-```text
-python harness/run_adapter.py \
-  --cases evals/cases/activation.jsonl \
-  --output eval-results/codex-with-skill-r1.jsonl \
-  --variant with-skill \
-  --system-id codex-model-high \
-  --replicate-id r1 \
-  -- python adapters/codex_cli.py \
-     --model MODEL_ID \
-     --model-version PINNED_MODEL_VERSION \
-     --reasoning high \
-     --artifact-output-root eval-results/artifacts
-```
-
-Repeat for `without-skill`, `previous-skill`, and `r1`, `r2`, and `r3`. The previous-skill cohort requires a frozen runtime checkout:
-
-```text
-python harness/run_adapter.py \
-  --cases evals/cases/activation.jsonl \
-  --output eval-results/activation-previous-r1.jsonl \
-  --variant previous-skill \
-  --baseline-skill-path /path/to/frozen/previous/runtime \
-  --system-id your-agent-model-config \
-  --replicate-id r1 \
-  -- your-adapter-command
-```
-
-Create blinded review packets for behavior results. Keep the reidentification key private from reviewers:
-
-```text
-python harness/prepare_review.py \
-  --results eval-results/behavior.jsonl \
-  --artifact-root eval-results/artifacts \
-  --packet-output eval-results/review-packets.jsonl \
-  --key-output eval-results/review-keys.jsonl
-```
-
-After independent reviewers return records matching `specification/review-record.schema.json`, merge their labels and score the complete run:
-
-```text
-python harness/merge_reviews.py \
-  --results eval-results/behavior.jsonl \
-  --review-keys eval-results/review-keys.jsonl \
-  --reviews eval-results/reviews.jsonl \
-  --minimum-reviews 2 \
-  --agreement-output eval-results/review-agreement.json \
-  --output eval-results/graded-behavior.jsonl
-
-python harness/prepare_pairwise_review.py \
-  --results eval-results/behavior-with.jsonl eval-results/behavior-without.jsonl \
-  --artifact-root eval-results/artifacts \
-  --salt STUDY_SECRET \
-  --packet-output eval-results/pairwise-packets.jsonl \
-  --key-output eval-results/pairwise-keys.jsonl
-
-python harness/score_pairwise.py \
-  --keys eval-results/pairwise-keys.jsonl \
-  --reviews eval-results/pairwise-reviews.jsonl \
-  --minimum-reviews 2 \
-  --output eval-results/pairwise-report.json
-
-python harness/score_results.py \
-  --results eval-results/activation.jsonl eval-results/graded-behavior.jsonl \
-  --require-complete \
-  --policy specification/release-policy.json \
-  --review-agreement eval-results/review-agreement.json \
-  --pairwise-report eval-results/pairwise-report.json \
-  --experiment-verification eval-results/experiment-verification.json \
-  --json-output benchmark-results/report.json \
-  --markdown-output benchmark-results/report.md
-```
-
-For exploratory partial runs, omit `--require-complete` and `--policy`. Release evidence MUST use both plus a verified preregistered experiment. The policy requires at least three distinct systems; three complete repetitions of current-skill, previous-skill, and no-skill cohorts; identical pinned configurations across variants and repetitions; public and held-out data; two human reviews per candidate and pair; complete usage and loaded-resource telemetry; quality thresholds; calibrated agreement; and no ungraded invariants. Automated judges may assist but cannot satisfy the human minimum. Current-skill quality is paired against no skill. Input tokens, routed context words, and turns are compared against the frozen previous skill. Critical failures, identity defects, configuration drift, incomplete repetitions, unresolved reviews, unknown or unnecessary resources, profile overloading, and efficiency regressions fail the gate.
-
-Reports separate activation, behavior, completion, bootstrap and Wilson confidence intervals, retries, critical failures, decision accuracy, configuration integrity, resource loading, input/output usage, latency, turns, tool calls, human-review coverage, reviewer agreement, and difficulty, locale, language, mode, risk, and decision slices. Release gates compare input and output tokens, latency, turns, tool calls, and loaded context with the frozen previous skill. A critical failure fails the gate regardless of aggregate quality. See [external evaluation operations](docs/external-evaluation.md), the [statistical protocol](docs/statistics.md), [data-handling policy](docs/data-handling.md), and [private evaluation protocol](docs/private-evaluation.md).
-
-The evaluation design follows the [official OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration of model graders.
+The design follows [OpenAI's evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices): task-specific cases, automated scoring where appropriate, continuous evaluation, typical and adversarial inputs, and human calibration.
 
 ## Conformance and Evidence
 
 The project defines four cumulative evidence levels beyond package validity:
 
-1. Routing and scope.
+1. Routing and activation scope.
 2. Semantic decisions.
-3. Refactor safety.
-4. Organization-grade held-out, human-calibrated, cross-agent evidence.
+3. Refactor and contract safety.
+4. Held-out, human-calibrated, cross-agent evidence.
 
-The offline repository can prove package validity and executable fixture safety. Level 4 cannot be claimed without external model runs, pinned configurations, held-out data, and expert review. See the [release policy](specification/release-policy.json), [conformance levels](specification/conformance-levels.md), [human evaluation](docs/human-evaluation.md), and [benchmarking](benchmarks/README.md).
+The repository currently establishes offline package and representative fixture evidence. Level 4 remains unclaimed until a preregistered experiment passes with public and private held-out suites, at least three pinned systems, three complete repetitions of each cohort, two independent human reviews per candidate and pair, complete telemetry, and every safety and quality gate.
+
+Passing that study would support only the systems, versions, datasets, and conditions named in the experiment—not every language, repository, model, or future release.
+
+See the [release policy](specification/release-policy.json), [conformance levels](specification/conformance-levels.md), [human evaluation protocol](docs/human-evaluation.md), and [limitations](docs/limitations.md).
+
+## Documentation
+
+| Topic | Document |
+|---|---|
+| Architecture | [docs/architecture.md](docs/architecture.md) |
+| Compatibility and evidence-scoped support | [docs/compatibility.md](docs/compatibility.md) |
+| Known limitations | [docs/limitations.md](docs/limitations.md) |
+| External experiment operations | [docs/external-evaluation.md](docs/external-evaluation.md) |
+| Human review | [docs/human-evaluation.md](docs/human-evaluation.md) |
+| Statistics | [docs/statistics.md](docs/statistics.md) |
+| Data handling and private suites | [docs/data-handling.md](docs/data-handling.md), [docs/private-evaluation.md](docs/private-evaluation.md) |
+| Normative decision model | [specification/decision-model.md](specification/decision-model.md) |
+| Versioned evidence | [benchmarks/README.md](benchmarks/README.md) |
 
 ## Contributing and Governance
 
-- [Contributing](CONTRIBUTING.md)
+Counterexamples, evaluation cases, language-specific corrections, safety failures, and reproducible benchmark results are especially valuable. Start with [Contributing](CONTRIBUTING.md).
+
 - [Governance](GOVERNANCE.md)
 - [Security policy](SECURITY.md)
 - [Code of conduct](CODE_OF_CONDUCT.md)
 - [Changelog](CHANGELOG.md)
 
-The project is licensed under Apache License 2.0. See [LICENSE](LICENSE).
+Licensed under the [Apache License 2.0](LICENSE).

@@ -11,8 +11,9 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from harness import review_core
 from harness.eval_core import EvaluationDataError, load_case_map, read_jsonl, write_jsonl
-from harness.review_core import ReviewDataError, merge_reviews, review_agreement
+from harness.review_core import ReviewDataError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,14 +34,14 @@ def main() -> int:
         results = [record for path in args.results for record in read_jsonl(path)]
         keys = read_jsonl(args.review_keys)
         reviews = [record for path in args.reviews for record in read_jsonl(path)]
-        merged = merge_reviews(
+        merged = review_core.merge_reviews(
             cases,
             results,
             keys,
             reviews,
             minimum_reviews=args.minimum_reviews,
         )
-        agreement = review_agreement(cases, keys, reviews)
+        agreement = review_core.review_agreement(cases, keys, reviews)
     except (EvaluationDataError, ReviewDataError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

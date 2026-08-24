@@ -9,6 +9,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any, NotRequired, TypedDict
 
 SENSITIVE_NAME = re.compile(
     r"(^|[._-])(\.env|credentials?|secrets?|tokens?|id_rsa)([._-]|$)|\.(pem|key|p12|pfx)$",
@@ -23,6 +24,20 @@ SENSITIVE_CONTENT = (
 )
 
 
+class BundleFile(TypedDict):
+    path: str
+    sha256: str
+    content: str
+
+
+class ArtifactBundleContent(TypedDict):
+    schema_version: str
+    root_label: str
+    total_bytes: int
+    files: list[BundleFile]
+    verifier_report: NotRequired[dict[str, Any]]
+
+
 def _resolve_inside(root: Path, relative: str) -> Path:
     unresolved = root / relative
     if unresolved.is_symlink():
@@ -35,7 +50,7 @@ def _resolve_inside(root: Path, relative: str) -> Path:
     return candidate
 
 
-def build_bundle(root: Path, includes: list[str], max_bytes: int) -> dict:
+def build_bundle(root: Path, includes: list[str], max_bytes: int) -> ArtifactBundleContent:
     root = root.resolve()
     selected: set[Path] = set()
     for relative in includes:
@@ -49,7 +64,7 @@ def build_bundle(root: Path, includes: list[str], max_bytes: int) -> dict:
             if candidate.is_symlink():
                 raise ValueError(f"symlinks are not allowed: {candidate.relative_to(root)}")
             selected.add(candidate)
-    files = []
+    files: list[BundleFile] = []
     total_bytes = 0
     for path in sorted(selected, key=lambda value: value.as_posix()):
         relative = path.relative_to(root).as_posix()

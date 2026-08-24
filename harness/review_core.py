@@ -7,7 +7,7 @@ import json
 from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from harness.eval_core import VALID_DECISIONS, VALID_GRADES, VALID_VARIANTS, validate_result
 
@@ -179,6 +179,20 @@ def _validate_review(
         raise ReviewDataError(f"{review_id}: observed_decisions must be unique")
 
 
+def prefer_human_reviews(
+    reviews: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Apply the human-first consensus policy.
+
+    Returns (preferred, human_only): `preferred` is the human subset when
+    non-empty, otherwise every review. Centralizing this fallback keeps the
+    policy consistent across review_core and pairwise_core instead of each
+    call site re-deriving it.
+    """
+    human = [review for review in reviews if review["reviewer_kind"] == "human"]
+    return human or reviews, human
+
+
 def _consensus_grade(severity: str, grades: list[str]) -> str | None:
     if not grades:
         return None
@@ -206,8 +220,7 @@ def review_agreement(
     by_review_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for review in reviews:
         by_review_id[review["review_id"]].append(review)
-    human_reviews = [review for review in reviews if review["reviewer_kind"] == "human"]
-    agreement_reviews = human_reviews or reviews
+    agreement_reviews, human_reviews = prefer_human_reviews(reviews)
     agreement_by_review_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for review in agreement_reviews:
         agreement_by_review_id[review["review_id"]].append(review)
@@ -314,7 +327,9 @@ def merge_reviews(
         ):
             raise ReviewDataError(f"{review_id}: incomplete review key")
         key_by_review_id[review_id] = key
-        result_key_by_review_id[review_id] = result_key
+        result_key_by_review_id[review_id] = cast(
+            "tuple[str, str, str, str, str, int]", result_key
+        )
 
     reviews_by_result: dict[tuple[str, str, str, str, str, int], list[dict[str, Any]]] = (
         defaultdict(list)
@@ -333,15 +348,12 @@ def merge_reviews(
     merged: list[dict[str, Any]] = []
     for original in results:
         result = dict(original)
-        case = cases.get(result.get("case_id"))
+        case = cases.get(result.get("case_id", ""))
         if not case or case["suite"] != "behavior" or result.get("status") != "completed":
             merged.append(result)
             continue
         candidate_reviews = reviews_by_result.get(_result_key(result), [])
-        human_candidate_reviews = [
-            review for review in candidate_reviews if review["reviewer_kind"] == "human"
-        ]
-        consensus_reviews = human_candidate_reviews or candidate_reviews
+        consensus_reviews, _ = prefer_human_reviews(candidate_reviews)
         consensus: dict[str, str] = {}
         unresolved: list[str] = []
         decision_consensus: list[str] = []
