@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import sys
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +40,7 @@ def runtime_files(root: Path) -> dict[str, Path]:
     files: dict[str, Path] = {}
     for relative in RUNTIME_PATHS:
         source = root / relative
+        candidates: Iterable[Path]
         if source.is_dir():
             allowed_suffixes = RUNTIME_DIRECTORY_SUFFIXES[relative]
             candidates = (
@@ -134,6 +137,26 @@ def _next_backup_path(destination: Path, backup_directory: Path) -> Path:
     return candidate
 
 
+def _acquire_install_lock(destination: Path) -> Path:
+    """Serialize concurrent installs targeting the same destination.
+
+    Without this, two concurrent `--replace` runs can both pass the
+    `_next_backup_path` check-then-act loop before either has moved anything,
+    compute the same backup path, and then race each other's rename/rollback
+    steps. An exclusive lock file makes the second run fail fast with a clear
+    error instead of silently corrupting the first run's backup or payload.
+    """
+    lock_path = destination.parent / f".{destination.name}.install.lock"
+    try:
+        os.close(os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+    except FileExistsError as exc:
+        raise ValueError(
+            f"another install is already in progress for {destination} "
+            f"(remove {lock_path} if a previous run crashed without cleaning up)"
+        ) from exc
+    return lock_path
+
+
 def install(
     destination: Path,
     *,
@@ -142,40 +165,50 @@ def install(
 ) -> Path | None:
     if destination.exists():
         if not replace:
-            raise ValueError(f"destination already exists: {destination}")
+            raise ValueError(
+                f"destination already exists: {destination} (pass --replace to install over it)"
+            )
         if not destination.is_dir():
             raise ValueError(f"destination is not a directory: {destination}")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    staging = destination.with_name(f".{destination.name}.staging-{uuid.uuid4().hex}")
-    backup: Path | None = None
+    lock_path = _acquire_install_lock(destination)
     try:
-        _write_installation(staging)
-        if destination.exists():
-            backup_directory = (backup_directory or default_backup_directory(destination)).resolve()
-            if backup_directory.anchor.lower() != destination.anchor.lower():
-                raise ValueError("backup directory must be on the same filesystem anchor")
-            try:
-                backup_directory.relative_to(destination.resolve())
-            except ValueError:
-                pass
-            else:
-                raise ValueError("backup directory cannot be inside the installed skill")
-            if (
-                destination.parent.name.lower() == "skills"
-                and backup_directory == destination.parent.resolve()
-            ):
-                raise ValueError("backup directory cannot be the one-level skill discovery directory")
-            backup_directory.mkdir(parents=True, exist_ok=True)
-            backup = _next_backup_path(destination, backup_directory)
-            destination.replace(backup)
-        staging.replace(destination)
-    except Exception:
-        if staging.exists():
-            shutil.rmtree(staging)
-        if backup is not None and backup.exists() and not destination.exists():
-            backup.replace(destination)
-        raise
-    return backup
+        staging = destination.with_name(f".{destination.name}.staging-{uuid.uuid4().hex}")
+        backup: Path | None = None
+        try:
+            _write_installation(staging)
+            if destination.exists():
+                backup_directory = (
+                    backup_directory or default_backup_directory(destination)
+                ).resolve()
+                if backup_directory.anchor.lower() != destination.anchor.lower():
+                    raise ValueError("backup directory must be on the same filesystem anchor")
+                try:
+                    backup_directory.relative_to(destination.resolve())
+                except ValueError:
+                    pass
+                else:
+                    raise ValueError("backup directory cannot be inside the installed skill")
+                if (
+                    destination.parent.name.lower() == "skills"
+                    and backup_directory == destination.parent.resolve()
+                ):
+                    raise ValueError(
+                        "backup directory cannot be the one-level skill discovery directory"
+                    )
+                backup_directory.mkdir(parents=True, exist_ok=True)
+                backup = _next_backup_path(destination, backup_directory)
+                destination.replace(backup)
+            staging.replace(destination)
+        except Exception:
+            if staging.exists():
+                shutil.rmtree(staging)
+            if backup is not None and backup.exists() and not destination.exists():
+                backup.replace(destination)
+            raise
+        return backup
+    finally:
+        lock_path.unlink(missing_ok=True)
 
 
 def main() -> int:

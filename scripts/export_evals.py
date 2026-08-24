@@ -378,8 +378,8 @@ def check_outputs(outputs: dict[Path, str]) -> int:
             stale.append(str(path.relative_to(ROOT)))
     if stale:
         print("Generated evaluation datasets are stale:", file=sys.stderr)
-        for path in stale:
-            print(f"- {path}", file=sys.stderr)
+        for stale_path in stale:
+            print(f"- {stale_path}", file=sys.stderr)
         print("Run: python scripts/export_evals.py --write", file=sys.stderr)
         return 1
     print("evaluation datasets are current")

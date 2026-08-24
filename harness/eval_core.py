@@ -187,7 +187,8 @@ def validate_case(case: dict[str, Any]) -> list[str]:
                     errors.append("invariant id must be non-empty")
                 elif invariant_id in invariant_ids:
                     errors.append(f"duplicate invariant id {invariant_id}")
-                invariant_ids.add(invariant_id)
+                else:
+                    invariant_ids.add(invariant_id)
                 if invariant.get("severity") not in {"critical", "major", "minor"}:
                     errors.append(f"{invariant_id}: invalid severity")
                 if invariant.get("grading") not in {"deterministic", "semantic", "human"}:
@@ -394,16 +395,25 @@ def _paired_difference(outcomes: dict[Any, dict[str, int]]) -> dict[str, Any] | 
         case_id = key[1] if isinstance(key, tuple) and len(key) > 1 else key
         differences_by_case[case_id].append(difference)
     case_ids = sorted(differences_by_case, key=str)
+    # Precompute each cluster's (sum, count) once. Resampling then accumulates
+    # these integer aggregates instead of re-materializing and re-summing the
+    # full per-difference list on every one of the 10,000 iterations; because
+    # the differences are integers, summing pre-aggregated cluster totals is
+    # exactly equal to summing the flattened list, just far cheaper.
+    cluster_stats = {
+        case_id: (sum(values), len(values)) for case_id, values in differences_by_case.items()
+    }
     mean = sum(differences) / len(differences)
     randomizer = random.Random(BOOTSTRAP_SEED)
     bootstrap_means: list[float] = []
     for _ in range(10_000):
-        sampled_differences = [
-            difference
-            for _ in case_ids
-            for difference in differences_by_case[randomizer.choice(case_ids)]
-        ]
-        bootstrap_means.append(sum(sampled_differences) / len(sampled_differences))
+        sampled_sum = 0
+        sampled_count = 0
+        for _ in case_ids:
+            cluster_sum, cluster_count = cluster_stats[randomizer.choice(case_ids)]
+            sampled_sum += cluster_sum
+            sampled_count += cluster_count
+        bootstrap_means.append(sampled_sum / sampled_count)
     bootstrap_means.sort()
     lower_index = int(0.025 * (len(bootstrap_means) - 1))
     upper_index = int(0.975 * (len(bootstrap_means) - 1))
@@ -736,8 +746,8 @@ def score_results(
                 (metadata["system_id"], metadata["variant"], replicate_id), set()
             )
             incomplete_ids = sorted(set(cases) - completed_ids)
-            key = f"{cohort}::{replicate_id}"
-            completion[key] = {
+            completion_key = f"{cohort}::{replicate_id}"
+            completion[completion_key] = {
                 "cohort": cohort,
                 "replicate_id": replicate_id,
                 "expected_cases": len(cases),
@@ -746,7 +756,9 @@ def score_results(
                 "complete": not incomplete_ids,
             }
             if require_complete and incomplete_ids:
-                errors.append(f"{key}: {len(incomplete_ids)} cases are missing, failed, or skipped")
+                errors.append(
+                    f"{completion_key}: {len(incomplete_ids)} cases are missing, failed, or skipped"
+                )
     if require_complete and not cohorts:
         errors.append("complete scoring requires at least one result cohort")
 
@@ -931,6 +943,7 @@ def apply_release_policy(report: dict[str, Any], policy: dict[str, Any]) -> dict
     gated_variant = policy.get("gated_variant")
     if gated_variant not in VALID_VARIANTS:
         violations.append("release policy gated_variant is invalid")
+        gated_variant = ""
     systems = sorted({metadata["system_id"] for metadata in report.get("cohorts", {}).values()})
     if not systems:
         violations.append("release policy requires at least one system")

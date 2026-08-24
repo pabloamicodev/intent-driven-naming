@@ -8,6 +8,7 @@ import copy
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -76,7 +77,7 @@ def main() -> int:
             (ROOT / "examples" / "rename-plan.json").read_text(encoding="utf-8")
         )
         rename_validator.validate(rename_example)
-        invalid_plans: list[tuple[str, dict]] = []
+        invalid_plans: list[tuple[str, dict[str, Any]]] = []
         low_materiality = copy.deepcopy(rename_example)
         low_materiality["records"][0]["materiality"] = "low"
         invalid_plans.append(("low-materiality change", low_materiality))

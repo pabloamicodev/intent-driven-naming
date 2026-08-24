@@ -92,7 +92,8 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
     markdown_files = sorted(
         path
         for path in ROOT.rglob("*.md")
-        if not any(
+        if not path.is_symlink()
+        and not any(
             excluded in path.parts
             for excluded in (".git", ".venv", ".tox", "node_modules", "__pycache__")
         )
@@ -100,7 +101,11 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
     reference_files = sorted((ROOT / "references").glob("*.md"))
     linked_references: set[Path] = set()
     for path in markdown_files:
-        text = path.read_text(encoding="utf-8")
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: not valid UTF-8: {exc}")
+            continue
         headings = [match.groups() for line in text.splitlines() if (match := HEADING.match(line))]
         h1_count = sum(1 for level, _ in headings if level == "#")
         if h1_count != 1:
@@ -336,9 +341,9 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
         for profile_count in range(1, min(maximum_profiles, len(profiles)) + 1):
             for profile_choice in itertools.combinations(profiles, profile_count):
                 paths = list(always) + list(mode_paths) + list(conditional_paths)
-                feature_names: list[str] = []
+                polyglot_feature_names: list[str] = []
                 for feature_name, feature_paths in feature_choice:
-                    feature_names.append(feature_name)
+                    polyglot_feature_names.append(feature_name)
                     paths.extend(feature_paths)
                 profile_names: list[str] = []
                 for profile_name, profile_paths in profile_choice:
@@ -346,7 +351,8 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
                     paths.extend(profile_paths)
                 total = sum(counts.get(path, 0) for path in dict.fromkeys(paths))
                 label = (
-                    f"{mode_name}+{'+'.join(feature_names) if feature_names else 'no-feature'}+"
+                    f"{mode_name}+"
+                    f"{'+'.join(polyglot_feature_names) if polyglot_feature_names else 'no-feature'}+"
                     f"{'+'.join(profile_names)}"
                 )
                 polyglot_routes.append((label, total))
@@ -405,9 +411,12 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
         record_errors = validate_case(record)
         errors.extend(f"eval {record.get('id', '?')}: {error}" for error in record_errors)
         case_id = record.get("id")
+        if not isinstance(case_id, str):
+            continue
         if case_id in ids:
             errors.append(f"duplicate evaluation id {case_id}")
-        ids.add(case_id)
+        else:
+            ids.add(case_id)
     trigger_source_ids = {
         match.group(1)
         for line in (ROOT / "evals" / "trigger-cases.md").read_text(encoding="utf-8").splitlines()
@@ -433,9 +442,13 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
                 errors.append("fixture manifest entries must be objects")
                 continue
             fixture_id = fixture.get("id")
+            if not isinstance(fixture_id, str):
+                errors.append("fixture manifest entries require a string id")
+                continue
             if fixture_id in fixture_ids:
                 errors.append(f"duplicate fixture id {fixture_id}")
-            fixture_ids.add(fixture_id)
+            else:
+                fixture_ids.add(fixture_id)
             unknown_cases = set(fixture.get("related_behavior_cases", [])) - behavior_ids
             if unknown_cases:
                 errors.append(
@@ -496,7 +509,7 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
     }
 
 
-def validate_governance(errors: list[str]) -> None:
+def validate_governance(errors: list[str], route_metrics: dict[str, Any]) -> None:
     required = [
         "VERSION",
         "LICENSE",
@@ -756,7 +769,6 @@ def validate_governance(errors: list[str]) -> None:
             )
         ):
             errors.append("release policy efficiency thresholds are invalid")
-        route_metrics = validate_routes([])
         standard_limit = efficiency.get("maximum_standard_route_words")
         extended_limit = efficiency.get("maximum_extended_route_words")
         runtime_limit = efficiency.get("maximum_runtime_instruction_words")
@@ -801,7 +813,7 @@ def validate_governance(errors: list[str]) -> None:
 def validate_placeholders(errors: list[str]) -> None:
     pattern = re.compile(r"\b(TODO|TBD|PLACEHOLDER)\b", re.IGNORECASE)
     for path in ROOT.rglob("*"):
-        if not path.is_file() or any(
+        if path.is_symlink() or not path.is_file() or any(
             excluded in path.parts
             for excluded in (".git", ".venv", ".tox", "node_modules", "__pycache__", "benchmarks")
         ):
@@ -810,7 +822,12 @@ def validate_placeholders(errors: list[str]) -> None:
             continue
         if path.suffix.lower() not in {".md", ".json", ".jsonl", ".yaml", ".yml", ".py", ".txt"}:
             continue
-        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: not valid UTF-8: {exc}")
+            continue
+        for line_number, line in enumerate(text.splitlines(), start=1):
             if pattern.search(line):
                 errors.append(
                     f"{path.relative_to(ROOT)}:{line_number}: unresolved placeholder token"
@@ -825,7 +842,7 @@ def validate_repository() -> dict[str, Any]:
     metrics.update(validate_frontmatter(errors))
     metrics["routes"] = validate_routes(errors)
     metrics.update(validate_evaluations(errors))
-    validate_governance(errors)
+    validate_governance(errors, metrics["routes"])
     validate_placeholders(errors)
     try:
         from harness.experiment_core import load_experiment, validate_experiment

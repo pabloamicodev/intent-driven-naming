@@ -24,11 +24,13 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.lock
       - name: Install validation dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-dev.lock
+        run: python -m pip install --disable-pip-version-check --require-hashes -r requirements-dev.lock
       - name: Validate JSON contracts
         run: python scripts/validate_schemas.py
       - name: Lint Python
         run: ruff check .
+      - name: Type check
+        run: python -m mypy
       - name: Run offline checks
         run: python scripts/run_checks.py
 

@@ -7,13 +7,14 @@ import argparse
 import hashlib
 import json
 import shutil
+import uuid
 import zipfile
 from pathlib import Path
 
 try:
     from scripts.install_local_skill import ROOT, runtime_files
 except ModuleNotFoundError:  # Direct execution puts scripts/ first on sys.path.
-    from install_local_skill import ROOT, runtime_files
+    from install_local_skill import ROOT, runtime_files  # type: ignore[no-redef, import-not-found]
 
 
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
@@ -50,7 +51,42 @@ def build(output_directory: Path) -> dict[str, Path]:
         relative: source.read_bytes() for relative, source in sorted(source_files.items())
     }
     entries["PACKAGE-MANIFEST.json"] = _package_manifest(version, entries)
-    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
+
+    # Build every artifact under a staging name first and only rename into the
+    # published path once everything is complete, so a concurrent reader (or a
+    # build interrupted partway through) never observes a truncated zip or a
+    # SHA256SUMS that doesn't yet match what's on disk.
+    token = uuid.uuid4().hex
+    staged_archive = archive.with_name(f"{archive.name}.staging-{token}")
+    staged_sbom = sbom.with_name(f"{sbom.name}.staging-{token}")
+    staged_checksums = checksums.with_name(f"{checksums.name}.staging-{token}")
+    try:
+        _build_staged_artifacts(
+            version, entries, staged_archive=staged_archive, staged_sbom=staged_sbom
+        )
+        checksum_entries = sorted(
+            [(archive.name, _sha256(staged_archive)), (sbom.name, _sha256(staged_sbom))]
+        )
+        staged_checksums.write_text(
+            "".join(f"{digest}  {name}\n" for name, digest in checksum_entries),
+            encoding="utf-8",
+            newline="\n",
+        )
+        staged_archive.replace(archive)
+        staged_sbom.replace(sbom)
+        staged_checksums.replace(checksums)
+    finally:
+        for staged in (staged_archive, staged_sbom, staged_checksums):
+            staged.unlink(missing_ok=True)
+    return {"archive": archive, "checksums": checksums, "sbom": sbom}
+
+
+def _build_staged_artifacts(
+    version: str, entries: dict[str, bytes], *, staged_archive: Path, staged_sbom: Path
+) -> None:
+    with zipfile.ZipFile(
+        staged_archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as bundle:
         for relative, content in sorted(entries.items()):
             info = zipfile.ZipInfo(f"intent-driven-naming/{relative}", ZIP_TIMESTAMP)
             info.compress_type = zipfile.ZIP_DEFLATED
@@ -87,12 +123,9 @@ def build(output_directory: Path) -> dict[str, Path]:
             for index in range(1, len(entries) + 1)
         ],
     }
-    sbom.write_text(json.dumps(sbom_document, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    checksum_entries = sorted(
-        [(archive.name, _sha256(archive)), (sbom.name, _sha256(sbom))]
+    staged_sbom.write_text(
+        json.dumps(sbom_document, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
-    checksums.write_text("".join(f"{digest}  {name}\n" for name, digest in checksum_entries), encoding="utf-8", newline="\n")
-    return {"archive": archive, "checksums": checksums, "sbom": sbom}
 
 
 def main() -> int:

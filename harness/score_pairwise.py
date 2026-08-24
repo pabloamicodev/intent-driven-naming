@@ -11,8 +11,8 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from harness import pairwise_core
 from harness.eval_core import read_jsonl
-from harness.pairwise_core import score_pairwise
 from harness.review_core import ReviewDataError
 
 
@@ -24,7 +24,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        report = score_pairwise(
+        report = pairwise_core.score_pairwise(
             read_jsonl(args.keys),
             read_jsonl(args.reviews),
             minimum_reviews=args.minimum_reviews,

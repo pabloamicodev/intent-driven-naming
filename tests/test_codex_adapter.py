@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,61 @@ class CodexAdapterTest(unittest.TestCase):
             self.assertGreater(
                 records_by_variant["with-skill"]["usage"]["skill_context_words"], 0
             )
+
+    def test_rejects_reasoning_value_that_would_break_config_quoting(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            completed = subprocess.run(
+                [
+                    sys.executable, str(ROOT / "adapters" / "codex_cli.py"),
+                    "--model", "fake-model", "--model-version", "fake-version",
+                    "--reasoning", 'high" extra_key="injected',
+                    "--artifact-output-root", str(Path(temporary_directory) / "artifacts"),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("--reasoning must match", completed.stderr)
+
+    def test_preserves_non_ascii_prompt_across_the_subprocess_boundary(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            spanish_prompt = (
+                "¿Podés revisar la función de validación de contraseñas? "
+                "Necesito nombres más claros para las variables temporales."
+            )
+            case = {
+                "schema_version": "1.0",
+                "dataset_version": "test-1.0",
+                "id": "T99",
+                "suite": "activation",
+                "title": "Caso en español",
+                "prompt": spanish_prompt,
+                "difficulty": "standard",
+                "locale": "es",
+                "tags": ["activation"],
+                "expected_activation": True,
+                "rationale": "Tarea de nomenclatura de identificadores.",
+            }
+            cases_path = temporary / "activation.jsonl"
+            cases_path.write_text(json.dumps(case) + "\n", encoding="utf-8")
+            output = temporary / "with-skill.jsonl"
+            command = [
+                sys.executable, str(ROOT / "harness" / "run_adapter.py"),
+                "--cases", str(cases_path),
+                "--output", str(output), "--variant", "with-skill",
+                "--system-id", "fake-codex", "--limit", "1",
+                "--",
+                sys.executable, str(ROOT / "adapters" / "codex_cli.py"),
+                "--codex", sys.executable,
+                "--codex-prefix-arg", str(ROOT / "tests" / "fixtures" / "fake_codex.py"),
+                "--model", "fake-model", "--model-version", "fake-version",
+                "--artifact-output-root", str(temporary / "artifacts"),
+            ]
+            subprocess.run(command, cwd=ROOT, check=True, capture_output=True, text=True)
+            result = read_jsonl(output)[0]
+            self.assertIn(spanish_prompt, result["output_text"])
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from scripts.install_local_skill import (
+    _acquire_install_lock,
     default_backup_directory,
     install,
     runtime_files,
@@ -81,6 +82,23 @@ class InstallLocalSkillTest(unittest.TestCase):
                 )
             with self.assertRaisesRegex(ValueError, "skill discovery directory"):
                 install(destination, replace=True, backup_directory=skills)
+
+    def test_concurrent_install_fails_fast_instead_of_racing(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            destination = Path(temporary_directory) / "intent-driven-naming"
+            held_lock = _acquire_install_lock(destination)
+            try:
+                with self.assertRaisesRegex(ValueError, "already in progress"):
+                    install(destination)
+            finally:
+                held_lock.unlink()
+
+    def test_install_releases_its_lock_on_success(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            destination = Path(temporary_directory) / "intent-driven-naming"
+            install(destination)
+            lock_path = destination.parent / f".{destination.name}.install.lock"
+            self.assertFalse(lock_path.exists())
 
 
 if __name__ == "__main__":

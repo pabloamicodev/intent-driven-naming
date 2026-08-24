@@ -7,7 +7,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from harness.create_artifact_bundle import SENSITIVE_CONTENT
 from harness.eval_core import (
@@ -62,7 +62,9 @@ def _load_json(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
-def load_experiment(manifest_path: Path, runner_config_path: Path) -> tuple[dict, dict]:
+def load_experiment(
+    manifest_path: Path, runner_config_path: Path
+) -> tuple[dict[str, Any], dict[str, Any]]:
     return (
         _load_json(manifest_path, "experiment manifest"),
         _load_json(runner_config_path, "runner configuration"),
@@ -76,8 +78,10 @@ def _resolve(config_path: Path, value: str) -> Path:
     return path.resolve()
 
 
-def _unique_by(records: list[dict], field: str, label: str, errors: list[str]) -> dict[str, dict]:
-    indexed: dict[str, dict] = {}
+def _unique_by(
+    records: list[dict[str, Any]], field: str, label: str, errors: list[str]
+) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
     for record in records:
         if not isinstance(record, dict):
             errors.append(f"each {label} must be an object")
@@ -93,7 +97,7 @@ def _unique_by(records: list[dict], field: str, label: str, errors: list[str]) -
     return indexed
 
 
-def _unique_strings(values: Any) -> bool:
+def _unique_strings(values: Any) -> TypeGuard[list[str]]:
     return (
         isinstance(values, list)
         and all(isinstance(value, str) for value in values)
@@ -114,7 +118,10 @@ def validate_experiment(
         errors.append("runner configuration schema_version must be 1.0")
     experiment_id = manifest.get("experiment_id")
     if not isinstance(experiment_id, str) or not SAFE_EXPERIMENT_ID.fullmatch(experiment_id):
-        errors.append("experiment_id is not a safe path component")
+        errors.append(
+            f"unsafe experiment_id: {experiment_id!r} "
+            f"(must match {SAFE_EXPERIMENT_ID.pattern})"
+        )
     created_at = manifest.get("created_at")
     if not isinstance(created_at, str):
         errors.append("created_at must be an RFC 3339 timestamp")
@@ -236,7 +243,7 @@ def validate_experiment(
             continue
         dataset_paths[dataset_id] = {}
         case_counts[dataset_id] = {}
-        loaded_parts: dict[str, dict[str, dict]] = {}
+        loaded_parts: dict[str, dict[str, dict[str, Any]]] = {}
         for part in ("activation", "behavior"):
             value = configured.get(f"{part}_cases")
             if not isinstance(value, str) or not value:

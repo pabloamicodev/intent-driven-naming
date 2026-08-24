@@ -5,10 +5,10 @@ from __future__ import annotations
 import hashlib
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from harness.eval_core import validate_result
-from harness.review_core import ReviewDataError, _load_artifact
+from harness.review_core import ReviewDataError, _load_artifact, prefer_human_reviews
 
 VALID_PREFERENCES = {"A", "B", "tie"}
 
@@ -33,7 +33,7 @@ def prepare_pairwise_packet(
     results: list[dict[str, Any]],
     salt: str,
     *,
-    artifact_root=None,
+    artifact_root: Path | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if not salt:
         raise ReviewDataError("pairwise salt must be non-empty")
@@ -120,7 +120,9 @@ def score_pairwise(
 ) -> dict[str, Any]:
     if minimum_reviews < 1:
         raise ReviewDataError("minimum_reviews must be positive")
-    key_map = {key.get("pair_id"): key for key in keys}
+    key_map: dict[str, dict[str, Any]] = cast(
+        "dict[str, dict[str, Any]]", {key.get("pair_id"): key for key in keys}
+    )
     if None in key_map or len(key_map) != len(keys):
         raise ReviewDataError("pairwise keys contain missing or duplicate pair IDs")
     by_pair: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -132,6 +134,7 @@ def score_pairwise(
         reviewer_id = review.get("reviewer_id")
         if pair_id not in key_map:
             raise ReviewDataError(f"unknown pair_id {pair_id}")
+        pair_id = cast(str, pair_id)
         if not isinstance(reviewer_id, str) or not reviewer_id.strip():
             raise ReviewDataError(f"{pair_id}: reviewer_id must be non-empty")
         if review.get("reviewer_kind") not in {"human", "model", "automated"}:
@@ -147,16 +150,13 @@ def score_pairwise(
 
     totals = Counter({"with-skill": 0, "without-skill": 0, "tie": 0, "unresolved": 0})
     pair_results: list[dict[str, Any]] = []
-    human_reviews = [review for review in reviews if review["reviewer_kind"] == "human"]
+    _, human_reviews = prefer_human_reviews(reviews)
     agreement_population = "human" if human_reviews else "all-reviewers"
     agreement_pairs = 0
     agreement_count = 0
     for pair_id, key in sorted(key_map.items()):
         candidate_reviews = by_pair.get(pair_id, [])
-        human_candidate_reviews = [
-            review for review in candidate_reviews if review["reviewer_kind"] == "human"
-        ]
-        consensus_reviews = human_candidate_reviews or candidate_reviews
+        consensus_reviews, human_candidate_reviews = prefer_human_reviews(candidate_reviews)
         agreement_reviews = (
             human_candidate_reviews if agreement_population == "human" else candidate_reviews
         )
