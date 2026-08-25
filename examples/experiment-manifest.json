@@ -51,11 +51,11 @@
   "schema_version": "1.0",
   "skills": {
     "previous_skill": {
-      "sha256": "5b1cf4206d63aeb828a22e77fbb6d91ac23ead55a6482a976cd0c5a13704f24b",
+      "sha256": "8b10321d0f11c092e9fcded6384e698a8585b82aabc9231088aed80edd2d8c35",
       "version": "2.0.0"
     },
     "with_skill": {
-      "sha256": "5b1cf4206d63aeb828a22e77fbb6d91ac23ead55a6482a976cd0c5a13704f24b",
+      "sha256": "8b10321d0f11c092e9fcded6384e698a8585b82aabc9231088aed80edd2d8c35",
       "version": "2.0.0"
     }
   },

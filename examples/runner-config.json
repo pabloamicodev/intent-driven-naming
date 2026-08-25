@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "output_root": "../eval-results",
-  "current_skill_path": "..",
-  "baseline_skill_path": "..",
+  "current_skill_path": "../skills/intent-driven-naming",
+  "baseline_skill_path": "../skills/intent-driven-naming",
   "release_policy_path": "../specification/release-policy.json",
   "datasets": [
     {

@@ -55,7 +55,13 @@ These are not universal word substitutions. The skill proposes a name only when 
 
 ## Quick Start
 
-Clone the repository and install only the runtime surface:
+Install with the [Agent Skills CLI](https://github.com/antfu/skills-cli), which reads `skills/intent-driven-naming/` directly from GitHub and installs only that directory into your agent's skills folder:
+
+```shell
+npx skills add pabloamicodev/intent-driven-naming
+```
+
+Or clone the repository and install only the runtime surface with the checked-in, hash-verified installer:
 
 ```shell
 git clone https://github.com/pabloamicodev/intent-driven-naming.git
@@ -109,7 +115,7 @@ $intent-driven-naming Rename dangerous or misleading identifiers without changin
 For a non-trivial change, ask the agent to emit a portable rename plan and validate it before editing:
 
 ```shell
-python scripts/runtime/validate_rename_plan.py examples/rename-plan.json
+python skills/intent-driven-naming/scripts/runtime/validate_rename_plan.py examples/rename-plan.json
 ```
 
 Replace `examples/rename-plan.json` with the plan your agent emitted. See the [complete rename-plan example](examples/rename-plan.json) for the expected shape.
@@ -144,18 +150,20 @@ Profiles are refinements, not an allowlist. Unlisted languages use the semantic 
 
 ```text
 intent-driven-naming/
-├── SKILL.md              small task and resource router
-├── agents/               host-facing metadata
-├── references/           conditional semantic and language guidance
-├── scripts/runtime/      optional dependency-free plan validation
-├── specification/        decisions, schemas, routes, and evidence policy
+├── skills/intent-driven-naming/  the installable unit — nothing outside this loads at agent runtime
+│   ├── SKILL.md                 small task and resource router
+│   ├── agents/                  host-facing metadata
+│   ├── references/              conditional semantic and language guidance
+│   ├── scripts/runtime/         optional dependency-free plan validation
+│   └── specification/           the two schemas the plan validator checks against
+├── specification/        decisions, routes, and evidence policy for the rest of the repo
 ├── evals/                activation, behavior, and contract fixtures
-├── harness/              provider-neutral experiment and review tooling
+├── harness/               provider-neutral experiment and review tooling
 ├── tests/                deterministic regression coverage
 └── docs/                 operations, limitations, and governance
 ```
 
-`SKILL.md` loads a small universal semantic core. Workflow, callable, local-variable, declaration, high-risk, boundary, and language guidance is conditional. Specifications, datasets, fixtures, and maintenance tooling remain outside normal task context.
+`SKILL.md` loads a small universal semantic core. Workflow, callable, local-variable, declaration, high-risk, boundary, and language guidance is conditional. Specifications, datasets, fixtures, and maintenance tooling remain outside normal task context. Everything an agent needs lives under `skills/intent-driven-naming/`, which is why `npx skills add` can install just that directory.
 
 The checked-in `2.0.0` static comparison reports a 61.4% reduction in maximum standard-route words and a 70.4% reduction in total runtime-instruction words relative to `1.1.0`. These are deterministic context-size measures, not provider token measurements. See the [versioned evidence](benchmarks/2.0.0/evidence.md).
 

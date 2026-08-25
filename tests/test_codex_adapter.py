@@ -24,7 +24,9 @@ class CodexAdapterTest(unittest.TestCase):
                     "--system-id", "fake-codex", "--limit", "1",
                 ]
                 if variant == "previous-skill":
-                    command.extend(["--baseline-skill-path", str(ROOT)])
+                    command.extend(
+                        ["--baseline-skill-path", str(ROOT / "skills" / "intent-driven-naming")]
+                    )
                 command.extend([
                     "--",
                     sys.executable, str(ROOT / "adapters" / "codex_cli.py"),

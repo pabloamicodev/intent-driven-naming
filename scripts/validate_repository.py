@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = ROOT / "skills" / "intent-driven-naming"
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
@@ -98,7 +99,7 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
             for excluded in (".git", ".venv", ".tox", "node_modules", "__pycache__")
         )
     )
-    reference_files = sorted((ROOT / "references").glob("*.md"))
+    reference_files = sorted((SKILL_ROOT / "references").glob("*.md"))
     linked_references: set[Path] = set()
     for path in markdown_files:
         try:
@@ -110,7 +111,7 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
         h1_count = sum(1 for level, _ in headings if level == "#")
         if h1_count != 1:
             errors.append(f"{path.relative_to(ROOT)}: expected exactly one H1, found {h1_count}")
-        if path.parent == ROOT / "references":
+        if path.parent == SKILL_ROOT / "references":
             h2_names = [title for level, title in headings if level == "##"]
             duplicates = [name for name, count in Counter(h2_names).items() if count > 1]
             for name in duplicates:
@@ -129,7 +130,7 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
             if not resolved.exists():
                 errors.append(f"{path.relative_to(ROOT)}: broken link '{target}'")
             try:
-                relative = resolved.relative_to((ROOT / "references").resolve())
+                relative = resolved.relative_to((SKILL_ROOT / "references").resolve())
             except ValueError:
                 continue
             if relative.suffix == ".md":
@@ -145,7 +146,7 @@ def validate_markdown(errors: list[str], warnings: list[str]) -> dict[str, int]:
 
 
 def validate_frontmatter(errors: list[str]) -> dict[str, int]:
-    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     line_count = len(skill.splitlines())
     if line_count > 500:
         errors.append(f"SKILL.md: {line_count} lines exceeds the Agent Skills limit of 500")
@@ -164,7 +165,7 @@ def validate_frontmatter(errors: list[str]) -> dict[str, int]:
         errors.append("SKILL.md: unexpected or missing name")
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill_name):
         errors.append("SKILL.md: name violates the portable Agent Skills naming grammar")
-    if skill_name and skill_name != ROOT.name:
+    if skill_name and skill_name != SKILL_ROOT.name:
         errors.append("SKILL.md: name must match the parent directory")
     if not description_match:
         errors.append("SKILL.md: missing description")
@@ -173,7 +174,7 @@ def validate_frontmatter(errors: list[str]) -> dict[str, int]:
         description_length = len(description_match.group(1).strip())
         if description_length > 1024:
             errors.append(f"SKILL.md: description too long ({description_length})")
-    metadata = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
+    metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
     short_match = re.search(r'^\s*short_description:\s*"([^"]+)"', metadata, re.MULTILINE)
     if not short_match:
         errors.append("agents/openai.yaml: missing short_description")
@@ -214,7 +215,7 @@ def validate_routes(errors: list[str]) -> dict[str, Any]:
     counts: dict[str, int] = {}
     byte_counts: dict[str, int] = {}
     for relative in sorted(all_paths):
-        path = ROOT / relative
+        path = SKILL_ROOT / relative
         if not path.exists():
             errors.append(f"specification/routes.json: missing routed file {relative}")
             continue
@@ -511,7 +512,6 @@ def validate_evaluations(errors: list[str]) -> dict[str, int]:
 
 def validate_governance(errors: list[str], route_metrics: dict[str, Any]) -> None:
     required = [
-        "VERSION",
         "LICENSE",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
@@ -523,12 +523,16 @@ def validate_governance(errors: list[str], route_metrics: dict[str, Any]) -> Non
     for relative in required:
         if not (ROOT / relative).exists():
             errors.append(f"missing adoption file: {relative}")
-    version_path = ROOT / "VERSION"
+    version_path = SKILL_ROOT / "VERSION"
+    if not version_path.exists():
+        errors.append("missing adoption file: skills/intent-driven-naming/VERSION")
     if version_path.exists():
         version = version_path.read_text(encoding="utf-8").strip()
         if not VERSION_PATTERN.fullmatch(version):
             errors.append(f"VERSION is not semantic: {version}")
-    for schema in sorted((ROOT / "specification").glob("*.json")):
+    for schema in sorted(
+        (*(ROOT / "specification").glob("*.json"), *(SKILL_ROOT / "specification").glob("*.json"))
+    ):
         load_json(schema, errors)
     policy = load_json(ROOT / "specification" / "release-policy.json", errors)
     if not isinstance(policy, dict):

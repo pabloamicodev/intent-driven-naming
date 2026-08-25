@@ -30,7 +30,11 @@ def main() -> int:
     run("repository", [python, "scripts/validate_repository.py"])
     run(
         "rename plan",
-        [python, "scripts/runtime/validate_rename_plan.py", "examples/rename-plan.json"],
+        [
+            python,
+            "skills/intent-driven-naming/scripts/runtime/validate_rename_plan.py",
+            "examples/rename-plan.json",
+        ],
     )
     run("unit tests", [python, "-m", "unittest", "discover", "-s", "tests", "-v"])
     run("fixtures", [python, "harness/verify_fixtures.py"])

@@ -1,6 +1,8 @@
 import unittest
 
-from scripts.runtime.validate_rename_plan import validate_plan
+from tests._skill_runtime import validate_rename_plan as _validate_rename_plan
+
+validate_plan = _validate_rename_plan.validate_plan
 
 
 def record(**overrides):

@@ -14,6 +14,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = ROOT / "skills" / "intent-driven-naming"
 RUNTIME_PATHS = (
     Path("SKILL.md"),
     Path("agents"),
@@ -21,7 +22,6 @@ RUNTIME_PATHS = (
     Path("scripts/runtime"),
     Path("specification/semantic-record.schema.json"),
     Path("specification/rename-plan.schema.json"),
-    Path("LICENSE"),
     Path("VERSION"),
 )
 
@@ -57,9 +57,20 @@ def runtime_files(root: Path) -> dict[str, Path]:
     return files
 
 
+def installed_runtime_files() -> dict[str, Path]:
+    """The exact payload installed or bundled: the skill's own tree plus the
+    repo-level LICENSE (sourced by content, not physically duplicated into
+    skills/intent-driven-naming/ — unlike VERSION, nothing needs LICENSE to
+    sit inside the skill root itself).
+    """
+    files = runtime_files(SKILL_ROOT)
+    files["LICENSE"] = ROOT / "LICENSE"
+    return files
+
+
 def verify_installation(destination: Path) -> list[str]:
     errors: list[str] = []
-    expected = runtime_files(ROOT)
+    expected = installed_runtime_files()
     actual = (
         {
             path.relative_to(destination).as_posix(): path
@@ -95,7 +106,7 @@ def verify_installation(destination: Path) -> list[str]:
 
 def _write_installation(destination: Path) -> None:
     destination.mkdir(parents=True)
-    sources = runtime_files(ROOT)
+    sources = installed_runtime_files()
     for relative, source in sorted(sources.items()):
         target = destination / Path(relative)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -103,7 +114,7 @@ def _write_installation(destination: Path) -> None:
     manifest = {
         "schema_version": "2.0",
         "skill": "intent-driven-naming",
-        "version": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
+        "version": (SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip(),
         "files": {
             relative: file_hash(path)
             for relative, path in sorted(sources.items())

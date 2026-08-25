@@ -68,8 +68,8 @@ class ExperimentCoreTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary = Path(temporary_directory)
             source_config["output_root"] = str(temporary / "results")
-            source_config["current_skill_path"] = str(ROOT)
-            source_config["baseline_skill_path"] = str(ROOT)
+            source_config["current_skill_path"] = str(ROOT / "skills" / "intent-driven-naming")
+            source_config["baseline_skill_path"] = str(ROOT / "skills" / "intent-driven-naming")
             source_config["release_policy_path"] = str(
                 ROOT / "specification" / "release-policy.json"
             )
@@ -123,8 +123,8 @@ class ExperimentCoreTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary = Path(temporary_directory)
             source_config["output_root"] = str(temporary / "results")
-            source_config["current_skill_path"] = str(ROOT)
-            source_config["baseline_skill_path"] = str(ROOT)
+            source_config["current_skill_path"] = str(ROOT / "skills" / "intent-driven-naming")
+            source_config["baseline_skill_path"] = str(ROOT / "skills" / "intent-driven-naming")
             source_config["release_policy_path"] = str(
                 ROOT / "specification" / "release-policy.json"
             )

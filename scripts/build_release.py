@@ -12,9 +12,13 @@ import zipfile
 from pathlib import Path
 
 try:
-    from scripts.install_local_skill import ROOT, runtime_files
+    from scripts.install_local_skill import ROOT, SKILL_ROOT, installed_runtime_files
 except ModuleNotFoundError:  # Direct execution puts scripts/ first on sys.path.
-    from install_local_skill import ROOT, runtime_files  # type: ignore[no-redef, import-not-found]
+    from install_local_skill import (  # type: ignore[no-redef, import-not-found]
+        ROOT,
+        SKILL_ROOT,
+        installed_runtime_files,
+    )
 
 
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
@@ -41,12 +45,12 @@ def _package_manifest(version: str, entries: dict[str, bytes]) -> bytes:
 
 
 def build(output_directory: Path) -> dict[str, Path]:
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    version = (SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip()
     output_directory.mkdir(parents=True, exist_ok=True)
     archive = output_directory / f"intent-driven-naming-{version}.zip"
     checksums = output_directory / "SHA256SUMS"
     sbom = output_directory / f"intent-driven-naming-{version}.spdx.json"
-    source_files = runtime_files(ROOT)
+    source_files = installed_runtime_files()
     entries = {
         relative: source.read_bytes() for relative, source in sorted(source_files.items())
     }

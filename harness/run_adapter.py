@@ -112,7 +112,7 @@ def main() -> int:
                 "skill_path": str(
                     args.baseline_skill_path.resolve()
                     if args.variant == "previous-skill"
-                    else ROOT.resolve()
+                    else (ROOT / "skills" / "intent-driven-naming").resolve()
                 ),
                 "variant": args.variant,
             }

@@ -2,6 +2,13 @@
 
 All notable changes are documented here. The project follows Semantic Versioning.
 
+## Unreleased
+
+### Changed
+
+- Moved the skill's runtime surface (`SKILL.md`, `references/`, `scripts/runtime/`, `agents/openai.yaml`, and the `rename-plan`/`semantic-record` schemas) from the repository root into `skills/intent-driven-naming/`, so third-party installers that discover a skill by its containing directory (e.g. `npx skills add`) install only the skill instead of the whole repository. `README.md` documents the new `npx skills add pabloamicodev/intent-driven-naming` install path alongside the existing hash-verified Python installer.
+- `scripts/compare_context.py --baseline-ref <ref>` no longer resolves against any ref predating this restructuring commit, since those refs still have `SKILL.md` at the repository root; comparisons must use a baseline ref at or after this change.
+
 ## 2.0.0 — 2026-08-21
 
 ### Added

@@ -13,6 +13,16 @@ from pathlib import Path
 from typing import TypedDict
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILL_PREFIX = "skills/intent-driven-naming/"
+
+
+def _resolve(relative: str) -> str:
+    """Map a routes.json path (skill-relative) to a repo-relative path.
+
+    specification/*.json stays at the repo root; everything else (SKILL.md,
+    references/*.md) now lives under skills/intent-driven-naming/.
+    """
+    return relative if relative.startswith("specification/") else f"{SKILL_PREFIX}{relative}"
 
 
 class _RouteWordLabel(TypedDict):
@@ -103,14 +113,20 @@ def _git_content_batch(revision: str, relatives: list[str]) -> dict[str, bytes]:
 
 def _measure(read_many: Callable[[list[str]], dict[str, bytes]]) -> RouteMeasurement:
     def decoded(relative: str) -> str:
-        return read_many([relative])[relative].decode("utf-8")
+        resolved = _resolve(relative)
+        return read_many([resolved])[resolved].decode("utf-8")
 
     routes = json.loads(decoded("specification/routes.json"))
     all_paths = set(routes["always"])
     for group_name in ("conditional_core", "modes", "features", "profiles"):
         for paths in routes[group_name].values():
             all_paths.update(paths)
-    contents = read_many(sorted(all_paths))
+    # Keep counts/byte_counts keyed by the logical (skill-relative) route path
+    # even though the actual bytes are fetched from the resolved repo-relative
+    # location, so every downstream label/budget lookup stays unchanged.
+    resolved_by_path = {path: _resolve(path) for path in all_paths}
+    raw_contents = read_many(sorted(set(resolved_by_path.values())))
+    contents = {path: raw_contents[resolved] for path, resolved in resolved_by_path.items()}
     counts = {path: _words(content.decode("utf-8")) for path, content in contents.items()}
     byte_counts = {path: len(content) for path, content in contents.items()}
     modes = list(routes["modes"].items())

@@ -2,30 +2,33 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.runtime.validate_rename_plan import (
-    ANALYSIS_FIELDS,
-    ANALYSIS_METHODS,
-    AUTHORIZATION_FIELDS,
-    DECISIONS,
-    KINDS,
-    MATERIALITIES,
-    MEANING_FIELDS,
-    PLAN_FIELDS,
-    RECORD_FIELDS,
-    RISKS,
-    VERIFICATION_FIELDS,
-)
+from tests._skill_runtime import validate_rename_plan as _validate_rename_plan
+
+ANALYSIS_FIELDS = _validate_rename_plan.ANALYSIS_FIELDS
+ANALYSIS_METHODS = _validate_rename_plan.ANALYSIS_METHODS
+AUTHORIZATION_FIELDS = _validate_rename_plan.AUTHORIZATION_FIELDS
+DECISIONS = _validate_rename_plan.DECISIONS
+KINDS = _validate_rename_plan.KINDS
+MATERIALITIES = _validate_rename_plan.MATERIALITIES
+MEANING_FIELDS = _validate_rename_plan.MEANING_FIELDS
+PLAN_FIELDS = _validate_rename_plan.PLAN_FIELDS
+RECORD_FIELDS = _validate_rename_plan.RECORD_FIELDS
+RISKS = _validate_rename_plan.RISKS
+VERIFICATION_FIELDS = _validate_rename_plan.VERIFICATION_FIELDS
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = ROOT / "skills" / "intent-driven-naming"
 
 
 class SchemaValidatorParityTest(unittest.TestCase):
     def test_runtime_constants_match_published_schemas(self):
         record_schema = json.loads(
-            (ROOT / "specification" / "semantic-record.schema.json").read_text(encoding="utf-8")
+            (SKILL_ROOT / "specification" / "semantic-record.schema.json").read_text(
+                encoding="utf-8"
+            )
         )
         plan_schema = json.loads(
-            (ROOT / "specification" / "rename-plan.schema.json").read_text(encoding="utf-8")
+            (SKILL_ROOT / "specification" / "rename-plan.schema.json").read_text(encoding="utf-8")
         )
         record_properties = record_schema["properties"]
         plan_properties = plan_schema["properties"]

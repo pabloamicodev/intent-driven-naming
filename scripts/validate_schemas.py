@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = ROOT / "skills" / "intent-driven-naming"
 
 
 def main() -> int:
@@ -26,9 +27,10 @@ def main() -> int:
         return 2
 
     schema_dir = ROOT / "specification"
+    skill_schema_dir = SKILL_ROOT / "specification"
     schemas = {
         path.name: json.loads(path.read_text(encoding="utf-8"))
-        for path in sorted(schema_dir.glob("*.schema.json"))
+        for path in sorted((*schema_dir.glob("*.schema.json"), *skill_schema_dir.glob("*.schema.json")))
     }
     try:
         for schema in schemas.values():
